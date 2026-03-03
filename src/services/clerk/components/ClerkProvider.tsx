@@ -1,10 +1,21 @@
 import { ReactNode } from "react"
 import { ClerkProvider as OriginalClerkProvider } from "@clerk/nextjs"
+import { viVN } from "@clerk/localizations"
 import { buttonVariants } from "@/components/ui/button"
 
 export function ClerkProvider({ children }: { children: ReactNode }) {
   return (
     <OriginalClerkProvider
+      localization={{
+        ...viVN,
+        signIn: {
+          ...viVN.signIn,
+          start: {
+            ...viVN.signIn?.start,
+            title: "Chào mừng bạn đến với NextStep",
+          },
+        },
+      }}
       appearance={{
         cssLayerName: "vendor",
         variables: {

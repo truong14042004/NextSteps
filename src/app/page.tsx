@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
-import { SignInButton } from "@clerk/nextjs"
+import { SignInButton, SignUpButton } from "@clerk/nextjs"
 import {
   BookOpenCheckIcon,
   Brain,
@@ -43,9 +43,14 @@ function Navbar() {
           </div>
           <Suspense
             fallback={
-              <SignInButton forceRedirectUrl="/app">
-                <Button variant="outline">Sign In</Button>
-              </SignInButton>
+              <div className="flex items-center gap-2">
+                <SignInButton forceRedirectUrl="/app">
+                  <Button variant="outline">Đăng nhập</Button>
+                </SignInButton>
+                <SignUpButton forceRedirectUrl="/app">
+                  <Button>Đăng ký</Button>
+                </SignUpButton>
+              </div>
             }
           >
             <NavButton />
@@ -61,9 +66,14 @@ async function NavButton() {
 
   if (userId == null) {
     return (
-      <SignInButton forceRedirectUrl="/app">
-        <Button variant="outline">Sign In</Button>
-      </SignInButton>
+      <div className="flex items-center gap-2">
+        <SignInButton forceRedirectUrl="/app">
+          <Button variant="outline">Đăng nhập</Button>
+        </SignInButton>
+        <SignUpButton forceRedirectUrl="/app">
+          <Button>Đăng ký</Button>
+        </SignUpButton>
+      </div>
     )
   }
 
