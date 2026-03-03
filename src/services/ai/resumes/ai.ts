@@ -6,16 +6,19 @@ import { aiAnalyzeSchema } from "./schemas"
 export async function analyzeResumeForJob({
   resumeFile,
   jobInfo,
+  onFinish,
 }: {
   resumeFile: File
   jobInfo: Pick<
     typeof JobInfoTable.$inferSelect,
     "title" | "experienceLevel" | "description"
   >
+  onFinish?: (result: { object: unknown }) => Promise<void>
 }) {
   return streamObject({
     model: google("gemini-2.5-flash"),
     schema: aiAnalyzeSchema,
+    onFinish,
     messages: [
       {
         role: "user",

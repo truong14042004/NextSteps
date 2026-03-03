@@ -24,8 +24,8 @@ export function errorToast(message: string) {
   }
 
   if (message === RATE_LIMIT_MESSAGE) {
-    toast.error("Woah! Slow down.", {
-      description: "You are making too many requests. Please try again later.",
+    toast.error("Bạn đang thao tác quá nhanh!", {
+      description: "Vui lòng đợi một chút trước khi thử lại. Giới hạn: 12 phỏng vấn mỗi ngày.",
     })
     return
   }

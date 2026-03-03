@@ -6,8 +6,8 @@ import { getJobInfoIdTag } from "../jobInfos/dbCache"
 import { db } from "@/drizzle/db"
 import { and, eq } from "drizzle-orm"
 import { InterviewTable, JobInfoTable } from "@/drizzle/schema"
-import { insertInterview, updateInterview as updateInterviewDb } from "./db"
-import { getInterviewIdTag } from "./dbCache"
+import { insertInterview, updateInterview as updateInterviewDb, getInterviewsByJobInfoId } from "./db"
+import { getInterviewIdTag, getInterviewJobInfoTag } from "./dbCache"
 import { canCreateInterview } from "./permissions"
 import { PLAN_LIMIT_MESSAGE, RATE_LIMIT_MESSAGE } from "@/lib/errorToast"
 import { env } from "@/data/env/server"
@@ -47,15 +47,18 @@ export async function createInterview({
     }
   }
 
-  const decision = await aj.protect(await request(), {
-    userId,
-    requested: 1,
-  })
+  // Skip rate limiting in development
+  if (process.env.NODE_ENV !== "development") {
+    const decision = await aj.protect(await request(), {
+      userId,
+      requested: 1,
+    })
 
-  if (decision.isDenied()) {
-    return {
-      error: true,
-      message: RATE_LIMIT_MESSAGE,
+    if (decision.isDenied()) {
+      return {
+        error: true,
+        message: RATE_LIMIT_MESSAGE,
+      }
     }
   }
 
@@ -76,6 +79,7 @@ export async function updateInterview(
   id: string,
   data: {
     humeChatId?: string
+    vapiTranscript?: string
     duration?: string
   }
 ) {
@@ -117,18 +121,28 @@ export async function generateInterviewFeedback(interviewId: string) {
     }
   }
 
-  if (interview.humeChatId == null) {
+  if (interview.humeChatId == null && interview.vapiTranscript == null) {
     return {
       error: true,
       message: "Interview has not been completed yet",
     }
   }
 
-  const feedback = await generateAiInterviewFeedback({
-    humeChatId: interview.humeChatId,
-    jobInfo: interview.jobInfo,
-    userName: user.name,
-  })
+  let feedback: string | null = null
+  try {
+    feedback = await generateAiInterviewFeedback({
+      humeChatId: interview.humeChatId,
+      vapiTranscript: interview.vapiTranscript,
+      jobInfo: interview.jobInfo,
+      userName: user.name,
+    })
+  } catch (e) {
+    console.error("Failed to generate feedback:", e)
+    return {
+      error: true,
+      message: "Không thể tạo đánh giá. Vui lòng thử lại sau.",
+    }
+  }
 
   if (feedback == null) {
     return {
@@ -176,4 +190,18 @@ async function getInterview(id: string, userId: string) {
   if (interview.jobInfo.userId !== userId) return null
 
   return interview
+}
+
+export async function getInterviewsForJobInfo(jobInfoId: string) {
+  const { userId } = await getCurrentUser()
+  if (userId == null) return []
+
+  // Verify the jobInfo belongs to this user
+  const jobInfo = await db.query.JobInfoTable.findFirst({
+    where: and(eq(JobInfoTable.id, jobInfoId), eq(JobInfoTable.userId, userId)),
+    columns: { id: true },
+  })
+  if (jobInfo == null) return []
+
+  return getInterviewsByJobInfoId(jobInfoId)
 }

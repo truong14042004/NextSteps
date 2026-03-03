@@ -1,15 +1,34 @@
 import { SignUp } from "@clerk/nextjs"
+import Link from "next/link"
 
 export default function SignUpPage() {
   return (
     <div className="flex h-screen w-screen items-center justify-center">
-      <SignUp
-        appearance={{
-          elements: {
-            footer: "hidden",
-          },
-        }}
-      />
+      <div className="space-y-6">
+        <SignUp
+          signInUrl="/sign-in"
+          appearance={{
+            elements: {
+              footer: "hidden",
+              badge: "hidden",
+              footerActionLink: "hidden",
+              poweredByClerkContainer: "hidden",
+            },
+          }}
+        />
+
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">
+            Đã có tài khoản?{" "}
+            <Link
+              href="/sign-in"
+              className="text-primary hover:underline font-medium"
+            >
+              Đăng nhập ngay
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

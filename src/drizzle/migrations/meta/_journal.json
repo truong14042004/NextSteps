@@ -8,6 +8,20 @@
       "when": 1753390582336,
       "tag": "0000_many_speed_demon",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772464074956,
+      "tag": "0001_flowery_fabian_cortez",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772515743224,
+      "tag": "0002_vapi_transcript",
+      "breakpoints": true
     }
   ]
 }

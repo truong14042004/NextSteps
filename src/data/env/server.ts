@@ -16,6 +16,7 @@ export const env = createEnv({
     CLERK_SECRET_KEY: z.string().min(1).default("placeholder"),
     HUME_API_KEY: z.string().min(1).default("placeholder"),
     HUME_SECRET_KEY: z.string().min(1).default("placeholder"),
+    VAPI_PRIVATE_KEY: z.string().min(1).optional(),
     GEMINI_API_KEY: z.string().min(1).default("placeholder"),
   },
   client: {
@@ -24,6 +25,8 @@ export const env = createEnv({
     NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: z.string().default("/app"),
     NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL: z.string().default("/app"),
     NEXT_PUBLIC_HUME_CONFIG_ID: z.string().default("placeholder"),
+    NEXT_PUBLIC_VAPI_PUBLIC_KEY: z.string().min(1).optional(),
+    NEXT_PUBLIC_VAPI_ASSISTANT_ID: z.string().min(1).optional(),
   },
   createFinalSchema: env => {
     return z.object(env).transform(val => {
@@ -40,6 +43,7 @@ export const env = createEnv({
         CLERK_SECRET_KEY: val.CLERK_SECRET_KEY!,
         HUME_API_KEY: val.HUME_API_KEY,
         HUME_SECRET_KEY: val.HUME_SECRET_KEY,
+        VAPI_PRIVATE_KEY: val.VAPI_PRIVATE_KEY,
         GEMINI_API_KEY: val.GEMINI_API_KEY!,
       }
     })
@@ -51,6 +55,8 @@ export const env = createEnv({
     NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: process.env.NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL,
     NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL: process.env.NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL,
     NEXT_PUBLIC_HUME_CONFIG_ID: process.env.NEXT_PUBLIC_HUME_CONFIG_ID,
+    NEXT_PUBLIC_VAPI_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY,
+    NEXT_PUBLIC_VAPI_ASSISTANT_ID: process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION || process.env.npm_lifecycle_event === "build",
 })
