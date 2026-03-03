@@ -12,7 +12,15 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
           ...viVN.signIn,
           start: {
             ...viVN.signIn?.start,
-            title: "Chào mừng bạn đến với NextStep",
+            title: "Đăng nhập vào NextStep",
+            titleCombined: "Tiếp tục đến NextStep",
+          },
+        },
+        signUp: {
+          ...viVN.signUp,
+          start: {
+            ...viVN.signUp?.start,
+            title: "Tạo tài khoản NextStep",
           },
         },
       }}
