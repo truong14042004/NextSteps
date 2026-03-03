@@ -36,7 +36,7 @@ export function VoiceInterviewCall({
       2: "OPEN",
       3: "CLOSED"
     }
-    console.log("🔄 Voice state changed:", stateNames[readyState as number] || readyState)
+    console.log("🔄 Voice state changed:", stateNames[readyState as unknown as number] || readyState)
     
     // Log error if exists
     if (error) {
