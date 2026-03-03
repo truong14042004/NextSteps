@@ -1,10 +1,23 @@
-import { SignUpForm } from "@/features/auth/components/SignUpForm"
+import { SignUp } from "@clerk/nextjs"
+import Link from "next/link"
 
 export default function SignUpPage() {
   return (
-    <div className="flex min-h-screen w-full items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <SignUpForm />
+    <div className="flex h-screen w-screen items-center justify-center">
+      <div className="space-y-6">
+        <SignUp />
+
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">
+            Đã có tài khoản?{" "}
+            <Link
+              href="/sign-in"
+              className="text-primary hover:underline font-medium"
+            >
+              Đăng nhập ngay
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   )
