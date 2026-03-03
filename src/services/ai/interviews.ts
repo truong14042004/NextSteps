@@ -5,34 +5,50 @@ import { google } from "./models/google"
 
 export async function generateAiInterviewFeedback({
   humeChatId,
+  vapiTranscript,
   jobInfo,
   userName,
 }: {
-  humeChatId: string
+  humeChatId?: string | null
+  vapiTranscript?: string | null
   jobInfo: Pick<
     typeof JobInfoTable.$inferSelect,
     "title" | "description" | "experienceLevel"
   >
   userName: string
 }) {
-  const messages = await fetchChatMessages(humeChatId)
+  let formattedMessages: { speaker: string; text: string; emotionFeatures?: unknown }[]
 
-  const formattedMessages = messages
-    .map(message => {
-      if (message.type !== "USER_MESSAGE" && message.type !== "AGENT_MESSAGE") {
-        return null
-      }
-      if (message.messageText == null) return null
+  if (vapiTranscript != null) {
+    // Vapi transcript: already an array of {role, content}
+    const raw: Array<{ role: string; content: string }> = JSON.parse(vapiTranscript)
+    formattedMessages = raw
+      .filter(m => m.role === "assistant" || m.role === "user")
+      .map(m => ({
+        speaker: m.role === "user" ? "interviewee" : "interviewer",
+        text: m.content,
+      }))
+  } else if (humeChatId != null) {
+    const messages = await fetchChatMessages(humeChatId)
+    formattedMessages = messages
+      .map(message => {
+        if (message.type !== "USER_MESSAGE" && message.type !== "AGENT_MESSAGE") {
+          return null
+        }
+        if (message.messageText == null) return null
 
-      return {
-        speaker:
-          message.type === "USER_MESSAGE" ? "interviewee" : "interviewer",
-        text: message.messageText,
-        emotionFeatures:
-          message.role === "USER" ? message.emotionFeatures : undefined,
-      }
-    })
-    .filter(f => f != null)
+        return {
+          speaker:
+            message.type === "USER_MESSAGE" ? "interviewee" : "interviewer",
+          text: message.messageText,
+          emotionFeatures:
+            message.role === "USER" ? message.emotionFeatures : undefined,
+        }
+      })
+      .filter(f => f != null)
+  } else {
+    return null
+  }
 
   const { text } = await generateText({
     model: google("gemini-2.5-flash"),
@@ -107,6 +123,7 @@ Additional Notes:
 - Do not include an h1 title or information about the job description in your response, just include the feedback.
 - Refer to the interviewee as "you" in your feedback. This feedback should be written as if you were speaking directly to the interviewee.
 - Include a number rating (out of 10) in the heading for each category (e.g., "Communication Clarity: 8/10") as well as an overall rating at the very start of the response.
+- Provide all feedback in Vietnamese (Tiếng Việt).
 - Stop generating output as soon you have provided the full feedback.`,
   })
 

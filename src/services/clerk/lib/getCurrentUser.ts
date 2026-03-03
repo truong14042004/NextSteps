@@ -15,7 +15,7 @@ export async function getCurrentUser({ allData = false } = {}) {
   }
 }
 
-async function getUser(id: string) {
+export async function getUser(id: string) {
   "use cache"
   cacheTag(getUserIdTag(id))
 

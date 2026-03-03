@@ -1,36 +1,7 @@
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { db } from "@/drizzle/db"
-import { JobInfoTable } from "@/drizzle/schema"
-import { JobInfoForm } from "@/features/jobInfos/components/JobInfoForm"
-import { getJobInfoUserTag } from "@/features/jobInfos/dbCache"
-import { formatExperienceLevel } from "@/features/jobInfos/lib/formatters"
-import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
-import { desc, eq } from "drizzle-orm"
-import { ArrowRightIcon, Loader2Icon, PlusIcon } from "lucide-react"
-import { cacheTag } from "next/dist/server/use-cache/cache-tag"
-import Link from "next/link"
-import { Suspense } from "react"
+import CVJDAnalysisPage from "./_CVJDAnalysis"
 
 export default function AppPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="h-screen-header flex items-center justify-center">
-          <Loader2Icon className="size-24 animate-spin" />
-        </div>
-      }
-    >
-      <JobInfos />
-    </Suspense>
-  )
+  return <CVJDAnalysisPage />
 }
 
 async function JobInfos() {

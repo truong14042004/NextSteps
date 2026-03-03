@@ -1,11 +1,11 @@
-import { pgEnum, pgTable, varchar } from "drizzle-orm/pg-core"
+import { pgEnum, pgTable, text, varchar } from "drizzle-orm/pg-core"
 import { createdAt, id, updatedAt } from "../schemaHelpers"
 import { UserTable } from "./user"
 import { relations } from "drizzle-orm"
 import { QuestionTable } from "./question"
 import { InterviewTable } from "./interview"
 
-export const experienceLevels = ["junior", "mid-level", "senior"] as const
+export const experienceLevels = ["intern", "fresh", "junior", "mid-level", "senior"] as const
 export type ExperienceLevel = (typeof experienceLevels)[number]
 export const experienceLevelEnum = pgEnum(
   "job_infos_experience_level",
@@ -18,6 +18,8 @@ export const JobInfoTable = pgTable("job_info", {
   name: varchar().notNull(),
   experienceLevel: experienceLevelEnum().notNull(),
   description: varchar().notNull(),
+  resumeUrl: varchar(),
+  analysisResult: text(),
   userId: varchar()
     .references(() => UserTable.id, { onDelete: "cascade" })
     .notNull(),

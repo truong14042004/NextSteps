@@ -1,7 +1,7 @@
 import { db } from "@/drizzle/db"
 import { InterviewTable } from "@/drizzle/schema"
 import { revalidateInterviewCache } from "./dbCache"
-import { eq } from "drizzle-orm"
+import { desc, eq } from "drizzle-orm"
 
 export async function insertInterview(
   interview: typeof InterviewTable.$inferInsert
@@ -29,4 +29,19 @@ export async function updateInterview(
   revalidateInterviewCache(newInterview)
 
   return newInterview
+}
+
+export async function getInterviewsByJobInfoId(jobInfoId: string) {
+  return db.query.InterviewTable.findMany({
+    where: eq(InterviewTable.jobInfoId, jobInfoId),
+    orderBy: desc(InterviewTable.createdAt),
+    columns: {
+      id: true,
+      duration: true,
+      feedback: true,
+      createdAt: true,
+      vapiTranscript: true,
+      humeChatId: true,
+    },
+  })
 }

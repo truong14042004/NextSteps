@@ -23,15 +23,27 @@ import { DeepPartial } from "ai"
 import {
   AlertCircleIcon,
   CheckCircleIcon,
+  ChevronDownIcon,
+  RefreshCwIcon,
   UploadIcon,
   XCircleIcon,
 } from "lucide-react"
 import { ReactNode, useRef, useState } from "react"
 import { toast } from "sonner"
 import z from "zod"
+import { Button } from "@/components/ui/button"
 
-export function ResumePageClient({ jobInfoId }: { jobInfoId: string }) {
+export function ResumePageClient({
+  jobInfoId,
+  storedAnalysis,
+  jobDetails,
+}: {
+  jobInfoId: string
+  storedAnalysis?: unknown
+  jobDetails?: { title: string; experienceLevel: string; description: string }
+}) {
   const [isDragOver, setIsDragOver] = useState(false)
+  const [showUpload, setShowUpload] = useState(!storedAnalysis)
   const fileRef = useRef<File | null>(null)
 
   const {
@@ -50,6 +62,11 @@ export function ResumePageClient({ jobInfoId }: { jobInfoId: string }) {
         formData.append("resumeFile", fileRef.current)
       }
       formData.append("jobInfoId", jobInfoId)
+      if (jobDetails) {
+        formData.append("jobTitle", jobDetails.title)
+        formData.append("experienceLevel", jobDetails.experienceLevel)
+        formData.append("description", jobDetails.description)
+      }
 
       return fetch(url, { ...options, headers, body: formData })
     },
@@ -81,69 +98,91 @@ export function ResumePageClient({ jobInfoId }: { jobInfoId: string }) {
 
   return (
     <div className="space-y-8 w-full">
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {isLoading ? "Analyzing your resume" : "Upload your resume"}
-          </CardTitle>
-          <CardDescription>
-            {isLoading
-              ? "This may take a couple minutes"
-              : "Get personalized feedback on your resume based on the job"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LoadingSwap loadingIconClassName="size-16" isLoading={isLoading}>
-            <div
-              className={cn(
-                "mt-2 border-2 border-dashed rounded-lg p-6 transition-colors relative",
-                isDragOver
-                  ? "border-primary bg-primary/5"
-                  : "border-muted-foreground/50 bg-muted/10"
-              )}
-              onDragOver={e => {
-                e.preventDefault()
-                setIsDragOver(true)
-              }}
-              onDragLeave={e => {
-                e.preventDefault()
-                setIsDragOver(false)
-              }}
-              onDrop={e => {
-                e.preventDefault()
-                setIsDragOver(false)
-                handleFileUpload(e.dataTransfer.files[0] ?? null)
-              }}
-            >
-              <label htmlFor="resume-upload" className="sr-only">
-                Upload your resume
-              </label>
-              <input
-                id="resume-upload"
-                type="file"
-                accept=".pdf,.doc,.docx,.txt"
-                className="opacity-0 absolute inset-0 cursor-pointer"
-                onChange={e => {
-                  handleFileUpload(e.target.files?.[0] ?? null)
+      {/* If we have a stored result and not loading a new one, show toggle button */}
+      {storedAnalysis && !aiAnalysis && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowUpload(v => !v)}
+          className="flex items-center gap-2"
+        >
+          <RefreshCwIcon className="size-4" />
+          Phân tích lại
+          <ChevronDownIcon className={cn("size-4 transition-transform", showUpload && "rotate-180")} />
+        </Button>
+      )}
+
+      {(showUpload || !storedAnalysis) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {isLoading ? "Analyzing your resume" : storedAnalysis ? "Phân tích lại" : "Upload your resume"}
+            </CardTitle>
+            <CardDescription>
+              {isLoading
+                ? "This may take a couple minutes"
+                : storedAnalysis
+                ? "Upload CV mới để cập nhật kết quả phân tích"
+                : "Get personalized feedback on your resume based on the job"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LoadingSwap loadingIconClassName="size-16" isLoading={isLoading}>
+              <div
+                className={cn(
+                  "mt-2 border-2 border-dashed rounded-lg p-6 transition-colors relative",
+                  isDragOver
+                    ? "border-primary bg-primary/5"
+                    : "border-muted-foreground/50 bg-muted/10"
+                )}
+                onDragOver={e => {
+                  e.preventDefault()
+                  setIsDragOver(true)
                 }}
-              />
-              <div className="flex flex-col items-center justify-center text-center gap-4">
-                <UploadIcon className="size-12 text-muted-foreground" />
-                <div className="space-y-2">
-                  <p className="text-lg">
-                    Drag your resume here or click to upload
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Supported formats: PDF, Word docs, and text files
-                  </p>
+                onDragLeave={e => {
+                  e.preventDefault()
+                  setIsDragOver(false)
+                }}
+                onDrop={e => {
+                  e.preventDefault()
+                  setIsDragOver(false)
+                  handleFileUpload(e.dataTransfer.files[0] ?? null)
+                }}
+              >
+                <label htmlFor="resume-upload" className="sr-only">
+                  Upload your resume
+                </label>
+                <input
+                  id="resume-upload"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.txt"
+                  className="opacity-0 absolute inset-0 cursor-pointer"
+                  onChange={e => {
+                    handleFileUpload(e.target.files?.[0] ?? null)
+                  }}
+                />
+                <div className="flex flex-col items-center justify-center text-center gap-4">
+                  <UploadIcon className="size-12 text-muted-foreground" />
+                  <div className="space-y-2">
+                    <p className="text-lg">
+                      Drag your resume here or click to upload
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Supported formats: PDF, Word docs, and text files
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </LoadingSwap>
-        </CardContent>
-      </Card>
+            </LoadingSwap>
+          </CardContent>
+        </Card>
+      )}
 
-      <AnalysisResults aiAnalysis={aiAnalysis} isLoading={isLoading} />
+      {/* Show new analysis result if streaming, otherwise show stored result */}
+      <AnalysisResults
+        aiAnalysis={aiAnalysis ?? (storedAnalysis as DeepPartial<z.infer<typeof aiAnalyzeSchema>> | undefined)}
+        isLoading={isLoading}
+      />
     </div>
   )
 }

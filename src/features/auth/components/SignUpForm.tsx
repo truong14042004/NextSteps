@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { useSignUp } from "@clerk/nextjs"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
@@ -25,14 +25,29 @@ import {
 import { LoadingSwap } from "@/components/ui/loading-swap"
 import { signUpSchema, SignUpFormData } from "../schemas"
 import { toast } from "sonner"
-import { EyeIcon, EyeOffIcon } from "lucide-react"
+import { EyeIcon, EyeOffIcon, MailIcon } from "lucide-react"
 import Link from "next/link"
+
+type VerificationStep = "signup" | "verify"
 
 export function SignUpForm() {
   const { signUp, setActive } = useSignUp()
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [verificationStep, setVerificationStep] = useState<VerificationStep>("signup")
+  const [verificationCode, setVerificationCode] = useState("")
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [isResending, setIsResending] = useState(false)
+  const [resendTimer, setResendTimer] = useState(0)
+
+  // Countdown timer for resend button
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timeout = setTimeout(() => setResendTimer(resendTimer - 1), 1000)
+      return () => clearTimeout(timeout)
+    }
+  }, [resendTimer])
 
   const form = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
@@ -58,12 +73,17 @@ export function SignUpForm() {
       })
 
       if (result.status === "complete") {
-        // Set the session active
+        // Account created without verification requirement
         await setActive({ session: result.createdSessionId })
-        router.push("/app")
-      } else if (result.status === "missing_requirements") {
-        // Handle email verification if needed
-        toast.error("Please verify your email address")
+        router.push("/app?new=true")
+      } else {
+        // Email verification required
+        await signUp.prepareEmailAddressVerification({ 
+          strategy: "email_code" 
+        })
+        setVerificationStep("verify")
+        setResendTimer(60)
+        toast.success("Verification code sent to your email")
       }
     } catch (err: any) {
       const errorMessage = err?.errors?.[0]?.message || "Failed to create account"
@@ -71,6 +91,117 @@ export function SignUpForm() {
     }
   }
 
+  async function handleVerifyCode() {
+    if (!signUp || !verificationCode) return
+
+    setIsVerifying(true)
+    try {
+      const result = await signUp.attemptEmailAddressVerification({
+        code: verificationCode,
+      })
+
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId })
+        toast.success("Email verified successfully!")
+        router.push("/app?new=true")
+      } else {
+        toast.error("Verification incomplete. Please try again.")
+      }
+    } catch (err: any) {
+      const errorMessage = err?.errors?.[0]?.message || "Invalid verification code"
+      toast.error(errorMessage)
+    } finally {
+      setIsVerifying(false)
+    }
+  }
+
+  async function handleResendCode() {
+    if (!signUp || resendTimer > 0) return
+
+    setIsResending(true)
+    try {
+      await signUp.prepareEmailAddressVerification({ 
+        strategy: "email_code" 
+      })
+      setResendTimer(60)
+      toast.success("Verification code resent!")
+    } catch (err: any) {
+      toast.error("Failed to resend code. Please try again.")
+    } finally {
+      setIsResending(false)
+    }
+  }
+
+  // Show verification step
+  if (verificationStep === "verify") {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <MailIcon className="h-6 w-6 text-primary" />
+          </div>
+          <CardTitle className="text-center">Check your email</CardTitle>
+          <CardDescription className="text-center">
+            We sent a verification code to{" "}
+            <span className="font-medium text-foreground">
+              {signUp?.emailAddress}
+            </span>
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="code" className="text-sm font-medium">
+              Verification Code
+            </label>
+            <Input
+              id="code"
+              placeholder="Enter 6-digit code"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value)}
+              maxLength={6}
+              className="text-center text-2xl tracking-widest"
+              autoComplete="one-time-code"
+            />
+          </div>
+
+          <Button
+            onClick={handleVerifyCode}
+            disabled={isVerifying || verificationCode.length !== 6}
+            className="w-full"
+          >
+            <LoadingSwap isLoading={isVerifying}>
+              Verify Email
+            </LoadingSwap>
+          </Button>
+
+          <div className="text-center text-sm">
+            <button
+              type="button"
+              onClick={handleResendCode}
+              disabled={isResending || resendTimer > 0}
+              className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+            >
+              {resendTimer > 0 
+                ? `Resend code in ${resendTimer}s` 
+                : "Resend code"}
+            </button>
+          </div>
+
+          <div className="text-center text-sm text-muted-foreground">
+            <button
+              type="button"
+              onClick={() => setVerificationStep("signup")}
+              className="text-primary hover:underline"
+            >
+              ← Back to sign up
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Show signup step
   return (
     <Card>
       <CardHeader>

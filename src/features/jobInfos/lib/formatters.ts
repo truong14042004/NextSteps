@@ -2,6 +2,10 @@ import { ExperienceLevel } from "@/drizzle/schema"
 
 export function formatExperienceLevel(level: ExperienceLevel) {
   switch (level) {
+    case "intern":
+      return "Intern"
+    case "fresh":
+      return "Fresh Graduate"
     case "junior":
       return "Junior"
     case "mid-level":
