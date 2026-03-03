@@ -99,7 +99,7 @@ export function ResumePageClient({
   return (
     <div className="space-y-8 w-full">
       {/* If we have a stored result and not loading a new one, show toggle button */}
-      {storedAnalysis && !aiAnalysis && (
+      {!!storedAnalysis && !aiAnalysis && (
         <Button
           variant="outline"
           size="sm"
