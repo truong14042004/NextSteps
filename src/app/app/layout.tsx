@@ -1,8 +1,38 @@
 import { getCurrentUser, getUser } from "@/services/clerk/lib/getCurrentUser"
+import { upsertUser } from "@/features/users/db"
+import { clerkClient } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 import { ReactNode } from "react"
 import { Navbar } from "./_Navbar"
 import { Sidebar } from "./_Sidebar"
+
+async function syncUserFromClerkById(userId: string) {
+  try {
+    const client = await clerkClient()
+    const clerkUser = await client.users.getUser(userId)
+    const primaryEmail = clerkUser.emailAddresses.find(
+      email => email.id === clerkUser.primaryEmailAddressId
+    )?.emailAddress
+
+    if (!primaryEmail) return false
+
+    await upsertUser({
+      id: clerkUser.id,
+      email: primaryEmail,
+      name:
+        `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() ||
+        "User",
+      imageUrl: clerkUser.imageUrl || "",
+      createdAt: new Date(clerkUser.createdAt),
+      updatedAt: new Date(clerkUser.updatedAt),
+    })
+
+    return true
+  } catch (error) {
+    console.error("Failed to sync user from Clerk:", error)
+    return false
+  }
+}
 
 async function getUserWithRetry(
   userId: string,
@@ -37,7 +67,14 @@ export default async function AppLayout({
   const params = await searchParams
   const isNewUser = params?.new === "true"
   
-  const user = await getUserWithRetry(userId, isNewUser)
+  let user = await getUserWithRetry(userId, isNewUser)
+
+  if (user == null) {
+    const synced = await syncUserFromClerkById(userId)
+    if (synced) {
+      user = await getUserWithRetry(userId, false)
+    }
+  }
   
   if (user == null) {
     console.error("User not found in DB after retries")
