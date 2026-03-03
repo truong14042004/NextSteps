@@ -5,7 +5,7 @@ export default function SignUpPage() {
   return (
     <div className="flex h-screen w-screen items-center justify-center">
       <div className="space-y-6">
-        <SignUp />
+        <SignUp signInUrl="/sign-in" />
 
         <div className="text-center">
           <p className="text-sm text-muted-foreground">
