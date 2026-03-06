@@ -38,12 +38,12 @@ export function AnalysisResults({
   if (!isLoading && aiAnalysis == null) return null
 
   const sections: Record<Keys, string> = {
-    ats: "ATS Compatibility",
-    jobMatch: "Job Match",
-    writingAndFormatting: "Writing and Formatting",
-    keywordCoverage: "Keyword Coverage",
-    other: "Additional Insights",
-  }
+  ats: "Tương thích ATS",
+  jobMatch: "Mức độ phù hợp công việc",
+  writingAndFormatting: "Viết & Trình bày",
+  keywordCoverage: "Mức độ bao phủ từ khóa",
+  other: "Nhận xét bổ sung",
+}
 
   return (
     <Card>
@@ -53,7 +53,7 @@ export function AnalysisResults({
           {aiAnalysis?.overallScore == null ? (
             <Skeleton className="w-32" />
           ) : (
-            `Overall Score: ${aiAnalysis.overallScore}/10`
+            `Tổng Điểm: ${aiAnalysis.overallScore}/10`
           )}
         </CardDescription>
       </CardHeader>
@@ -119,11 +119,11 @@ function CategoryAccordionHeader({
   if (score == null) {
     badge = <Skeleton className="w-16" />
   } else if (score >= 8) {
-    badge = <Badge>Excellent</Badge>
+    badge = <Badge>Rất Tốt</Badge>
   } else if (score >= 6) {
-    badge = <Badge variant="warning">Ok</Badge>
+    badge = <Badge variant="warning">Khá</Badge>
   } else {
-    badge = <Badge variant="destructive">Needs Work</Badge>
+    badge = <Badge variant="destructive">Cần Cải Thiện</Badge>
   }
 
   return (
