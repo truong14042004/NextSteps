@@ -1,7 +1,7 @@
 import "server-only"
 
 import { db } from "@/drizzle/db"
-import { AuthCredentialTable } from "@/drizzle/schema"
+import { AuthCredentialTable, UserTable } from "@/drizzle/schema"
 import { eq } from "drizzle-orm"
 import { logAuthInfo, logAuthWarn } from "./logger"
 import { verifyPassword } from "./password"
@@ -11,29 +11,47 @@ type LoginResult =
   | { ok: true }
   | { ok: false; status: number; message: string }
 
-function normalizeUsername(username: string) {
-  return username.trim().toLowerCase()
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase()
 }
 
 export async function loginWithPassword({
-  username,
+  email,
   password,
 }: {
-  username: string
+  email: string
   password: string
 }): Promise<LoginResult> {
-  const normalizedUsername = normalizeUsername(username)
+  const normalizedEmail = normalizeEmail(email)
 
-  if (normalizedUsername.length === 0 || password.trim().length === 0) {
+  if (normalizedEmail.length === 0 || password.trim().length === 0) {
     return {
       ok: false,
       status: 400,
-      message: "Vui lòng nhập tên đăng nhập và mật khẩu.",
+      message: "Vui lòng nhập email và mật khẩu.",
+    }
+  }
+
+  const user = await db.query.UserTable.findFirst({
+    where: eq(UserTable.email, normalizedEmail),
+    columns: {
+      id: true,
+    },
+  })
+
+  if (user == null) {
+    logAuthWarn("password_login_user_not_found", {
+      email: normalizedEmail,
+    })
+    return {
+      ok: false,
+      status: 401,
+      message: "Email hoặc mật khẩu không đúng.",
     }
   }
 
   const credential = await db.query.AuthCredentialTable.findFirst({
-    where: eq(AuthCredentialTable.username, normalizedUsername),
+    where: eq(AuthCredentialTable.userId, user.id),
     columns: {
       userId: true,
       passwordHash: true,
@@ -41,13 +59,14 @@ export async function loginWithPassword({
   })
 
   if (credential == null) {
-    logAuthWarn("password_login_user_not_found", {
-      username: normalizedUsername,
+    logAuthWarn("password_login_no_credential", {
+      email: normalizedEmail,
+      userId: user.id,
     })
     return {
       ok: false,
       status: 401,
-      message: "Tên đăng nhập hoặc mật khẩu không đúng.",
+      message: "Email hoặc mật khẩu không đúng.",
     }
   }
 
@@ -62,7 +81,7 @@ export async function loginWithPassword({
     return {
       ok: false,
       status: 401,
-      message: "Tên đăng nhập hoặc mật khẩu không đúng.",
+      message: "Email hoặc mật khẩu không đúng.",
     }
   }
 

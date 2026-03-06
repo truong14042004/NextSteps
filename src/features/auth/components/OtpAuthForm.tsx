@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { LoadingSwap } from "@/components/ui/loading-swap"
-import { MailIcon } from "lucide-react"
+import { MailIcon, Chrome } from "lucide-react"
 
 type Mode = "sign_in" | "sign_up"
 type Step = "form" | "verify_otp"
@@ -22,7 +22,6 @@ type Step = "form" | "verify_otp"
 type SignUpFormState = {
   firstName: string
   lastName: string
-  username: string
   email: string
   password: string
   confirmPassword: string
@@ -60,13 +59,12 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
   const searchParams = useSearchParams()
   const handledGoogleError = useRef<string | null>(null)
 
-  const [signInUsername, setSignInUsername] = useState("")
+  const [signInEmail, setSignInEmail] = useState("")
   const [signInPassword, setSignInPassword] = useState("")
 
   const [signUpForm, setSignUpForm] = useState<SignUpFormState>({
     firstName: "",
     lastName: "",
-    username: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -109,7 +107,7 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
 
     try {
       await callApi("/api/auth/login", {
-        username: signInUsername,
+        email: signInEmail,
         password: signInPassword,
       })
       toast.success("Đăng nhập thành công.")
@@ -138,7 +136,6 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
         email: signUpForm.email,
         firstName: signUpForm.firstName,
         lastName: signUpForm.lastName,
-        username: signUpForm.username,
         password: signUpForm.password,
         purpose: "sign_up",
       })
@@ -185,7 +182,6 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
         email: signUpForm.email,
         firstName: signUpForm.firstName,
         lastName: signUpForm.lastName,
-        username: signUpForm.username,
         password: signUpForm.password,
         purpose: "sign_up",
       })
@@ -220,7 +216,7 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
               inputMode="numeric"
               autoComplete="one-time-code"
               className="text-center text-2xl tracking-widest"
-              placeholder="000000"
+              placeholder=""
               required
             />
             <Button className="w-full" disabled={isSubmitting || code.length !== 6}>
@@ -262,10 +258,11 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
         <CardContent>
           <form onSubmit={onSignInWithPassword} className="space-y-4">
             <Input
-              value={signInUsername}
-              onChange={e => setSignInUsername(e.target.value)}
-              placeholder="Tên đăng nhập"
-              autoComplete="username"
+              type="email"
+              value={signInEmail}
+              onChange={e => setSignInEmail(e.target.value)}
+              placeholder="Email"
+              autoComplete="email"
               required
             />
             <Input
@@ -286,7 +283,8 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
               disabled={isSubmitting}
               onClick={onGoogleAuth}
             >
-              Vào nhanh bằng Google
+              <Chrome className="mr-2 h-4 w-4" />
+              Đăng nhập bằng Google
             </Button>
             <p className="text-center text-sm text-muted-foreground">
               {altText}{" "}
@@ -304,9 +302,6 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
     <Card>
       <CardHeader>
         <CardTitle>Đăng ký tài khoản</CardTitle>
-        <CardDescription>
-          Điền đầy đủ thông tin. Sau đó bạn phải nhập OTP để vào dashboard.
-        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSignUpRequestOtp} className="space-y-4">
@@ -330,15 +325,6 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
               required
             />
           </div>
-          <Input
-            value={signUpForm.username}
-            onChange={e =>
-              setSignUpForm(prev => ({ ...prev, username: e.target.value }))
-            }
-            placeholder="Tên đăng nhập"
-            autoComplete="username"
-            required
-          />
           <Input
             type="email"
             value={signUpForm.email}
@@ -368,7 +354,7 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
             required
           />
           <Button className="w-full" disabled={isSubmitting}>
-            <LoadingSwap isLoading={isSubmitting}>Đăng ký và nhận OTP</LoadingSwap>
+            <LoadingSwap isLoading={isSubmitting}>Đăng ký</LoadingSwap>
           </Button>
           <Button
             type="button"
@@ -377,7 +363,8 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
             disabled={isSubmitting}
             onClick={onGoogleAuth}
           >
-            Đăng ký nhanh bằng Google
+            <Chrome className="mr-2 h-4 w-4" />
+            Đăng ký bằng Google
           </Button>
           <p className="text-xs text-muted-foreground">
             Sau khi đăng ký, bạn cần nhập OTP từ email để xác thực trước khi vào dashboard.

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import z from "zod"
 
 const schema = z.object({
-  username: z.string().trim().min(1).max(32),
+  email: z.string().trim().email(),
   password: z.string().min(1).max(200),
 })
 

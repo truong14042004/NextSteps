@@ -129,21 +129,28 @@ export async function requestOtp({
   if (purpose === "sign_up") {
     signUpFirstName = firstName?.trim() ?? ""
     signUpLastName = lastName?.trim() ?? ""
-    signUpUsername = normalizeUsername(username ?? "")
     const rawPassword = password?.trim() ?? ""
 
     if (
       signUpFirstName.length === 0 ||
       signUpLastName.length === 0 ||
-      signUpUsername.length === 0 ||
       rawPassword.length === 0
     ) {
       return {
         ok: false,
         status: 400,
         message:
-          "Vui lòng nhập đầy đủ tên, họ, tên đăng nhập và mật khẩu để đăng ký.",
+          "Vui lòng nhập đầy đủ tên, họ và mật khẩu để đăng ký.",
       }
+    }
+
+    // Auto-generate username from email (remove domain)
+    const emailLocalPart = normalizedEmail.split("@")[0]
+    signUpUsername = normalizeUsername(emailLocalPart)
+
+    if (signUpUsername.length < 4) {
+      // If email part is too short, use firstname+lastname
+      signUpUsername = normalizeUsername(`${signUpFirstName}${signUpLastName}`.replace(/\s+/g, ""))
     }
 
     if (!USERNAME_REGEX.test(signUpUsername)) {
@@ -151,7 +158,7 @@ export async function requestOtp({
         ok: false,
         status: 400,
         message:
-          "Tên đăng nhập phải từ 4-32 ký tự, chỉ gồm chữ thường, số, dấu chấm, gạch ngang hoặc gạch dưới.",
+          "Không thể tạo tên đăng nhập. Vui lòng sử dụng email khác.",
       }
     }
 
