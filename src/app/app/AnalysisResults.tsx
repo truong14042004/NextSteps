@@ -1,49 +1,45 @@
-"use client"
+"use client";
 
-import { Skeleton } from "@/components/Skeleton"
+import { Skeleton } from "@/components/Skeleton";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { cn } from "@/lib/utils"
-import { aiAnalyzeSchema } from "@/services/ai/resumes/schemas"
-import { DeepPartial } from "ai"
-import {
-  AlertCircleIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-} from "lucide-react"
-import { ReactNode } from "react"
-import z from "zod"
+} from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { aiAnalyzeSchema } from "@/services/ai/resumes/schemas";
+import { DeepPartial } from "ai";
+import { AlertCircleIcon, CheckCircleIcon, XCircleIcon } from "lucide-react";
+import { ReactNode } from "react";
+import z from "zod";
 
-type Keys = Exclude<keyof z.infer<typeof aiAnalyzeSchema>, "overallScore">
+type Keys = Exclude<keyof z.infer<typeof aiAnalyzeSchema>, "overallScore">;
 
 export function AnalysisResults({
   aiAnalysis,
   isLoading,
 }: {
-  aiAnalysis: DeepPartial<z.infer<typeof aiAnalyzeSchema>> | undefined
-  isLoading: boolean
+  aiAnalysis: DeepPartial<z.infer<typeof aiAnalyzeSchema>> | undefined;
+  isLoading: boolean;
 }) {
-  if (!isLoading && aiAnalysis == null) return null
+  if (!isLoading && aiAnalysis == null) return null;
 
   const sections: Record<Keys, string> = {
-  ats: "Tương thích ATS",
-  jobMatch: "Mức độ phù hợp công việc",
-  writingAndFormatting: "Viết & Trình bày",
-  keywordCoverage: "Mức độ bao phủ từ khóa",
-  other: "Nhận xét bổ sung",
-}
+    ats: "Tương thích ATS",
+    jobMatch: "Mức độ phù hợp công việc",
+    writingAndFormatting: "Viết & Trình bày",
+    keywordCoverage: "Mức độ bao phủ từ khóa",
+    other: "Nhận xét bổ sung",
+  };
 
   return (
     <Card>
@@ -60,7 +56,7 @@ export function AnalysisResults({
       <CardContent>
         <Accordion type="multiple">
           {Object.entries(sections).map(([key, title]) => {
-            const category = aiAnalysis?.[key as Keys]
+            const category = aiAnalysis?.[key as Keys];
 
             return (
               <AccordionItem value={title} key={key}>
@@ -92,38 +88,38 @@ export function AnalysisResults({
                         </>
                       ) : (
                         category.feedback.map((item, index) => {
-                          if (item == null) return null
-                          return <FeedbackItem key={index} {...item} />
+                          if (item == null) return null;
+                          return <FeedbackItem key={index} {...item} />;
                         })
                       )}
                     </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
-            )
+            );
           })}
         </Accordion>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function CategoryAccordionHeader({
   title,
   score,
 }: {
-  title: string
-  score: number | undefined | null
+  title: string;
+  score: number | undefined | null;
 }) {
-  let badge: ReactNode
+  let badge: ReactNode;
   if (score == null) {
-    badge = <Skeleton className="w-16" />
+    badge = <Skeleton className="w-16" />;
   } else if (score >= 8) {
-    badge = <Badge>Rất Tốt</Badge>
+    badge = <Badge>Rất Tốt</Badge>;
   } else if (score >= 6) {
-    badge = <Badge variant="warning">Khá</Badge>
+    badge = <Badge variant="warning">Khá</Badge>;
   } else {
-    badge = <Badge variant="destructive">Cần Cải Thiện</Badge>
+    badge = <Badge variant="destructive">Cần Cải Thiện</Badge>;
   }
 
   return (
@@ -134,7 +130,7 @@ function CategoryAccordionHeader({
       </div>
       {score == null ? <Skeleton className="w-12" /> : `${score}/10`}
     </div>
-  )
+  );
 }
 
 function FeedbackItem({
@@ -142,39 +138,39 @@ function FeedbackItem({
   name,
   type,
 }: Partial<z.infer<typeof aiAnalyzeSchema>["ats"]["feedback"][number]>) {
-  if (name == null || message == null || type == null) return null
+  if (name == null || message == null || type == null) return null;
 
   const getColors = () => {
     switch (type) {
       case "strength":
-        return "bg-primary/10 border border-primary/50"
+        return "bg-primary/10 border border-primary/50";
       case "major-improvement":
-        return "bg-destructive/10 dark:bg-destructive/20 border border-destructive/50 dark:border-destructive/70"
+        return "bg-destructive/10 dark:bg-destructive/20 border border-destructive/50 dark:border-destructive/70";
       case "minor-improvement":
-        return "bg-warning/10 border border-warning/40"
+        return "bg-warning/10 border border-warning/40";
       default:
-        throw new Error(`Unknown feedback type: ${type satisfies never}`)
+        throw new Error(`Unknown feedback type: ${type satisfies never}`);
     }
-  }
+  };
 
   const getIcon = () => {
     switch (type) {
       case "strength":
-        return <CheckCircleIcon className="size-4 text-primary" />
+        return <CheckCircleIcon className="size-4 text-primary" />;
       case "minor-improvement":
-        return <AlertCircleIcon className="size-4 text-warning" />
+        return <AlertCircleIcon className="size-4 text-warning" />;
       case "major-improvement":
-        return <XCircleIcon className="size-4 text-destructive" />
+        return <XCircleIcon className="size-4 text-destructive" />;
       default:
-        throw new Error(`Unknown feedback type: ${type satisfies never}`)
+        throw new Error(`Unknown feedback type: ${type satisfies never}`);
     }
-  }
+  };
 
   return (
     <div
       className={cn(
         "flex items-baseline gap-3 pl-3 pr-5 py-5 rounded-lg",
-        getColors()
+        getColors(),
       )}
     >
       <div>{getIcon()}</div>
@@ -183,5 +179,5 @@ function FeedbackItem({
         <div className="text-muted-foreground">{message}</div>
       </div>
     </div>
-  )
+  );
 }
