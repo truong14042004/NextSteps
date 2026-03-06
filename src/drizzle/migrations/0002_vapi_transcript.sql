@@ -1,1 +1,1 @@
-ALTER TABLE "interviews" ADD COLUMN "vapiTranscript" text;
+ALTER TABLE "interviews" ADD COLUMN IF NOT EXISTS "vapiTranscript" text;

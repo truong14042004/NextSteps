@@ -1,7 +1,6 @@
-import { Button } from "@/components/ui/button"
+﻿import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
-import { SignInButton, SignUpButton } from "@clerk/nextjs"
 import {
   BookOpenCheckIcon,
   Brain,
@@ -44,12 +43,12 @@ function Navbar() {
           <Suspense
             fallback={
               <div className="flex items-center gap-2">
-                <SignInButton forceRedirectUrl="/app">
-                  <Button variant="outline">Đăng nhập</Button>
-                </SignInButton>
-                <SignUpButton forceRedirectUrl="/app">
-                  <Button>Đăng ký</Button>
-                </SignUpButton>
+                <Button variant="outline" asChild>
+                  <Link href="/sign-in">Sign in</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/sign-up">Sign up</Link>
+                </Button>
               </div>
             }
           >
@@ -67,12 +66,12 @@ async function NavButton() {
   if (userId == null) {
     return (
       <div className="flex items-center gap-2">
-        <SignInButton forceRedirectUrl="/app">
-          <Button variant="outline">Đăng nhập</Button>
-        </SignInButton>
-        <SignUpButton forceRedirectUrl="/app">
-          <Button>Đăng ký</Button>
-        </SignUpButton>
+        <Button variant="outline" asChild>
+          <Link href="/sign-in">Sign in</Link>
+        </Button>
+        <Button asChild>
+          <Link href="/sign-up">Sign up</Link>
+        </Button>
       </div>
     )
   }
@@ -325,7 +324,7 @@ function DetailedFeatures() {
               </div>
               <div className="mt-4 p-3 bg-primary/10 rounded-lg">
                 <p className="text-xs text-primary font-medium mb-1">
-                  💡 Suggestion
+                  đŸ’¡ Suggestion
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Add 2 more quantified achievements to increase impact score
@@ -397,7 +396,7 @@ function DetailedFeatures() {
               </div>
 
               <div className="text-xs text-muted-foreground">
-                <span className="text-primary">✓</span> 3/5 test cases passed
+                <span className="text-primary">âœ“</span> 3/5 test cases passed
               </div>
             </div>
           </div>
@@ -659,3 +658,5 @@ function Footer() {
     </footer>
   )
 }
+
+

@@ -1,81 +1,59 @@
 "use client"
 
-import { PricingTable as ClerkPricingTable } from "@clerk/nextjs"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertTriangle } from "lucide-react"
-import { Component, ReactNode } from "react"
+import Link from "next/link"
 
-class PricingTableErrorBoundary extends Component<
-  { children: ReactNode },
-  { hasError: boolean }
-> {
-  constructor(props: { children: ReactNode }) {
-    super(props)
-    this.state = { hasError: false }
-  }
-
-  static getDerivedStateFromError() {
-    return { hasError: true }
-  }
-
-  render() {
-    if (this.state.hasError && process.env.NODE_ENV === "development") {
-      return (
-        <div className="max-w-4xl mx-auto">
-          <Alert variant="warning">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Billing Not Enabled</AlertTitle>
-            <AlertDescription>
-              Clerk billing is disabled. To enable the pricing table, visit{" "}
-              <a
-                href="https://dashboard.clerk.com/last-active?path=billing/settings"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                Clerk Billing Settings
-              </a>
-              .
-            </AlertDescription>
-          </Alert>
-
-          <div className="grid md:grid-cols-2 gap-6 mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Free Plan</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold mb-4">$0</p>
-                <p className="text-muted-foreground">
-                  Basic features for getting started
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Pro Plan</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold mb-4">$XX</p>
-                <p className="text-muted-foreground">
-                  Advanced features (configure in Clerk)
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )
-    }
-
-    return this.props.children
-  }
-}
+const plans = [
+  {
+    name: "Free",
+    price: "$0",
+    description: "For trying out core interview prep features.",
+    features: ["1 interview", "5 questions", "Basic resume analysis"],
+    cta: "Start Free",
+    href: "/sign-up",
+  },
+  {
+    name: "Pro",
+    price: "Contact us",
+    description: "For power users who need unlimited preparation.",
+    features: [
+      "Unlimited interviews",
+      "Unlimited questions",
+      "Unlimited resume analysis",
+    ],
+    cta: "Upgrade",
+    href: "/app/upgrade",
+    highlight: true,
+  },
+]
 
 export function PricingTable() {
   return (
-    <PricingTableErrorBoundary>
-      <ClerkPricingTable newSubscriptionRedirectUrl="/app" />
-    </PricingTableErrorBoundary>
+    <div className="grid gap-6 md:grid-cols-2">
+      {plans.map(plan => (
+        <Card key={plan.name} className={plan.highlight ? "border-primary" : ""}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>{plan.name}</CardTitle>
+              {plan.highlight ? <Badge>Popular</Badge> : null}
+            </div>
+            <p className="text-3xl font-bold">{plan.price}</p>
+            <p className="text-sm text-muted-foreground">{plan.description}</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              {plan.features.map(feature => (
+                <li key={feature}>- {feature}</li>
+              ))}
+            </ul>
+            <Button asChild className="w-full">
+              <Link href={plan.href}>{plan.cta}</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   )
 }

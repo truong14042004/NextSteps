@@ -1,10 +1,9 @@
 "use client"
 
-import {
-  BrainCircuitIcon,
-  LogOut,
-  User,
-} from "lucide-react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { BrainCircuitIcon, LogOut, User } from "lucide-react"
+import Link from "next/link"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import {
   DropdownMenu,
@@ -12,18 +11,29 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { SignOutButton, useClerk } from "@clerk/nextjs"
-import Link from "next/link"
 import { UserAvatar } from "@/features/users/components/UserAvatar"
-import { useState, useEffect } from "react"
 
 export function Navbar({ user }: { user: { name: string; imageUrl: string } }) {
-  const { openUserProfile } = useClerk()
+  const router = useRouter()
   const [mounted, setMounted] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  async function handleSignOut() {
+    if (isSigningOut) return
+
+    setIsSigningOut(true)
+    try {
+      await fetch("/api/auth/logout", { method: "POST" })
+      router.push("/")
+      router.refresh()
+    } finally {
+      setIsSigningOut(false)
+    }
+  }
 
   return (
     <nav className="h-header border-b">
@@ -34,28 +44,28 @@ export function Navbar({ user }: { user: { name: string; imageUrl: string } }) {
         </Link>
 
         <div className="flex items-center gap-4">
-
           <ThemeToggle />
 
-          {mounted && (
+          {mounted ? (
             <DropdownMenu>
               <DropdownMenuTrigger>
                 <UserAvatar user={user} />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => openUserProfile()}>
+                <DropdownMenuItem disabled>
                   <User className="mr-2" />
-                  Profile
+                  {user.name}
                 </DropdownMenuItem>
-                <SignOutButton>
-                  <DropdownMenuItem>
-                    <LogOut className="mr-2" />
-                    Logout
-                  </DropdownMenuItem>
-                </SignOutButton>
+                <DropdownMenuItem
+                  onClick={handleSignOut}
+                  disabled={isSigningOut}
+                >
+                  <LogOut className="mr-2" />
+                  Logout
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          )}
+          ) : null}
         </div>
       </div>
     </nav>
