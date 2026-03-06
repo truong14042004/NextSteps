@@ -1,29 +1,39 @@
 import arcjet, { detectBot, shield, slidingWindow } from "@arcjet/next"
-import { env } from "./data/env/server"
-import { NextRequest } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
-const aj = arcjet({
-  key: env.ARCJET_KEY,
-  rules: [
-    shield({ mode: "LIVE" }),
-    detectBot({
-      mode: "LIVE",
-      allow: ["CATEGORY:SEARCH_ENGINE", "CATEGORY:MONITOR", "CATEGORY:PREVIEW"],
-    }),
-    slidingWindow({
-      mode: "LIVE",
-      interval: "1m",
-      max: 100,
-    }),
-  ],
-})
+const arcjetKey = process.env.ARCJET_KEY
+const aj =
+  arcjetKey != null && arcjetKey !== "placeholder"
+    ? arcjet({
+        key: arcjetKey,
+        rules: [
+          shield({ mode: "LIVE" }),
+          detectBot({
+            mode: "LIVE",
+            allow: ["CATEGORY:SEARCH_ENGINE", "CATEGORY:MONITOR", "CATEGORY:PREVIEW"],
+          }),
+          slidingWindow({
+            mode: "LIVE",
+            interval: "1m",
+            max: 100,
+          }),
+        ],
+      })
+    : null
 
 export default async function middleware(req: NextRequest) {
-  const decision = await aj.protect(req)
+  if (aj == null) return NextResponse.next()
 
-  if (decision.isDenied()) {
-    return new Response(null, { status: 403 })
+  try {
+    const decision = await aj.protect(req)
+    if (decision.isDenied()) {
+      return new Response(null, { status: 403 })
+    }
+  } catch (error) {
+    console.error("Arcjet middleware failed, allowing request:", error)
   }
+
+  return NextResponse.next()
 }
 
 export const config = {
