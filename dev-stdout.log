@@ -1,0 +1,4 @@
+
+> ai-powered-job-prep@0.1.0 dev
+> next dev --turbopack --hostname 127.0.0.1 --port 3007
+

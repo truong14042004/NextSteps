@@ -1,25 +1,25 @@
-"use client"
+"use client";
 
-import { Skeleton } from "@/components/Skeleton"
+import { Skeleton } from "@/components/Skeleton";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { LoadingSwap } from "@/components/ui/loading-swap"
-import { cn } from "@/lib/utils"
-import { aiAnalyzeSchema } from "@/services/ai/resumes/schemas"
-import { experimental_useObject as useObject } from "@ai-sdk/react"
-import { DeepPartial } from "ai"
+} from "@/components/ui/card";
+import { LoadingSwap } from "@/components/ui/loading-swap";
+import { cn } from "@/lib/utils";
+import { aiAnalyzeSchema } from "@/services/ai/resumes/schemas";
+import { experimental_useObject as useObject } from "@ai-sdk/react";
+import { DeepPartial } from "ai";
 import {
   AlertCircleIcon,
   CheckCircleIcon,
@@ -27,24 +27,24 @@ import {
   RefreshCwIcon,
   UploadIcon,
   XCircleIcon,
-} from "lucide-react"
-import { ReactNode, useRef, useState } from "react"
-import { toast } from "sonner"
-import z from "zod"
-import { Button } from "@/components/ui/button"
+} from "lucide-react";
+import { ReactNode, useRef, useState } from "react";
+import { toast } from "sonner";
+import z from "zod";
+import { Button } from "@/components/ui/button";
 
 export function ResumePageClient({
   jobInfoId,
   storedAnalysis,
   jobDetails,
 }: {
-  jobInfoId: string
-  storedAnalysis?: unknown
-  jobDetails?: { title: string; experienceLevel: string; description: string }
+  jobInfoId: string;
+  storedAnalysis?: unknown;
+  jobDetails?: { title: string; experienceLevel: string; description: string };
 }) {
-  const [isDragOver, setIsDragOver] = useState(false)
-  const [showUpload, setShowUpload] = useState(!storedAnalysis)
-  const fileRef = useRef<File | null>(null)
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [showUpload, setShowUpload] = useState(!storedAnalysis);
+  const fileRef = useRef<File | null>(null);
 
   const {
     object: aiAnalysis,
@@ -54,31 +54,31 @@ export function ResumePageClient({
     api: "/api/ai/resumes/analyze",
     schema: aiAnalyzeSchema,
     fetch: (url, options) => {
-      const headers = new Headers(options?.headers)
-      headers.delete("Content-Type")
+      const headers = new Headers(options?.headers);
+      headers.delete("Content-Type");
 
-      const formData = new FormData()
+      const formData = new FormData();
       if (fileRef.current) {
-        formData.append("resumeFile", fileRef.current)
+        formData.append("resumeFile", fileRef.current);
       }
-      formData.append("jobInfoId", jobInfoId)
+      formData.append("jobInfoId", jobInfoId);
       if (jobDetails) {
-        formData.append("jobTitle", jobDetails.title)
-        formData.append("experienceLevel", jobDetails.experienceLevel)
-        formData.append("description", jobDetails.description)
+        formData.append("jobTitle", jobDetails.title);
+        formData.append("experienceLevel", jobDetails.experienceLevel);
+        formData.append("description", jobDetails.description);
       }
 
-      return fetch(url, { ...options, headers, body: formData })
+      return fetch(url, { ...options, headers, body: formData });
     },
-  })
+  });
 
   function handleFileUpload(file: File | null) {
-    fileRef.current = file
-    if (file == null) return
+    fileRef.current = file;
+    if (file == null) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("File size exceeds 10MB limit")
-      return
+      toast.error("File size exceeds 10MB limit");
+      return;
     }
 
     const allowedTypes = [
@@ -86,14 +86,14 @@ export function ResumePageClient({
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "text/plain",
-    ]
+    ];
 
     if (!allowedTypes.includes(file.type)) {
-      toast.error("Please upload a PDF, Word document, or text file")
-      return
+      toast.error("Please upload a PDF, Word document, or text file");
+      return;
     }
 
-    generateAnalysis(null)
+    generateAnalysis(null);
   }
 
   return (
@@ -103,12 +103,17 @@ export function ResumePageClient({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setShowUpload(v => !v)}
+          onClick={() => setShowUpload((v) => !v)}
           className="flex items-center gap-2"
         >
           <RefreshCwIcon className="size-4" />
           Phân tích lại
-          <ChevronDownIcon className={cn("size-4 transition-transform", showUpload && "rotate-180")} />
+          <ChevronDownIcon
+            className={cn(
+              "size-4 transition-transform",
+              showUpload && "rotate-180",
+            )}
+          />
         </Button>
       )}
 
@@ -116,14 +121,18 @@ export function ResumePageClient({
         <Card>
           <CardHeader>
             <CardTitle>
-              {isLoading ? "Analyzing your resume" : storedAnalysis ? "Phân tích lại" : "Upload your resume"}
+              {isLoading
+                ? "Analyzing your resume"
+                : storedAnalysis
+                  ? "Phân tích lại"
+                  : "Upload your resume"}
             </CardTitle>
             <CardDescription>
               {isLoading
                 ? "This may take a couple minutes"
                 : storedAnalysis
-                ? "Upload CV mới để cập nhật kết quả phân tích"
-                : "Get personalized feedback on your resume based on the job"}
+                  ? "Upload CV mới để cập nhật kết quả phân tích"
+                  : "Get personalized feedback on your resume based on the job"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -133,20 +142,20 @@ export function ResumePageClient({
                   "mt-2 border-2 border-dashed rounded-lg p-6 transition-colors relative",
                   isDragOver
                     ? "border-primary bg-primary/5"
-                    : "border-muted-foreground/50 bg-muted/10"
+                    : "border-muted-foreground/50 bg-muted/10",
                 )}
-                onDragOver={e => {
-                  e.preventDefault()
-                  setIsDragOver(true)
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragOver(true);
                 }}
-                onDragLeave={e => {
-                  e.preventDefault()
-                  setIsDragOver(false)
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  setIsDragOver(false);
                 }}
-                onDrop={e => {
-                  e.preventDefault()
-                  setIsDragOver(false)
-                  handleFileUpload(e.dataTransfer.files[0] ?? null)
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragOver(false);
+                  handleFileUpload(e.dataTransfer.files[0] ?? null);
                 }}
               >
                 <label htmlFor="resume-upload" className="sr-only">
@@ -157,8 +166,8 @@ export function ResumePageClient({
                   type="file"
                   accept=".pdf,.doc,.docx,.txt"
                   className="opacity-0 absolute inset-0 cursor-pointer"
-                  onChange={e => {
-                    handleFileUpload(e.target.files?.[0] ?? null)
+                  onChange={(e) => {
+                    handleFileUpload(e.target.files?.[0] ?? null);
                   }}
                 />
                 <div className="flex flex-col items-center justify-center text-center gap-4">
@@ -180,31 +189,36 @@ export function ResumePageClient({
 
       {/* Show new analysis result if streaming, otherwise show stored result */}
       <AnalysisResults
-        aiAnalysis={aiAnalysis ?? (storedAnalysis as DeepPartial<z.infer<typeof aiAnalyzeSchema>> | undefined)}
+        aiAnalysis={
+          aiAnalysis ??
+          (storedAnalysis as
+            | DeepPartial<z.infer<typeof aiAnalyzeSchema>>
+            | undefined)
+        }
         isLoading={isLoading}
       />
     </div>
-  )
+  );
 }
 
-type Keys = Exclude<keyof z.infer<typeof aiAnalyzeSchema>, "overallScore">
+type Keys = Exclude<keyof z.infer<typeof aiAnalyzeSchema>, "overallScore">;
 
 function AnalysisResults({
   aiAnalysis,
   isLoading,
 }: {
-  aiAnalysis: DeepPartial<z.infer<typeof aiAnalyzeSchema>> | undefined
-  isLoading: boolean
+  aiAnalysis: DeepPartial<z.infer<typeof aiAnalyzeSchema>> | undefined;
+  isLoading: boolean;
 }) {
-  if (!isLoading && aiAnalysis == null) return null
+  if (!isLoading && aiAnalysis == null) return null;
 
   const sections: Record<Keys, string> = {
-  ats: "Tương thích ATS",
-  jobMatch: "Mức độ phù hợp công việc",
-  writingAndFormatting: "Viết & Trình bày",
-  keywordCoverage: "Mức độ bao phủ từ khóa",
-  other: "Nhận xét bổ sung",
-}
+    ats: "Tương thích ATS",
+    jobMatch: "Mức độ phù hợp công việc",
+    writingAndFormatting: "Viết & Trình bày",
+    keywordCoverage: "Mức độ bao phủ từ khóa",
+    other: "Nhận xét bổ sung",
+  };
 
   return (
     <Card>
@@ -221,7 +235,7 @@ function AnalysisResults({
       <CardContent>
         <Accordion type="multiple">
           {Object.entries(sections).map(([key, title]) => {
-            const category = aiAnalysis?.[key as Keys]
+            const category = aiAnalysis?.[key as Keys];
 
             return (
               <AccordionItem value={title} key={key}>
@@ -252,39 +266,39 @@ function AnalysisResults({
                         </>
                       ) : (
                         category.feedback.map((item, index) => {
-                          if (item == null) return null
+                          if (item == null) return null;
 
-                          return <FeedbackItem key={index} {...item} />
+                          return <FeedbackItem key={index} {...item} />;
                         })
                       )}
                     </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
-            )
+            );
           })}
         </Accordion>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function CategoryAccordionHeader({
   title,
   score,
 }: {
-  title: string
-  score: number | undefined | null
+  title: string;
+  score: number | undefined | null;
 }) {
-  let badge: ReactNode
+  let badge: ReactNode;
   if (score == null) {
-    badge = <Skeleton className="w-16" />
+    badge = <Skeleton className="w-16" />;
   } else if (score >= 8) {
-    badge = <Badge>Rất Tốt</Badge>
+    badge = <Badge>Rất Tốt</Badge>;
   } else if (score >= 6) {
-    badge = <Badge variant="warning">Khá</Badge>
+    badge = <Badge variant="warning">Khá</Badge>;
   } else {
-    badge = <Badge variant="destructive">Cần Cải Thiện</Badge>
+    badge = <Badge variant="destructive">Cần Cải Thiện</Badge>;
   }
 
   return (
@@ -295,7 +309,7 @@ function CategoryAccordionHeader({
       </div>
       {score == null ? <Skeleton className="w-12" /> : `${score}/10`}
     </div>
-  )
+  );
 }
 
 function FeedbackItem({
@@ -303,39 +317,39 @@ function FeedbackItem({
   name,
   type,
 }: Partial<z.infer<typeof aiAnalyzeSchema>["ats"]["feedback"][number]>) {
-  if (name == null || message == null || type == null) return null
+  if (name == null || message == null || type == null) return null;
 
   const getColors = () => {
     switch (type) {
       case "strength":
-        return "bg-primary/10 border border-primary/50"
+        return "bg-primary/10 border border-primary/50";
       case "major-improvement":
-        return "bg-destructive/10 dark:bg-destructive/20 border border-destructive/50 dark:border-destructive/70"
+        return "bg-destructive/10 dark:bg-destructive/20 border border-destructive/50 dark:border-destructive/70";
       case "minor-improvement":
-        return "bg-warning/10 border border-warning/40"
+        return "bg-warning/10 border border-warning/40";
       default:
-        throw new Error(`Unknown feedback type: ${type satisfies never}`)
+        throw new Error(`Unknown feedback type: ${type satisfies never}`);
     }
-  }
+  };
 
   const getIcon = () => {
     switch (type) {
       case "strength":
-        return <CheckCircleIcon className="size-4 text-primary" />
+        return <CheckCircleIcon className="size-4 text-primary" />;
       case "minor-improvement":
-        return <AlertCircleIcon className="size-4 text-warning" />
+        return <AlertCircleIcon className="size-4 text-warning" />;
       case "major-improvement":
-        return <XCircleIcon className="size-4 text-destructive" />
+        return <XCircleIcon className="size-4 text-destructive" />;
       default:
-        throw new Error(`Unknown feedback type: ${type satisfies never}`)
+        throw new Error(`Unknown feedback type: ${type satisfies never}`);
     }
-  }
+  };
 
   return (
     <div
       className={cn(
         "flex items-baseline gap-3 pl-3 pr-5 py-5 rounded-lg",
-        getColors()
+        getColors(),
       )}
     >
       <div>{getIcon()}</div>
@@ -344,5 +358,5 @@ function FeedbackItem({
         <div className="text-muted-foreground">{message}</div>
       </div>
     </div>
-  )
+  );
 }
