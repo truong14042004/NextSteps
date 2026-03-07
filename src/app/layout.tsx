@@ -21,8 +21,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const webhookUrlFromEnv = process.env.NEXT_PUBLIC_CHATBOT_WEBHOOK_URL?.trim();
+  const chatbotWebhookUrl =
+    webhookUrlFromEnv && webhookUrlFromEnv.startsWith("/")
+      ? webhookUrlFromEnv
+      : "/api/chatbot";
+
   const chatbotConfig = {
-    webhookUrl: process.env.NEXT_PUBLIC_CHATBOT_WEBHOOK_URL || "/api/chatbot",
+    webhookUrl: chatbotWebhookUrl,
     botName: "AI Assistant",
     botAvatar: "/bot_avatar.jpg",
     theme: {

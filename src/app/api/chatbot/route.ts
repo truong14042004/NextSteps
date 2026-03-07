@@ -1,15 +1,54 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+
+const DEFAULT_REPLY = "Xin loi, hien tai toi khong the tra loi. Vui long thu lai sau.";
+
+function normalizeReply(payload: unknown): string {
+  if (typeof payload === "string") return payload;
+  if (payload == null) return DEFAULT_REPLY;
+
+  if (typeof payload === "object") {
+    const data = payload as Record<string, unknown>;
+    const preferredKeys = ["reply", "text", "message", "response"];
+
+    for (const key of preferredKeys) {
+      const value = data[key];
+      if (typeof value === "string" && value.trim().length > 0) {
+        return value;
+      }
+    }
+
+    const firstValue = Object.values(data)[0];
+    if (typeof firstValue === "string" && firstValue.trim().length > 0) {
+      return firstValue;
+    }
+
+    return JSON.stringify(data);
+  }
+
+  return String(payload);
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { message, sessionId } = body;
+    const webhookUrl = process.env.N8N_WEBHOOK_URL?.trim();
+    if (!webhookUrl) {
+      console.error("[chatbot] Missing N8N_WEBHOOK_URL");
+      return NextResponse.json({ reply: DEFAULT_REPLY }, { status: 500 });
+    }
 
-    // Gửi request đến n8n webhook
-    const n8nResponse = await fetch(process.env.N8N_WEBHOOK_URL!, {
-      method: 'POST',
+    const body = await request.json();
+    const message = typeof body?.message === "string" ? body.message.trim() : "";
+    const sessionId = typeof body?.sessionId === "string" ? body.sessionId : "anonymous";
+
+    if (!message) {
+      return NextResponse.json({ error: "Message is required" }, { status: 400 });
+    }
+
+    const n8nResponse = await fetch(webhookUrl, {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
+        Accept: "application/json, text/plain;q=0.9, */*;q=0.8",
       },
       body: JSON.stringify({
         message,
@@ -18,46 +57,27 @@ export async function POST(request: NextRequest) {
       }),
     });
 
+    const rawBody = await n8nResponse.text();
+
     if (!n8nResponse.ok) {
-      throw new Error(`n8n error: ${n8nResponse.status}`);
+      console.error(
+        `[chatbot] n8n error ${n8nResponse.status}: ${rawBody.slice(0, 300)}`
+      );
+      return NextResponse.json({ reply: DEFAULT_REPLY }, { status: 502 });
     }
 
-    const n8nData = await n8nResponse.json();
-    
-    console.log('N8N Response:', n8nData);
-    console.log('N8N Response Type:', typeof n8nData);
-    console.log('N8N Response Keys:', Object.keys(n8nData));
-
-    // Xử lý response từ N8N - có thể là text plain hoặc object
-    let replyText = "Xin lỗi, tôi không thể xử lý yêu cầu này.";
-    
-    if (typeof n8nData === 'string') {
-      // Nếu response là text plain
-      replyText = n8nData;
-    } else if (typeof n8nData === 'object' && n8nData !== null) {
-      // Nếu response là object
-      if (n8nData.reply) {
-        replyText = n8nData.reply;
-      } else if (n8nData.text) {
-        replyText = n8nData.text;
-      } else if (n8nData.message) {
-        replyText = n8nData.message;
-      } else {
-        // Lấy giá trị đầu tiên nếu không có key chuẩn
-        const firstValue = Object.values(n8nData)[0];
-        replyText = typeof firstValue === 'string' ? firstValue : JSON.stringify(n8nData);
+    let parsedPayload: unknown = rawBody;
+    if (rawBody.trim().length > 0) {
+      try {
+        parsedPayload = JSON.parse(rawBody);
+      } catch {
+        parsedPayload = rawBody;
       }
     }
 
-    return NextResponse.json({
-      reply: replyText,
-    });
-
+    return NextResponse.json({ reply: normalizeReply(parsedPayload) });
   } catch (error) {
-    console.error('Chatbot API error:', error);
-    return NextResponse.json(
-      { reply: "Xin lỗi, hiện tại tôi không thể trả lời. Vui lòng thử lại sau." },
-      { status: 500 }
-    );
+    console.error("[chatbot] API error:", error);
+    return NextResponse.json({ reply: DEFAULT_REPLY }, { status: 500 });
   }
 }
