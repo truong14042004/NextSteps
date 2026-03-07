@@ -1,16 +1,17 @@
 import { db } from "@/drizzle/db"
 import { UserTable } from "@/drizzle/schema"
 import { getUserIdTag } from "@/features/users/dbCache"
-import { auth } from "@clerk/nextjs/server"
 import { eq } from "drizzle-orm"
 import { cacheTag } from "next/dist/server/use-cache/cache-tag"
+import { redirect } from "next/navigation"
+import { getSessionUserId } from "@/services/auth/lib/session"
 
 export async function getCurrentUser({ allData = false } = {}) {
-  const { userId, redirectToSignIn } = await auth()
+  const userId = await getSessionUserId()
 
   return {
     userId,
-    redirectToSignIn,
+    redirectToSignIn: () => redirect("/sign-in"),
     user: allData && userId != null ? await getUser(userId) : undefined,
   }
 }

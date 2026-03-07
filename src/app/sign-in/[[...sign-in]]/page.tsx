@@ -1,23 +1,10 @@
-import { SignIn } from "@clerk/nextjs"
-import Link from "next/link"
+import { OtpAuthForm } from "@/features/auth/components/OtpAuthForm"
 
 export default function SignInPage() {
   return (
-    <div className="flex h-screen w-screen items-center justify-center">
-      <div className="space-y-6">
-        <SignIn signUpUrl="/sign-up" />
-        
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground">
-            Chưa có tài khoản?{" "}
-            <Link 
-              href="/sign-up" 
-              className="text-primary hover:underline font-medium"
-            >
-              Đăng ký ngay
-            </Link>
-          </p>
-        </div>
+    <div className="flex min-h-screen w-full items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <OtpAuthForm mode="sign_in" />
       </div>
     </div>
   )

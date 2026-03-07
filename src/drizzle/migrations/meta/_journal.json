@@ -22,6 +22,27 @@
       "when": 1772515743224,
       "tag": "0002_vapi_transcript",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1772820000000,
+      "tag": "0003_analysis_result",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1772821000000,
+      "tag": "0004_auth_otp_session",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1772822000000,
+      "tag": "0005_auth_credentials_google",
+      "breakpoints": true
     }
   ]
 }

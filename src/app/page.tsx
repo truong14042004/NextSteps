@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser";
-import { SignInButton, SignUpButton } from "@clerk/nextjs";
 import {
   BookOpenCheckIcon,
   Brain,
@@ -121,14 +120,14 @@ async function NavButton() {
   if (!userId) {
     return (
       <div className="flex items-center gap-2">
-        <SignInButton forceRedirectUrl="/app">
+        <Link href="/sign-in">
           <Button variant="outline" className="rounded-xl">
             Đăng nhập
           </Button>
-        </SignInButton>
-        <SignUpButton forceRedirectUrl="/app">
-          <Button className="rounded-xl">Đăng ký</Button>
-        </SignUpButton>
+        </Link>
+        <Link href="/sign-up">
+          <Button>Đăng ký</Button>
+        </Link>
       </div>
     );
   }
@@ -1179,3 +1178,5 @@ function Footer() {
     </footer>
   );
 }
+
+
