@@ -115,7 +115,7 @@ function CategoryAccordionHeader({
   if (score == null) {
     badge = <Skeleton className="w-16" />;
   } else if (score >= 8) {
-    badge = <Badge>Rất Tốt</Badge>;
+    badge = <Badge className="bg-emerald-600">Rất Tốt</Badge>;
   } else if (score >= 6) {
     badge = <Badge variant="warning">Khá</Badge>;
   } else {
@@ -143,7 +143,7 @@ function FeedbackItem({
   const getColors = () => {
     switch (type) {
       case "strength":
-        return "bg-primary/10 border border-primary/50";
+        return "bg-emerald-300/20 border border-emerald-700/50";
       case "major-improvement":
         return "bg-destructive/10 dark:bg-destructive/20 border border-destructive/50 dark:border-destructive/70";
       case "minor-improvement":
@@ -156,7 +156,7 @@ function FeedbackItem({
   const getIcon = () => {
     switch (type) {
       case "strength":
-        return <CheckCircleIcon className="size-4 text-primary" />;
+        return <CheckCircleIcon className="size-4 text-emerald-300" />;
       case "minor-improvement":
         return <AlertCircleIcon className="size-4 text-warning" />;
       case "major-improvement":

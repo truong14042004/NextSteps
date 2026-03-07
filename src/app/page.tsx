@@ -21,7 +21,7 @@ import { PricingTable } from "@/services/clerk/components/PricingTable";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-full bg-background">
       {/* Premium subtle background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute -top-40 left-1/2 h-[28rem] w-[52rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />

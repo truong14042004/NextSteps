@@ -39,8 +39,7 @@ export function Navbar({ user }: { user: { name: string; imageUrl: string } }) {
     <nav className="h-header border-b">
       <div className="container flex h-full items-center justify-between">
         <Link href="/app" className="flex items-center gap-2">
-          <BrainCircuitIcon className="size-8 text-primary" />
-          <span className="text-xl font-bold">Landr</span>
+          <span className="text-xl font-bold">Phân tích CV/JD</span>
         </Link>
 
         <div className="flex items-center gap-4">
@@ -69,5 +68,5 @@ export function Navbar({ user }: { user: { name: string; imageUrl: string } }) {
         </div>
       </div>
     </nav>
-  )
+  );
 }

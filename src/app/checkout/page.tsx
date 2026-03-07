@@ -134,7 +134,7 @@ export default function CheckoutPage() {
   return (
     <>
       <CheckoutNavbar />
-      <main className="min-h-screen bg-background py-10 md:py-14">
+      <main className="h-full bg-background py-10 md:py-14">
         <div className="pointer-events-none fixed inset-0 -z-10">
           <div className="absolute left-1/2 top-0 h-72 w-[42rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
           <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-muted blur-3xl" />

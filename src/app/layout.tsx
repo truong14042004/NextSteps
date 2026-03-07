@@ -1,18 +1,10 @@
-import type { Metadata } from "next"
-import { Outfit } from "next/font/google"
-import "./globals.css"
-import { ClerkProvider } from "@/services/clerk/components/ClerkProvider"
-import { ThemeProvider } from "next-themes"
-import { Toaster } from "@/components/ui/sonner"
-import { ChatWidget } from "@/components/chatbot/ChatWidget"
-
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@/services/clerk/components/ClerkProvider";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
-
+import { ChatWidget } from "@/components/chatbot/ChatWidget";
 
 const outfitSans = Outfit({
   variable: "--font-outfit-sans",
@@ -30,15 +22,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const chatbotConfig = {
-    webhookUrl: process.env.NEXT_PUBLIC_CHATBOT_WEBHOOK_URL || '/api/chatbot',
-    botName: 'AI Assistant',
-    botAvatar: '/bot_avatar.jpg',
+    webhookUrl: process.env.NEXT_PUBLIC_CHATBOT_WEBHOOK_URL || "/api/chatbot",
+    botName: "AI Assistant",
+    botAvatar: "/bot_avatar.jpg",
     theme: {
-      primaryColor: '#3b82f6',
-      backgroundColor: '#ffffff',
-      userBubbleColor: '#3b82f6',
-      botBubbleColor: '#f3f4f6',
-    }
+      primaryColor: "#3b82f6",
+      backgroundColor: "#ffffff",
+      userBubbleColor: "#3b82f6",
+      botBubbleColor: "#f3f4f6",
+    },
   };
 
   return (
