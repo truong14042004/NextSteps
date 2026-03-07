@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { LoadingSwap } from "@/components/ui/loading-swap"
-import { MailIcon, Chrome } from "lucide-react"
+import { MailIcon, Chrome, Eye, EyeOff } from "lucide-react"
 
 type Mode = "sign_in" | "sign_up"
 type Step = "form" | "verify_otp"
@@ -74,6 +74,9 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
   const [step, setStep] = useState<Step>("form")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [resendInSeconds, setResendInSeconds] = useState(0)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [showSignInPassword, setShowSignInPassword] = useState(false)
 
   const altLink = mode === "sign_up" ? "/sign-in" : "/sign-up"
   const altText = mode === "sign_up" ? "Đã có tài khoản?" : "Chưa có tài khoản?"
@@ -122,11 +125,36 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
     }
   }
 
+  function validatePassword(password: string): string | null {
+    if (password.length < 8) {
+      return "Mật khẩu phải có ít nhất 8 ký tự"
+    }
+    if (!/[a-z]/.test(password)) {
+      return "Mật khẩu phải chứa chữ cái thường"
+    }
+    if (!/[A-Z]/.test(password)) {
+      return "Mật khẩu phải chứa chữ cái hoa"
+    }
+    if (!/[0-9]/.test(password)) {
+      return "Mật khẩu phải chứa ít nhất một số"
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      return "Mật khẩu phải chứa ký tự đặc biệt (!@#$%^&* v.v.)"
+    }
+    return null
+  }
+
   async function onSignUpRequestOtp(e: FormEvent) {
     e.preventDefault()
 
     if (signUpForm.password !== signUpForm.confirmPassword) {
       toast.error("Mật khẩu xác nhận không khớp.")
+      return
+    }
+
+    const passwordError = validatePassword(signUpForm.password)
+    if (passwordError) {
+      toast.error(passwordError)
       return
     }
 
@@ -265,14 +293,30 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
               autoComplete="email"
               required
             />
-            <Input
-              type="password"
-              value={signInPassword}
-              onChange={e => setSignInPassword(e.target.value)}
-              placeholder="Mật khẩu"
-              autoComplete="current-password"
-              required
-            />
+            <div className="space-y-2">
+              <div className="relative">
+                <Input
+                  type={showSignInPassword ? "text" : "password"}
+                  value={signInPassword}
+                  onChange={e => setSignInPassword(e.target.value)}
+                  placeholder="Mật khẩu"
+                  autoComplete="current-password"
+                  required
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSignInPassword(!showSignInPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  disabled={isSubmitting}
+                >
+                  {showSignInPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <Link href="/forgot-password" className="text-sm text-primary hover:underline block text-right">
+                Quên mật khẩu?
+              </Link>
+            </div>
             <Button className="w-full" disabled={isSubmitting}>
               <LoadingSwap isLoading={isSubmitting}>Đăng nhập</LoadingSwap>
             </Button>
@@ -333,26 +377,53 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
             autoComplete="email"
             required
           />
-          <Input
-            type="password"
-            value={signUpForm.password}
-            onChange={e =>
-              setSignUpForm(prev => ({ ...prev, password: e.target.value }))
-            }
-            placeholder="Mật khẩu (ít nhất 8 ký tự)"
-            autoComplete="new-password"
-            required
-          />
-          <Input
-            type="password"
-            value={signUpForm.confirmPassword}
-            onChange={e =>
-              setSignUpForm(prev => ({ ...prev, confirmPassword: e.target.value }))
-            }
-            placeholder="Xác nhận mật khẩu"
-            autoComplete="new-password"
-            required
-          />
+          <div className="space-y-2">
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={signUpForm.password}
+                onChange={e =>
+                  setSignUpForm(prev => ({ ...prev, password: e.target.value }))
+                }
+                placeholder="Mật khẩu"
+                autoComplete="new-password"
+                required
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                disabled={isSubmitting}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Mật khẩu phải có ít nhất 8 ký tự, chứa chữ cái (hoa và thường), số và ký tự đặc biệt
+            </p>
+          </div>
+          <div className="relative">
+            <Input
+              type={showConfirmPassword ? "text" : "password"}
+              value={signUpForm.confirmPassword}
+              onChange={e =>
+                setSignUpForm(prev => ({ ...prev, confirmPassword: e.target.value }))
+              }
+              placeholder="Xác nhận mật khẩu"
+              autoComplete="new-password"
+              required
+              className="pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              disabled={isSubmitting}
+            >
+              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           <Button className="w-full" disabled={isSubmitting}>
             <LoadingSwap isLoading={isSubmitting}>Đăng ký</LoadingSwap>
           </Button>

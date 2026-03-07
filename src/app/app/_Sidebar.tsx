@@ -64,7 +64,7 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="p-4 border-t text-xs text-muted-foreground text-center">
-        <p>© 2026 Landr</p>
+        <p>© 2026 </p>
       </div>
     </aside>
   )
