@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -39,7 +39,7 @@ type CheckoutProduct = {
   refundText: string;
 };
 
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -623,6 +623,24 @@ export default function CheckoutPage() {
         </div>
       </main>
     </>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-background py-10 md:py-14">
+          <div className="container mx-auto px-4">
+            <div className="mx-auto max-w-3xl rounded-3xl border bg-card/70 p-8 text-center shadow-sm">
+              <p className="text-sm text-muted-foreground">Dang tai trang thanh toan...</p>
+            </div>
+          </div>
+        </main>
+      }
+    >
+      <CheckoutPageContent />
+    </Suspense>
   );
 }
 
