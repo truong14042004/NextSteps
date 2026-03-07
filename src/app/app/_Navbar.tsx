@@ -1,42 +1,40 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { BrainCircuitIcon, LogOut, User } from "lucide-react"
-import Link from "next/link"
-import { ThemeToggle } from "@/components/ThemeToggle"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { LogOut, User } from "lucide-react";
+import Link from "next/link";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { UserAvatar } from "@/features/users/components/UserAvatar"
+} from "@/components/ui/dropdown-menu";
+import { UserAvatar } from "@/features/users/components/UserAvatar";
 
 export function Navbar({ user }: { user: { name: string; imageUrl: string } }) {
-  const router = useRouter()
-  const [mounted, setMounted] = useState(false)
-  const [isSigningOut, setIsSigningOut] = useState(false)
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  useEffect(() => setMounted(true), []);
 
   async function handleSignOut() {
-    if (isSigningOut) return
-
-    setIsSigningOut(true)
+    if (isSigningOut) return;
+    setIsSigningOut(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" })
-      router.push("/")
-      router.refresh()
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/");
+      router.refresh();
     } finally {
-      setIsSigningOut(false)
+      setIsSigningOut(false);
     }
   }
 
+  // Navbar is NOT sticky here; it sits inside right column so it won't overlap sidebar.
   return (
-    <nav className="h-header border-b">
+    <nav className="h-16 border-b bg-background/70">
       <div className="container flex h-full items-center justify-between">
         <Link href="/app" className="flex items-center gap-2">
           <span className="text-xl font-bold">Phân tích CV/JD</span>
@@ -45,7 +43,7 @@ export function Navbar({ user }: { user: { name: string; imageUrl: string } }) {
         <div className="flex items-center gap-4">
           <ThemeToggle />
 
-          {mounted ? (
+          {mounted && (
             <DropdownMenu>
               <DropdownMenuTrigger>
                 <UserAvatar user={user} />
@@ -64,7 +62,7 @@ export function Navbar({ user }: { user: { name: string; imageUrl: string } }) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : null}
+          )}
         </div>
       </div>
     </nav>

@@ -126,7 +126,7 @@ async function NavButton() {
           </Button>
         </Link>
         <Link href="/sign-up">
-          <Button>Đăng ký</Button>
+          <Button className="rounded-xl bg-primary">Đăng ký</Button>
         </Link>
       </div>
     );
@@ -696,8 +696,7 @@ function Stats() {
         <div className="mt-10 flex justify-center">
           <Button
             size="lg"
-            className="
-  h-12 px-6 rounded-2xl
+            className=" h-12 px-6 rounded-2xl
   text-white font-medium
   bg-gradient-to-r from-red-600 via-red-500 to-rose-500
   shadow-lg shadow-red-500/30
@@ -1178,5 +1177,3 @@ function Footer() {
     </footer>
   );
 }
-
-

@@ -57,6 +57,11 @@ import {
   CreditCardIcon,
   ShieldCheckIcon,
   BriefcaseIcon,
+  CheckCircle2Icon,
+  TargetIcon,
+  ClipboardListIcon,
+  UserIcon,
+  Layers3Icon,
 } from "lucide-react";
 
 const analysisSchema = z.object({
@@ -509,7 +514,8 @@ export default function CVJDAnalysisPage() {
                   <div>
                     <h2 className="text-xl font-semibold">Tạo phân tích mới</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Điền thông tin JD và tải CV để AI bắt đầu phân tích.
+                      Điền thông tin vị trí, mô tả công việc và tải CV để AI bắt
+                      đầu phân tích.
                     </p>
                   </div>
                 </div>
@@ -546,6 +552,56 @@ export default function CVJDAnalysisPage() {
                   </div>
                 )}
 
+                {/* <div className="mb-6 rounded-[28px] border border-primary/10 bg-gradient-to-r from-primary/5 via-white to-secondary/10 p-5 shadow-sm dark:from-primary/10 dark:via-card dark:to-secondary/10">
+                  <div className="flex items-start gap-3">
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <SparklesIcon className="size-5" />
+                    </div>
+
+                    <div>
+                      <h3 className="text-base font-semibold text-foreground">
+                        AI sẽ phân tích hồ sơ của bạn dựa trên JD
+                      </h3>
+                      <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                        Càng nhập rõ vị trí, cấp độ và mô tả công việc, kết quả
+                        phân tích sẽ càng sát với nhu cầu tuyển dụng thực tế.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-border bg-background/80 p-3">
+                      <div className="mb-1 flex items-center gap-2 text-sm font-medium text-foreground">
+                        <BriefcaseIcon className="size-4 text-primary" />
+                        Theo vị trí
+                      </div>
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        Đánh giá CV theo job title và mục tiêu ứng tuyển.
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-border bg-background/80 p-3">
+                      <div className="mb-1 flex items-center gap-2 text-sm font-medium text-foreground">
+                        <Layers3Icon className="size-4 text-primary" />
+                        Theo cấp độ
+                      </div>
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        Điều chỉnh kỳ vọng theo intern, fresher hoặc junior.
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-border bg-background/80 p-3">
+                      <div className="mb-1 flex items-center gap-2 text-sm font-medium text-foreground">
+                        <ClipboardListIcon className="size-4 text-primary" />
+                        Theo JD thực tế
+                      </div>
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        Phát hiện điểm mạnh, điểm thiếu và mức độ phù hợp.
+                      </p>
+                    </div>
+                  </div>
+                </div> */}
+
                 <Form {...form}>
                   <form
                     onSubmit={form.handleSubmit(onSubmit)}
@@ -556,11 +612,14 @@ export default function CVJDAnalysisPage() {
                       name="candidateName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Họ tên ứng viên</FormLabel>
+                          <FormLabel className="flex items-center gap-2">
+                            <UserIcon className="size-4 text-primary" />
+                            Họ tên ứng viên
+                          </FormLabel>
                           <FormControl>
                             <Input
                               placeholder="Nguyễn Văn A"
-                              className="h-12 rounded-2xl border-violet-200/70 bg-white/90 dark:border-violet-900/30"
+                              className="h-12 rounded-2xl border-primary/10 bg-background/80 shadow-none"
                               {...field}
                             />
                           </FormControl>
@@ -575,11 +634,14 @@ export default function CVJDAnalysisPage() {
                         name="jobTitle"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Vị trí tuyển dụng</FormLabel>
+                            <FormLabel className="flex items-center gap-2">
+                              <BriefcaseIcon className="size-4 text-primary" />
+                              Vị trí tuyển dụng
+                            </FormLabel>
                             <FormControl>
                               <Input
                                 placeholder="Frontend Developer"
-                                className="h-12 rounded-2xl border-violet-200/70 bg-white/90 dark:border-violet-900/30"
+                                className="h-12 rounded-2xl border-primary/10 bg-background/80 shadow-none"
                                 {...field}
                               />
                             </FormControl>
@@ -593,13 +655,16 @@ export default function CVJDAnalysisPage() {
                         name="experienceLevel"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Cấp độ</FormLabel>
+                            <FormLabel className="flex items-center gap-2">
+                              <Layers3Icon className="size-4 text-primary" />
+                              Cấp độ
+                            </FormLabel>
                             <Select
                               onValueChange={field.onChange}
                               value={field.value}
                             >
                               <FormControl>
-                                <SelectTrigger className="h-12 w-full rounded-2xl border-violet-200/70 bg-white/90 dark:border-violet-900/30">
+                                <SelectTrigger className="h-12 w-full rounded-2xl border-primary/10 bg-background/80 shadow-none">
                                   <SelectValue placeholder="Chọn cấp độ" />
                                 </SelectTrigger>
                               </FormControl>
@@ -622,11 +687,14 @@ export default function CVJDAnalysisPage() {
                       name="jobDescription"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Mô tả công việc</FormLabel>
+                          <FormLabel className="flex items-center gap-2">
+                            <ClipboardListIcon className="size-4 text-primary" />
+                            Mô tả công việc
+                          </FormLabel>
                           <FormControl>
                             <Textarea
                               placeholder="Nhập mô tả công việc, trách nhiệm, yêu cầu kỹ năng, kinh nghiệm và kỳ vọng của nhà tuyển dụng..."
-                              className="min-h-[180px] rounded-[24px] border-violet-200/70 bg-white/90 dark:border-violet-900/30"
+                              className="min-h-[180px] rounded-[24px] border-primary/10 bg-background/80 shadow-none"
                               {...field}
                             />
                           </FormControl>
@@ -645,6 +713,22 @@ export default function CVJDAnalysisPage() {
                       setIsDragOver={setIsDragOver}
                       handleFileUpload={handleFileUpload}
                     />
+
+                    <div className="rounded-[24px] border border-border bg-muted/30 p-4">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle2Icon className="mt-0.5 size-5 shrink-0 text-primary" />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">
+                            Mẹo để kết quả phân tích sát hơn
+                          </p>
+                          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                            Hãy nhập đúng vị trí ứng tuyển, cấp độ kinh nghiệm
+                            và mô tả JD rõ ràng. CV càng sát thực tế, AI càng
+                            đưa ra đánh giá hữu ích hơn.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
                     <Button
                       type="submit"
@@ -707,9 +791,9 @@ export default function CVJDAnalysisPage() {
                 </div>
 
                 <div className="rounded-[32px] border border-amber-200/60 bg-gradient-to-r from-amber-50 via-rose-50 to-violet-50 p-6 shadow-sm dark:border-amber-900/30 dark:from-amber-950/10 dark:via-rose-950/10 dark:to-violet-950/10">
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h3 className="text-lg font-semibold">
+                      <h3 className="text-xl font-semibold">
                         Cần thêm lượt phân tích?
                       </h3>
                       <p className="mt-1 text-sm text-muted-foreground">
@@ -717,9 +801,24 @@ export default function CVJDAnalysisPage() {
                         nhiều hơn.
                       </p>
                     </div>
+
                     <Badge className="rounded-full bg-gradient-to-r from-fuchsia-500 to-amber-400 text-white hover:from-fuchsia-500 hover:to-amber-400">
                       15.000đ/lượt
                     </Badge>
+                  </div>
+                  <div className="mt-5 space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CheckCircle2Icon className="size-4 text-primary" />
+                      Mua thêm lượt ngay khi cần
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <TargetIcon className="size-4 text-primary" />
+                      Phù hợp cho luyện tập theo từng đợt ứng tuyển
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <BriefcaseIcon className="size-4 text-primary" />
+                      Linh hoạt giữa mua lẻ và nâng cấp gói
+                    </div>
                   </div>
 
                   <div className="mt-4 grid gap-2 sm:grid-cols-2">

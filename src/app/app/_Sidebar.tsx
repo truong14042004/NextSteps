@@ -10,12 +10,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   const menuItems = [
-    {
-      id: "analyze",
-      label: "Phân tích CV",
-      icon: FileSearch,
-      href: "/app",
-    },
+    { id: "analyze", label: "Phân tích CV", icon: FileSearch, href: "/app" },
     {
       id: "interview",
       label: "Phỏng vấn với AI",
@@ -25,14 +20,14 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="hidden md:flex w-60 border-r bg-card/70 backdrop-blur flex-col h-screen sticky top-0">
-      {/* Header */}
-      <div className="px-4 py-4 border-b">
+    <aside className="hidden md:flex md:flex-col w-60 flex-shrink-0 h-screen sticky top-0 left-0 z-20 border-r bg-card/70 backdrop-blur box-border">
+      {/* header area sized to match navbar height */}
+      <div className="px-5 py-4 min-h-[64px] flex items-center">
         <AppLogo />
       </div>
 
-      {/* Menu */}
-      <nav className="flex-1 p-3 space-y-1">
+      {/* nav scrolls internally if menu is long, but sidebar stays fixed */}
+      <nav className="flex-1 overflow-auto p-3 space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -48,14 +43,13 @@ export function Sidebar() {
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
               )}
             >
-              <Icon className="size-5 shrink-0" />
+              <Icon className="h-5 w-5 shrink-0" />
               <span className="truncate">{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
-      {/* Footer */}
       <div className="border-t px-4 py-4 text-center text-xs text-muted-foreground">
         © 2026 NextStep
       </div>
