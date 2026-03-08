@@ -680,6 +680,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
           language: "vi",
           smartFormat: true,
           numerals: true,
+          endpointing: 300,
           ...(transcriberKeyterms.length > 0
             ? { keyterm: transcriberKeyterms }
             : {}),
