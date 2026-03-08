@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useTheme } from "next-themes"
-import { Monitor, Moon, Sun } from "lucide-react"
+import { Moon, Sun } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -16,19 +16,14 @@ import { cn } from "@/lib/utils"
 
 const themes = [
   {
-    name: "Light",
+    name: "Sáng",
     Icon: Sun,
     value: "light",
   },
   {
-    name: "Dark",
+    name: "Tối",
     Icon: Moon,
     value: "dark",
-  },
-  {
-    name: "System",
-    Icon: Monitor,
-    value: "system",
   },
 ] as const
 

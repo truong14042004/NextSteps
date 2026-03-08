@@ -263,8 +263,9 @@ export default function CVJDAnalysisPage() {
     defaultValues: {
       candidateName: "",
       jobTitle: "",
-      experienceLevel: "intern",
+      experienceLevel: undefined as any,
       jobDescription: "",
+      resumeFile: null as any,
     },
   });
 
@@ -285,11 +286,10 @@ export default function CVJDAnalysisPage() {
         formData.append("resumeFile", resumeFile);
       }
 
-      const values = form.getValues();
-      formData.append("jobTitle", values.jobTitle);
-      formData.append("experienceLevel", values.experienceLevel);
-      formData.append("description", values.jobDescription);
-
+      const values = form.getValues()
+      formData.append("jobTitle", values.jobTitle)
+      formData.append("experienceLevel", values.experienceLevel)
+      formData.append("description", values.jobDescription)
       if (jobInfoIdRef.current) {
         formData.append("jobInfoId", jobInfoIdRef.current);
       }

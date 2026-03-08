@@ -33,6 +33,7 @@
     "@tailwindcss/typography": "^0.5.16",
     "@vapi-ai/web": "^2.5.2",
     "ai": "^4.3.19",
+    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
