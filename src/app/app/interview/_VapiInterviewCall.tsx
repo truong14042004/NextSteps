@@ -231,6 +231,11 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   const hasFinalizedRef = useRef(false)
   const manualStopRef = useRef(false)
   const microphoneStreamRef = useRef<MediaStream | null>(null)
+  const microphoneDeviceIdRef = useRef<string | null>(null)
+  const microphoneRecoveryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const lastRecognizedSpeechAtRef = useRef(0)
+  const lastMicrophoneRecoveryAtRef = useRef(0)
+  const isRecoveringMicrophoneRef = useRef(false)
   const hasReceivedUserAudioRef = useRef(false)
   const endedReasonRef = useRef<string | null>(null)
   const router = useRouter()
@@ -246,35 +251,73 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     }
   }, [])
 
+  const clearMicrophoneRecoveryTimer = useCallback(() => {
+    if (microphoneRecoveryTimeoutRef.current) {
+      clearTimeout(microphoneRecoveryTimeoutRef.current)
+      microphoneRecoveryTimeoutRef.current = null
+    }
+  }, [])
+
   const stopMicrophoneStream = useCallback(() => {
     microphoneStreamRef.current?.getTracks().forEach(track => track.stop())
     microphoneStreamRef.current = null
   }, [])
 
-  const prepareMicrophoneTrack = useCallback(async () => {
+  const prepareMicrophoneInput = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error("Browser does not support microphone capture.")
     }
 
     stopMicrophoneStream()
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        autoGainControl: true,
-        echoCancellation: true,
-        noiseSuppression: true,
-      },
+    const buildAudioConstraints = (deviceId?: string | null): MediaTrackConstraints => ({
+      autoGainControl: true,
+      echoCancellation: true,
+      noiseSuppression: true,
+      ...(deviceId
+        ? {
+            deviceId: {
+              exact: deviceId,
+            },
+          }
+        : {}),
     })
+
+    const preferredDeviceId = microphoneDeviceIdRef.current
+    let stream: MediaStream
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: buildAudioConstraints(preferredDeviceId),
+      })
+    } catch (error) {
+      if (preferredDeviceId == null) {
+        throw error
+      }
+
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: buildAudioConstraints(),
+      })
+    }
+
+    microphoneStreamRef.current = stream
     const [track] = stream.getAudioTracks()
 
     if (!track) {
-      stream.getTracks().forEach(currentTrack => currentTrack.stop())
+      stopMicrophoneStream()
       throw new Error("No microphone track available.")
     }
 
     track.enabled = true
-    microphoneStreamRef.current = stream
-    return track
+
+    const currentDeviceId = track.getSettings().deviceId
+    microphoneDeviceIdRef.current =
+      typeof currentDeviceId === "string" && currentDeviceId !== ""
+        ? currentDeviceId
+        : preferredDeviceId
+
+    stopMicrophoneStream()
+    return microphoneDeviceIdRef.current
   }, [stopMicrophoneStream])
 
   const stopVapiCall = useCallback(async (source: string) => {
@@ -291,6 +334,74 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     }
   }, [])
 
+  const recoverMicrophoneInput = useCallback(async (reason: string) => {
+    const vapi = vapiRef.current
+    if (
+      !vapi ||
+      !isCallActive ||
+      isMuted ||
+      hasFinalizedRef.current ||
+      manualStopRef.current
+    ) {
+      return
+    }
+
+    const now = Date.now()
+    if (
+      isRecoveringMicrophoneRef.current ||
+      now - lastMicrophoneRecoveryAtRef.current < 8000
+    ) {
+      return
+    }
+
+    isRecoveringMicrophoneRef.current = true
+
+    try {
+      const microphoneDeviceId = await prepareMicrophoneInput()
+      if (!microphoneDeviceId) {
+        console.warn("Skipping microphone recovery because no deviceId is available", {
+          reason,
+        })
+        return
+      }
+
+      await vapi.setInputDevicesAsync({ audioDeviceId: microphoneDeviceId })
+      lastMicrophoneRecoveryAtRef.current = Date.now()
+      lastRecognizedSpeechAtRef.current = Date.now()
+      console.info("Recovered microphone input", {
+        reason,
+        microphoneDeviceId,
+      })
+    } catch (error) {
+      console.warn("Failed to recover microphone input", {
+        reason,
+        error,
+      })
+    } finally {
+      isRecoveringMicrophoneRef.current = false
+    }
+  }, [isCallActive, isMuted, prepareMicrophoneInput])
+
+  const markRecognizedSpeech = useCallback(() => {
+    lastRecognizedSpeechAtRef.current = Date.now()
+    clearMicrophoneRecoveryTimer()
+  }, [clearMicrophoneRecoveryTimer])
+
+  const scheduleMicrophoneRecovery = useCallback((reason: string) => {
+    if (!isCallActive || isMuted) return
+
+    clearMicrophoneRecoveryTimer()
+    const scheduledAt = Date.now()
+
+    microphoneRecoveryTimeoutRef.current = setTimeout(() => {
+      if (lastRecognizedSpeechAtRef.current >= scheduledAt) {
+        return
+      }
+
+      void recoverMicrophoneInput(reason)
+    }, 6000)
+  }, [clearMicrophoneRecoveryTimer, isCallActive, isMuted, recoverMicrophoneInput])
+
   const finalizeCall = useCallback(async (options?: {
     notice?: { type: "info" | "error"; message: string }
     fallbackNotice?: { type: "info" | "error"; message: string }
@@ -299,6 +410,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     hasFinalizedRef.current = true
 
     clearDurationTimer()
+    clearMicrophoneRecoveryTimer()
     stopMicrophoneStream()
     setIsCallActive(false)
     setIsConnecting(false)
@@ -350,14 +462,14 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     }
 
     router.push("/app/interview")
-  }, [clearDurationTimer, router, stopMicrophoneStream])
+  }, [clearDurationTimer, clearMicrophoneRecoveryTimer, router, stopMicrophoneStream])
 
   // Keep refs in sync with state
   useEffect(() => { messagesRef.current = messages }, [messages])
   useEffect(() => { interviewIdRef.current = interviewId }, [interviewId])
   useEffect(() => { durationRef.current = duration }, [duration])
 
-  const createVapiInstance = useCallback((audioSource?: MediaStreamTrack) => {
+  const createVapiInstance = useCallback((audioSource?: string | null) => {
     if (!env.NEXT_PUBLIC_VAPI_PUBLIC_KEY) {
       console.error("Vapi public key not found")
       return null
@@ -407,6 +519,18 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
       console.log("Vapi speech ended")
     })
 
+    vapiInstance.on("network-quality-change", (event: unknown) => {
+      console.info("Vapi network quality changed", event)
+    })
+
+    vapiInstance.on("network-connection", (event: unknown) => {
+      console.info("Vapi network connection changed", event)
+    })
+
+    vapiInstance.on("call-start-progress", (event: unknown) => {
+      console.info("Vapi call start progress", event)
+    })
+
     vapiInstance.on("message", (event: unknown) => {
       if (event == null || typeof event !== "object") {
         return
@@ -433,12 +557,14 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
       ) {
         hasReceivedUserAudioRef.current = true
         console.info("User speech detected by Vapi")
+        scheduleMicrophoneRecovery("speech-detected-without-transcript")
       }
 
       if (message.type === "voice-input") {
         const input = typeof message.input === "string" ? message.input : ""
         if (input.trim() !== "") {
           hasReceivedUserAudioRef.current = true
+          markRecognizedSpeech()
           console.info("Vapi voice input:", input)
         }
       }
@@ -455,6 +581,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
         }
 
         hasReceivedUserAudioRef.current = true
+        markRecognizedSpeech()
 
         if (message.transcriptType === "final") {
           setMessages(prev => {
@@ -581,7 +708,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     })
 
     return vapiInstance
-  }, [clearDurationTimer, finalizeCall])
+  }, [clearDurationTimer, finalizeCall, markRecognizedSpeech, scheduleMicrophoneRecovery])
 
   useEffect(() => {
     if (!env.NEXT_PUBLIC_VAPI_PUBLIC_KEY) {
@@ -591,6 +718,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
 
     return () => {
       clearDurationTimer()
+      clearMicrophoneRecoveryTimer()
       stopMicrophoneStream()
       if (!hasFinalizedRef.current) {
         void stopVapiCall("cleanup")
@@ -598,7 +726,28 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
       vapiRef.current?.removeAllListeners()
       vapiRef.current = null
     }
-  }, [clearDurationTimer, stopMicrophoneStream, stopVapiCall])
+  }, [clearDurationTimer, clearMicrophoneRecoveryTimer, stopMicrophoneStream, stopVapiCall])
+
+  useEffect(() => {
+    if (
+      !isCallActive ||
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices?.addEventListener
+    ) {
+      return
+    }
+
+    const handleDeviceChange = () => {
+      console.info("Detected media device change during interview")
+      void recoverMicrophoneInput("media-device-change")
+    }
+
+    navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange)
+
+    return () => {
+      navigator.mediaDevices.removeEventListener("devicechange", handleDeviceChange)
+    }
+  }, [isCallActive, recoverMicrophoneInput])
 
   // Update interview duration periodically
   useEffect(() => {
@@ -648,8 +797,8 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     setIsConnecting(true)
 
     try {
-      const microphoneTrack = await prepareMicrophoneTrack()
-      const vapi = createVapiInstance(microphoneTrack)
+      const microphoneDeviceId = await prepareMicrophoneInput()
+      const vapi = createVapiInstance(microphoneDeviceId)
       if (!vapi) {
         throw new Error("Vapi instance could not be created.")
       }
