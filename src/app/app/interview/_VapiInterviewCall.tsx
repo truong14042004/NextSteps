@@ -357,21 +357,22 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   useEffect(() => { interviewIdRef.current = interviewId }, [interviewId])
   useEffect(() => { durationRef.current = duration }, [duration])
 
-  // Initialize Vapi
-  useEffect(() => {
+  const createVapiInstance = useCallback((audioSource?: MediaStreamTrack) => {
     if (!env.NEXT_PUBLIC_VAPI_PUBLIC_KEY) {
       console.error("Vapi public key not found")
-      return
+      return null
     }
+
+    vapiRef.current?.removeAllListeners()
 
     const vapiInstance = new Vapi(
       env.NEXT_PUBLIC_VAPI_PUBLIC_KEY,
       undefined,
       { alwaysIncludeMicInPermissionPrompt: true },
+      audioSource ? { audioSource } : undefined,
     )
     vapiRef.current = vapiInstance
 
-    // Event listeners
     vapiInstance.on("call-start", () => {
       console.log("Vapi call started")
       hasFinalizedRef.current = false
@@ -579,15 +580,25 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
       setIsCallActive(false)
     })
 
+    return vapiInstance
+  }, [clearDurationTimer, finalizeCall])
+
+  useEffect(() => {
+    if (!env.NEXT_PUBLIC_VAPI_PUBLIC_KEY) {
+      console.error("Vapi public key not found")
+      return
+    }
+
     return () => {
       clearDurationTimer()
       stopMicrophoneStream()
       if (!hasFinalizedRef.current) {
         void stopVapiCall("cleanup")
       }
+      vapiRef.current?.removeAllListeners()
       vapiRef.current = null
     }
-  }, [clearDurationTimer, finalizeCall, stopMicrophoneStream, stopVapiCall])
+  }, [clearDurationTimer, stopMicrophoneStream, stopVapiCall])
 
   // Update interview duration periodically
   useEffect(() => {
@@ -613,8 +624,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   }, [isInterviewComplete, stopVapiCall])
 
   const handleStartCall = async () => {
-    const vapi = vapiRef.current
-    if (!vapi || !env.NEXT_PUBLIC_VAPI_ASSISTANT_ID) {
+    if (!env.NEXT_PUBLIC_VAPI_ASSISTANT_ID) {
       toast.error("Vapi chưa được cấu hình đúng")
       return
     }
@@ -639,6 +649,10 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
 
     try {
       const microphoneTrack = await prepareMicrophoneTrack()
+      const vapi = createVapiInstance(microphoneTrack)
+      if (!vapi) {
+        throw new Error("Vapi instance could not be created.")
+      }
 
       // Create interview in database
       const res = await createInterview({ jobInfoId: jobInfo.id })
@@ -733,7 +747,6 @@ NÓI TIẾNG VIỆT HOÀN TOÀN TRONG SUỐT CUỘC PHỎNG VẤN.`,
         firstMessage: `Xin chào ${jobInfo.name}! Tôi là AI Interviewer. Hôm nay tôi sẽ phỏng vấn bạn cho vị trí ${jobInfo.title}. Bạn đã sẵn sàng chưa?`,
         name: "AI Interviewer",
       })
-      await vapi.setInputDevicesAsync({ audioSource: microphoneTrack })
     } catch (error) {
       console.error("❌ Failed to start call:", error)
       toast.error("Không thể bắt đầu cuộc gọi")
