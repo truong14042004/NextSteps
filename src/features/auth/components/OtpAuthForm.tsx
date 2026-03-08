@@ -15,7 +15,7 @@ import {
 import { AppLogo } from "@/components/ui/AppLogo"
 import { Input } from "@/components/ui/input"
 import { LoadingSwap } from "@/components/ui/loading-swap"
-import { MailIcon, Chrome, Eye, EyeOff } from "lucide-react"
+import { MailIcon, Eye, EyeOff } from "lucide-react"
 
 type Mode = "sign_in" | "sign_up"
 type Step = "form" | "verify_otp"
@@ -356,67 +356,89 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
 
   if (mode === "sign_in") {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Đăng nhập</CardTitle>
-          <CardDescription>Nhập tên đăng nhập và mật khẩu để vào hệ thống.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSignInWithPassword} className="space-y-4">
-            <Input
-              type="email"
-              value={signInEmail}
-              onChange={e => setSignInEmail(e.target.value)}
-              placeholder="Email"
-              autoComplete="email"
-              required
-            />
-            <div className="space-y-2">
-              <div className="relative">
-                <Input
-                  type={showSignInPassword ? "text" : "password"}
-                  value={signInPassword}
-                  onChange={e => setSignInPassword(e.target.value)}
-                  placeholder="Mật khẩu"
-                  autoComplete="current-password"
-                  required
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowSignInPassword(!showSignInPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  disabled={isSubmitting}
-                >
-                  {showSignInPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              <Link href="/forgot-password" className="text-sm text-primary hover:underline block text-right">
-                Quên mật khẩu?
-              </Link>
+      <AuthShell
+        title="Đăng nhập"
+        description="Tiếp tục với tài khoản NextStep của bạn để vào dashboard và xem lịch sử luyện tập."
+      >
+        <form onSubmit={onSignInWithPassword} className="space-y-4">
+          <Input
+            type="email"
+            value={signInEmail}
+            onChange={(e) => setSignInEmail(e.target.value)}
+            placeholder="you@example.com"
+            autoComplete="email"
+            className="h-12 rounded-2xl border-primary/10"
+            required
+          />
+
+          <div className="space-y-2">
+            <div className="relative">
+              <Input
+                type={showSignInPassword ? "text" : "password"}
+                value={signInPassword}
+                onChange={(e) => setSignInPassword(e.target.value)}
+                placeholder="Mật khẩu"
+                autoComplete="current-password"
+                className="h-12 rounded-2xl border-primary/10 pr-10"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowSignInPassword(!showSignInPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                disabled={isSubmitting}
+              >
+                {showSignInPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
             </div>
-            <Button className="w-full" disabled={isSubmitting}>
-              <LoadingSwap isLoading={isSubmitting}>Đăng nhập</LoadingSwap>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              disabled={isSubmitting}
-              onClick={onGoogleAuth}
+
+            <Link
+              href="/forgot-password"
+              className="block text-right text-sm text-primary hover:underline"
             >
-              <Chrome className="mr-2 h-4 w-4" />
-              Đăng nhập bằng Google
-            </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              {altText}{" "}
-              <Link href={altLink} className="text-primary hover:underline">
-                {altCta}
-              </Link>
-            </p>
-          </form>
-        </CardContent>
-      </Card>
+              Quên mật khẩu?
+            </Link>
+          </div>
+
+          <Button
+            className="btn-cta h-12 w-full rounded-2xl"
+            disabled={isSubmitting}
+          >
+            <LoadingSwap isLoading={isSubmitting}>Đăng nhập</LoadingSwap>
+          </Button>
+
+          <div className="relative py-1">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-3 text-muted-foreground">Hoặc</span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 w-full rounded-2xl border-primary/10 bg-white hover:bg-primary/5 dark:bg-background"
+            disabled={isSubmitting}
+            onClick={onGoogleAuth}
+          >
+            <GoogleIcon className="mr-2 h-4 w-4" />
+            Đăng nhập bằng Google
+          </Button>
+
+          <p className="pt-1 text-center text-sm text-muted-foreground">
+            {altText}{" "}
+            <Link href={altLink} className="font-medium text-primary hover:underline">
+              {altCta}
+            </Link>
+          </p>
+        </form>
+      </AuthShell>
     )
   }
 
