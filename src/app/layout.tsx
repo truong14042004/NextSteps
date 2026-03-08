@@ -6,6 +6,8 @@ import { ThemeProvider } from "next-themes"
 import { Toaster } from "@/components/ui/sonner"
 import { syncUser } from "@/lib/sync-user"
 
+import { ChatWidget } from "@/components/chatbot/ChatWidget";
+
 const outfitSans = Outfit({
   variable: "--font-outfit-sans",
   subsets: ["latin"],
@@ -18,10 +20,26 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
-  await syncUser()
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const webhookUrlFromEnv = process.env.NEXT_PUBLIC_CHATBOT_WEBHOOK_URL?.trim();
+  const chatbotWebhookUrl =
+    webhookUrlFromEnv && webhookUrlFromEnv.startsWith("/")
+      ? webhookUrlFromEnv
+      : "/api/chatbot";
+
+  const chatbotConfig = {
+    webhookUrl: chatbotWebhookUrl,
+    botName: "AI Assistant",
+    botAvatar: "/bot_avatar.jpg",
+    theme: {
+      primaryColor: "#3b82f6",
+      backgroundColor: "#ffffff",
+      userBubbleColor: "#3b82f6",
+      botBubbleColor: "#f3f4f6",
+    },
+  };
 
   return (
     <html lang="vi" suppressHydrationWarning>
@@ -33,6 +51,7 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             {children}
+            <ChatWidget config={chatbotConfig} />
             <Toaster />
           </ThemeProvider>
       </body>

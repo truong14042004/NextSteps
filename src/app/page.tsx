@@ -21,7 +21,7 @@ import { PricingTable } from "@/services/clerk/components/PricingTable";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-full bg-background">
       {/* Premium subtle background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute -top-40 left-1/2 h-[28rem] w-[52rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
@@ -126,7 +126,7 @@ async function NavButton() {
           </Button>
         </Link>
         <Link href="/sign-up">
-          <Button>Đăng ký</Button>
+          <Button className="rounded-xl bg-primary">Đăng ký</Button>
         </Link>
       </div>
     );
@@ -696,8 +696,7 @@ function Stats() {
         <div className="mt-10 flex justify-center">
           <Button
             size="lg"
-            className="
-  h-12 px-6 rounded-2xl
+            className=" h-12 px-6 rounded-2xl
   text-white font-medium
   bg-gradient-to-r from-red-600 via-red-500 to-rose-500
   shadow-lg shadow-red-500/30
@@ -1178,5 +1177,3 @@ function Footer() {
     </footer>
   );
 }
-
-
