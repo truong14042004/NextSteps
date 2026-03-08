@@ -7,7 +7,7 @@ import { errorToast } from "@/lib/errorToast"
 import Vapi from "@vapi-ai/web"
 import { Loader2Icon, MicIcon, MicOffIcon, PhoneOffIcon, ArrowLeftIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { InterviewJobInfo } from "./page"
 import { toast } from "sonner"
 
@@ -65,6 +65,152 @@ function isMeetingEndedMessage(message: string | null) {
   )
 }
 
+const TRANSCRIBER_KEYTERM_LIMIT = 24
+
+const GENERIC_TRANSCRIBER_TERMS = new Set([
+  "a",
+  "an",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "build",
+  "building",
+  "candidate",
+  "company",
+  "description",
+  "developer",
+  "engineer",
+  "experience",
+  "for",
+  "from",
+  "good",
+  "have",
+  "has",
+  "in",
+  "into",
+  "job",
+  "knowledge",
+  "level",
+  "must",
+  "nice",
+  "of",
+  "on",
+  "or",
+  "our",
+  "position",
+  "preferred",
+  "required",
+  "requirements",
+  "responsibilities",
+  "responsible",
+  "role",
+  "skill",
+  "skills",
+  "software",
+  "strong",
+  "team",
+  "teams",
+  "that",
+  "the",
+  "their",
+  "this",
+  "to",
+  "use",
+  "used",
+  "using",
+  "we",
+  "will",
+  "with",
+  "work",
+  "working",
+  "year",
+  "years",
+  "you",
+  "your",
+])
+
+function normalizeTranscriberTerm(value: string) {
+  return value
+    .replace(/["'`]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9+#./-]+$/g, "")
+    .trim()
+}
+
+function pushUniqueTranscriberTerm(
+  terms: string[],
+  value: string,
+  limit: number,
+) {
+  const normalized = normalizeTranscriberTerm(value)
+  if (normalized === "") return
+
+  const normalizedKey = normalized.toLowerCase()
+  const hasTerm = terms.some(term => term.toLowerCase() === normalizedKey)
+  if (hasTerm || terms.length >= limit) return
+
+  terms.push(normalized)
+}
+
+function extractTechnicalTerms(text: string) {
+  const matches = text.match(/[A-Za-z][A-Za-z0-9+#./-]{1,}/g) ?? []
+  const terms: string[] = []
+
+  for (const match of matches) {
+    const normalized = normalizeTranscriberTerm(match)
+    if (normalized === "") continue
+
+    const normalizedKey = normalized.toLowerCase()
+    const isShortPlainWord =
+      normalized.length <= 2 && !/[A-Z0-9+#./-]/.test(normalized)
+
+    if (
+      isShortPlainWord ||
+      GENERIC_TRANSCRIBER_TERMS.has(normalizedKey)
+    ) {
+      continue
+    }
+
+    pushUniqueTranscriberTerm(terms, normalized, TRANSCRIBER_KEYTERM_LIMIT * 2)
+
+    for (const part of normalized.split(/[/:]/)) {
+      if (part === normalized) continue
+      pushUniqueTranscriberTerm(terms, part, TRANSCRIBER_KEYTERM_LIMIT * 2)
+    }
+
+    if (terms.length >= TRANSCRIBER_KEYTERM_LIMIT * 2) {
+      break
+    }
+  }
+
+  return terms
+}
+
+function buildTranscriberKeyterms(jobInfo: InterviewJobInfo) {
+  const keyterms: string[] = []
+
+  pushUniqueTranscriberTerm(keyterms, jobInfo.title, TRANSCRIBER_KEYTERM_LIMIT)
+
+  const normalizedExperienceLevel = jobInfo.experienceLevel.replace(/[_-]+/g, " ")
+  pushUniqueTranscriberTerm(
+    keyterms,
+    normalizedExperienceLevel,
+    TRANSCRIBER_KEYTERM_LIMIT,
+  )
+
+  const sources = [jobInfo.title, jobInfo.description, jobInfo.cvSummary ?? ""]
+
+  for (const source of sources) {
+    for (const term of extractTechnicalTerms(source)) {
+      pushUniqueTranscriberTerm(keyterms, term, TRANSCRIBER_KEYTERM_LIMIT)
+    }
+  }
+
+  return keyterms
+}
+
 export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobInfo; onBack?: () => void }) {
   const [isConnecting, setIsConnecting] = useState(false)
   const [isCallActive, setIsCallActive] = useState(false)
@@ -88,6 +234,10 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   const hasReceivedUserAudioRef = useRef(false)
   const endedReasonRef = useRef<string | null>(null)
   const router = useRouter()
+  const transcriberKeyterms = useMemo(
+    () => buildTranscriberKeyterms(jobInfo),
+    [jobInfo],
+  )
 
   const clearDurationTimer = useCallback(() => {
     if (durationIntervalRef.current) {
@@ -502,13 +652,23 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
       console.log("✅ Interview created, ID:", res.id)
       setInterviewId(res.id)
       interviewIdRef.current = res.id
+      console.info("Deepgram transcriber tuned for interview", {
+        model: "nova-3",
+        language: "vi",
+        keytermCount: transcriberKeyterms.length,
+      })
 
       // Start Vapi call - override system prompt with dynamic candidate info
       await vapi.start({
         transcriber: {
           provider: "deepgram",
-          model: "nova-2",
-          language: "vi", // Vietnamese transcription
+          model: "nova-3",
+          language: "vi",
+          smartFormat: true,
+          numerals: true,
+          ...(transcriberKeyterms.length > 0
+            ? { keyterm: transcriberKeyterms }
+            : {}),
         },
         model: {
           provider: "openai",
