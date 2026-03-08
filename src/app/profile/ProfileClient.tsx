@@ -2,10 +2,10 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { BrainCircuitIcon, LogOut, User, Lock } from "lucide-react"
+import { LogOut, User, Lock } from "lucide-react"
 import { toast } from "sonner"
 
+import { AppLogo } from "@/components/ui/AppLogo"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -94,10 +94,7 @@ export default function ProfileClient({
       {/* NAVBAR */}
       <nav className="h-header border-b">
         <div className="container flex h-full items-center justify-between">
-          <Link href="/app" className="flex items-center gap-2">
-            <BrainCircuitIcon className="size-8 text-primary" />
-            <span className="text-xl font-bold">Landr</span>
-          </Link>
+          <AppLogo href="/app" />
 
           <div className="flex items-center gap-4">
             <ThemeToggle />

@@ -65,6 +65,7 @@ export default async function InterviewResultsPage({
             {interview.feedback == null ? (
               <ActionButton
                 action={generateInterviewFeedback.bind(null, interview.id)}
+                successMessage="Da tao danh gia AI"
               >
                 Tạo đánh giá AI
               </ActionButton>

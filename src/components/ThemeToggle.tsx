@@ -1,6 +1,6 @@
 "use client"
 
-import * as React from "react"
+import { useSyncExternalStore } from "react"
 import { useTheme } from "next-themes"
 import { Moon, Sun } from "lucide-react"
 
@@ -11,7 +11,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 
 const themes = [
@@ -28,14 +27,21 @@ const themes = [
 ] as const
 
 export function ThemeToggle() {
-  const [mounted, setMounted] = useState(false)
   const { setTheme, theme, resolvedTheme } = useTheme()
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) return null
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="icon" type="button" disabled aria-label="Theme menu loading">
+        <Sun />
+        <span className="sr-only">Toggle theme</span>
+      </Button>
+    )
+  }
 
   return (
     <DropdownMenu>

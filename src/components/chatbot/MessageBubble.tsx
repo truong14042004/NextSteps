@@ -2,10 +2,11 @@
 
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { ChatbotConfig, Message } from '@/lib/chatbot/types';
 
 interface MessageBubbleProps {
-  message: any;
-  theme?: any;
+  message: Message;
+  theme?: ChatbotConfig['theme'];
 }
 
 export function MessageBubble({ message, theme }: MessageBubbleProps) {

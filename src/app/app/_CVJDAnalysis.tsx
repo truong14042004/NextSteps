@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { experienceLevels } from "@/drizzle/schema/jobInfo";
+import { experienceLevels, type ExperienceLevel } from "@/drizzle/schema/jobInfo";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -237,7 +237,7 @@ export default function CVJDAnalysisPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<{
     title: string;
-    experienceLevel: string;
+    experienceLevel: ExperienceLevel;
     description: string;
   } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -263,9 +263,7 @@ export default function CVJDAnalysisPage() {
     defaultValues: {
       candidateName: "",
       jobTitle: "",
-      experienceLevel: undefined as any,
       jobDescription: "",
-      resumeFile: null as any,
     },
   });
 
@@ -1002,7 +1000,8 @@ export default function CVJDAnalysisPage() {
                                         v
                                           ? {
                                               ...v,
-                                              experienceLevel: e.target.value,
+                                              experienceLevel:
+                                                e.target.value as ExperienceLevel,
                                             }
                                           : null,
                                       )
@@ -1078,7 +1077,7 @@ export default function CVJDAnalysisPage() {
                                                     ...h,
                                                     title: editValues.title,
                                                     experienceLevel:
-                                                      editValues.experienceLevel as any,
+                                                      editValues.experienceLevel,
                                                     description:
                                                       editValues.description,
                                                   }

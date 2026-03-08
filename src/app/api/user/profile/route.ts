@@ -59,7 +59,7 @@ export async function PUT(request: Request) {
       .where(eq(UserTable.id, userId))
 
     // Invalidate cache để dashboard load lại dữ liệu mới
-    revalidateTag(getUserIdTag(userId))
+    revalidateTag(getUserIdTag(userId), "default")
 
     return NextResponse.json({ ok: true })
   } catch (error) {

@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { AppLogo } from "@/components/ui/AppLogo"
 import { Input } from "@/components/ui/input"
 import { LoadingSwap } from "@/components/ui/loading-swap"
 import { MailIcon, Chrome, Eye, EyeOff } from "lucide-react"
@@ -132,8 +133,6 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
   const [step, setStep] = useState<Step>("form")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [resendInSeconds, setResendInSeconds] = useState(0)
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [showSignInPassword, setShowSignInPassword] = useState(false)
 
   const altLink = mode === "sign_up" ? "/sign-in" : "/sign-up";
@@ -419,127 +418,6 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
         </CardContent>
       </Card>
     )
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Đăng ký tài khoản</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={onSignUpRequestOtp} className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              value={signUpForm.firstName}
-              onChange={e =>
-                setSignUpForm(prev => ({ ...prev, firstName: e.target.value }))
-              }
-              placeholder="Tên"
-              autoComplete="given-name"
-              required
-            />
-            <Input
-              value={signUpForm.lastName}
-              onChange={e =>
-                setSignUpForm(prev => ({ ...prev, lastName: e.target.value }))
-              }
-              placeholder="Họ"
-              autoComplete="family-name"
-              required
-            />
-          </div>
-          <Input
-            type="email"
-            value={signInEmail}
-            onChange={(e) => setSignInEmail(e.target.value)}
-            placeholder="Email"
-            autoComplete="email"
-            className="h-12 rounded-2xl border-primary/10"
-            required
-          />
-          <div className="space-y-2">
-            <div className="relative">
-              <Input
-                type={showPassword ? "text" : "password"}
-                value={signUpForm.password}
-                onChange={e =>
-                  setSignUpForm(prev => ({ ...prev, password: e.target.value }))
-                }
-                placeholder="Mật khẩu"
-                autoComplete="new-password"
-                required
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                disabled={isSubmitting}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Mật khẩu phải có ít nhất 8 ký tự, chứa chữ cái (hoa và thường), số và ký tự đặc biệt
-            </p>
-          </div>
-          <div className="relative">
-            <Input
-              type={showConfirmPassword ? "text" : "password"}
-              value={signUpForm.confirmPassword}
-              onChange={e =>
-                setSignUpForm(prev => ({ ...prev, confirmPassword: e.target.value }))
-              }
-              placeholder="Xác nhận mật khẩu"
-              autoComplete="new-password"
-              required
-              className="pr-10"
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              disabled={isSubmitting}
-            >
-              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
-          <Button className="w-full" disabled={isSubmitting}>
-            <LoadingSwap isLoading={isSubmitting}>Đăng ký</LoadingSwap>
-          </Button>
-
-          <div className="relative py-1">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-3 text-muted-foreground">Hoặc</span>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            className="h-12 w-full rounded-2xl border-primary/10 bg-white hover:bg-primary/5 dark:bg-background"
-            disabled={isSubmitting}
-            onClick={onGoogleAuth}
-          >
-            <GoogleIcon className="mr-2 h-4 w-4" />
-            Đăng nhập bằng Google
-          </Button>
-
-          <p className="pt-2 text-center text-sm text-muted-foreground">
-            {altText}{" "}
-            <Link
-              href={altLink}
-              className="font-medium text-primary hover:underline"
-            >
-              {altCta}
-            </Link>
-          </p>
-        </form>
-      </AuthShell>
-    );
   }
 
   return (

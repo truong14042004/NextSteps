@@ -1,13 +1,10 @@
 "use server"
 
 import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
-import { cacheTag } from "next/dist/server/use-cache/cache-tag"
-import { getJobInfoIdTag } from "../jobInfos/dbCache"
 import { db } from "@/drizzle/db"
 import { and, eq } from "drizzle-orm"
 import { InterviewTable, JobInfoTable } from "@/drizzle/schema"
 import { insertInterview, updateInterview as updateInterviewDb, getInterviewsByJobInfoId } from "./db"
-import { getInterviewIdTag, getInterviewJobInfoTag } from "./dbCache"
 import { canCreateInterview } from "./permissions"
 import { PLAN_LIMIT_MESSAGE, RATE_LIMIT_MESSAGE } from "@/lib/errorToast"
 import { env } from "@/data/env/server"
@@ -62,7 +59,7 @@ export async function createInterview({
     }
   }
 
-  const jobInfo = await getJobInfo(jobInfoId, userId)
+  const jobInfo = await findJobInfoForUser(jobInfoId, userId)
   if (jobInfo == null) {
     return {
       error: true,
@@ -91,7 +88,7 @@ export async function updateInterview(
     }
   }
 
-  const interview = await getInterview(id, userId)
+  const interview = await findInterviewForUser(id, userId)
   if (interview == null) {
     return {
       error: true,
@@ -113,7 +110,7 @@ export async function generateInterviewFeedback(interviewId: string) {
     }
   }
 
-  const interview = await getInterview(interviewId, userId)
+  const interview = await findInterviewForUser(interviewId, userId)
   if (interview == null) {
     return {
       error: true,
@@ -156,19 +153,13 @@ export async function generateInterviewFeedback(interviewId: string) {
   return { error: false }
 }
 
-async function getJobInfo(id: string, userId: string) {
-  "use cache"
-  cacheTag(getJobInfoIdTag(id))
-
+async function findJobInfoForUser(id: string, userId: string) {
   return db.query.JobInfoTable.findFirst({
     where: and(eq(JobInfoTable.id, id), eq(JobInfoTable.userId, userId)),
   })
 }
 
-async function getInterview(id: string, userId: string) {
-  "use cache"
-  cacheTag(getInterviewIdTag(id))
-
+async function findInterviewForUser(id: string, userId: string) {
   const interview = await db.query.InterviewTable.findFirst({
     where: eq(InterviewTable.id, id),
     with: {
@@ -185,8 +176,6 @@ async function getInterview(id: string, userId: string) {
   })
 
   if (interview == null) return null
-
-  cacheTag(getJobInfoIdTag(interview.jobInfo.id))
   if (interview.jobInfo.userId !== userId) return null
 
   return interview
