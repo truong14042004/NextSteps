@@ -7,9 +7,12 @@ import { errorToast } from "@/lib/errorToast"
 import Vapi from "@vapi-ai/web"
 import { Loader2Icon, MicIcon, MicOffIcon, PhoneOffIcon, ArrowLeftIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { InterviewJobInfo } from "./page"
 import { toast } from "sonner"
+import { syncAssistantMessagesFromConversation } from "./vapiAssistantMessageSync.mjs"
+import { INTERVIEWER_DISPLAY_NAME } from "./vapiInterviewPrompt.mjs"
+import { buildVapiStartCallArgs } from "./vapiStartCallConfig.mjs"
 
 type InterviewTranscriptMessage = {
   role: "assistant" | "user"
@@ -65,152 +68,6 @@ function isMeetingEndedMessage(message: string | null) {
   )
 }
 
-const TRANSCRIBER_KEYTERM_LIMIT = 24
-
-const GENERIC_TRANSCRIBER_TERMS = new Set([
-  "a",
-  "an",
-  "and",
-  "are",
-  "as",
-  "at",
-  "be",
-  "build",
-  "building",
-  "candidate",
-  "company",
-  "description",
-  "developer",
-  "engineer",
-  "experience",
-  "for",
-  "from",
-  "good",
-  "have",
-  "has",
-  "in",
-  "into",
-  "job",
-  "knowledge",
-  "level",
-  "must",
-  "nice",
-  "of",
-  "on",
-  "or",
-  "our",
-  "position",
-  "preferred",
-  "required",
-  "requirements",
-  "responsibilities",
-  "responsible",
-  "role",
-  "skill",
-  "skills",
-  "software",
-  "strong",
-  "team",
-  "teams",
-  "that",
-  "the",
-  "their",
-  "this",
-  "to",
-  "use",
-  "used",
-  "using",
-  "we",
-  "will",
-  "with",
-  "work",
-  "working",
-  "year",
-  "years",
-  "you",
-  "your",
-])
-
-function normalizeTranscriberTerm(value: string) {
-  return value
-    .replace(/["'`]/g, "")
-    .replace(/\s+/g, " ")
-    .replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9+#./-]+$/g, "")
-    .trim()
-}
-
-function pushUniqueTranscriberTerm(
-  terms: string[],
-  value: string,
-  limit: number,
-) {
-  const normalized = normalizeTranscriberTerm(value)
-  if (normalized === "") return
-
-  const normalizedKey = normalized.toLowerCase()
-  const hasTerm = terms.some(term => term.toLowerCase() === normalizedKey)
-  if (hasTerm || terms.length >= limit) return
-
-  terms.push(normalized)
-}
-
-function extractTechnicalTerms(text: string) {
-  const matches = text.match(/[A-Za-z][A-Za-z0-9+#./-]{1,}/g) ?? []
-  const terms: string[] = []
-
-  for (const match of matches) {
-    const normalized = normalizeTranscriberTerm(match)
-    if (normalized === "") continue
-
-    const normalizedKey = normalized.toLowerCase()
-    const isShortPlainWord =
-      normalized.length <= 2 && !/[A-Z0-9+#./-]/.test(normalized)
-
-    if (
-      isShortPlainWord ||
-      GENERIC_TRANSCRIBER_TERMS.has(normalizedKey)
-    ) {
-      continue
-    }
-
-    pushUniqueTranscriberTerm(terms, normalized, TRANSCRIBER_KEYTERM_LIMIT * 2)
-
-    for (const part of normalized.split(/[/:]/)) {
-      if (part === normalized) continue
-      pushUniqueTranscriberTerm(terms, part, TRANSCRIBER_KEYTERM_LIMIT * 2)
-    }
-
-    if (terms.length >= TRANSCRIBER_KEYTERM_LIMIT * 2) {
-      break
-    }
-  }
-
-  return terms
-}
-
-function buildTranscriberKeyterms(jobInfo: InterviewJobInfo) {
-  const keyterms: string[] = []
-
-  pushUniqueTranscriberTerm(keyterms, jobInfo.title, TRANSCRIBER_KEYTERM_LIMIT)
-
-  const normalizedExperienceLevel = jobInfo.experienceLevel.replace(/[_-]+/g, " ")
-  pushUniqueTranscriberTerm(
-    keyterms,
-    normalizedExperienceLevel,
-    TRANSCRIBER_KEYTERM_LIMIT,
-  )
-
-  const sources = [jobInfo.title, jobInfo.description, jobInfo.cvSummary ?? ""]
-
-  for (const source of sources) {
-    for (const term of extractTechnicalTerms(source)) {
-      pushUniqueTranscriberTerm(keyterms, term, TRANSCRIBER_KEYTERM_LIMIT)
-    }
-  }
-
-  return keyterms
-}
-
 export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobInfo; onBack?: () => void }) {
   const [isConnecting, setIsConnecting] = useState(false)
   const [isCallActive, setIsCallActive] = useState(false)
@@ -239,10 +96,6 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   const hasReceivedUserAudioRef = useRef(false)
   const endedReasonRef = useRef<string | null>(null)
   const router = useRouter()
-  const transcriberKeyterms = useMemo(
-    () => buildTranscriberKeyterms(jobInfo),
-    [jobInfo],
-  )
 
   const clearDurationTimer = useCallback(() => {
     if (durationIntervalRef.current) {
@@ -612,17 +465,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
         const lastAssistant = [...conversation].reverse().find(m => m.role === "assistant")
         if (lastAssistant?.content) {
           setMessages(prev => {
-            const last = prev.at(-1)
-            if (last?.role === "assistant" && last.content === lastAssistant.content) {
-              messagesRef.current = prev
-              return prev
-            }
-
-            const nextMessages =
-              last?.role === "assistant"
-                ? [...prev.slice(0, -1), { role: "assistant" as const, content: lastAssistant.content }]
-                : [...prev, { role: "assistant" as const, content: lastAssistant.content }]
-
+            const nextMessages = syncAssistantMessagesFromConversation(prev, conversation)
             messagesRef.current = nextMessages
             return nextMessages
           })
@@ -815,88 +658,15 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
       console.log("✅ Interview created, ID:", res.id)
       setInterviewId(res.id)
       interviewIdRef.current = res.id
-      console.info("Deepgram transcriber tuned for interview", {
-        model: "nova-3",
-        language: "vi",
-        keytermCount: transcriberKeyterms.length,
-      })
+      console.info("Using assistant dashboard transcriber configuration")
 
       // Start Vapi call - override system prompt with dynamic candidate info
-      await vapi.start({
-        transcriber: {
-          provider: "deepgram",
-          model: "nova-3",
-          language: "vi",
-          smartFormat: true,
-          numerals: true,
-          endpointing: 300,
-          ...(transcriberKeyterms.length > 0
-            ? { keyterm: transcriberKeyterms }
-            : {}),
-        },
-        model: {
-          provider: "openai",
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "system",
-              content: `Bạn là một AI interviewer chuyên nghiệp đang phỏng vấn tuyển dụng. 
-
-QUAN TRỌNG: Bạn PHẢI nói và trả lời HOÀN TOÀN BẰNG TIẾNG VIỆT. Không được dùng tiếng Anh.
-
-Thông tin ứng viên:
-- Tên: ${jobInfo.name}
-- Vị trí ứng tuyển: ${jobInfo.title}
-- Cấp độ kinh nghiệm: ${jobInfo.experienceLevel}
-- Mô tả công việc: ${jobInfo.description}${jobInfo.cvSummary ? `\n- Thông tin CV ứng viên:\n${jobInfo.cvSummary}` : ""}
-
-Nhiệm vụ:
-1. Chào hỏi ứng viên thân thiện, giới thiệu bản thân và mục đích buổi phỏng vấn
-2. Hỏi đúng 5 câu hỏi phỏng vấn phù hợp với vị trí và cấp độ kinh nghiệm
-3. Từng câu hỏi một — chờ ứng viên trả lời hoàn toàn xong mới hỏi tiếp
-4. Sau mỗi câu trả lời, phản hồi ngắn gọn (1 câu) thể hiện bạn đã lắng nghe trước khi chuyển sang câu tiếp theo
-5. Nếu ứng viên trả lời quá ngắn hoặc không rõ, hỏi thêm 1 câu làm rõ
-6. Kết thúc: "Cảm ơn bạn đã dành thời gian tham gia buổi phỏng vấn hôm nay. Chúc bạn may mắn!"
-
-Cấu trúc 5 câu hỏi theo cấp độ:
-
-Intern/Fresher:
-- Câu 1: Giới thiệu bản thân và lý do ứng tuyển vị trí này
-- Câu 2: Kiến thức nền tảng liên quan đến vị trí (lý thuyết, học phần)
-- Câu 3: Dự án cá nhân hoặc đồ án đã làm
-- Câu 4: Khả năng học hỏi và xử lý khi gặp vấn đề mới
-- Câu 5: Mục tiêu nghề nghiệp trong 1-2 năm tới
-
-Junior:
-- Câu 1: Giới thiệu kinh nghiệm làm việc và dự án nổi bật nhất
-- Câu 2: Công nghệ/tech stack đã sử dụng và mức độ thành thạo
-- Câu 3: Tình huống cụ thể gặp bug hoặc vấn đề kỹ thuật và cách giải quyết
-- Câu 4: Cách làm việc nhóm và giao tiếp với đồng nghiệp/khách hàng
-- Câu 5: Định hướng phát triển kỹ năng trong thời gian tới
-
-Mid-level/Senior:
-- Câu 1: Dự án lớn nhất từng tham gia và vai trò cụ thể
-- Câu 2: Kinh nghiệm thiết kế hệ thống hoặc kiến trúc giải pháp
-- Câu 3: Cách mentor/hỗ trợ thành viên junior trong team
-- Câu 4: Tình huống xử lý conflict trong team hoặc với stakeholder
-- Câu 5: Tầm nhìn kỹ thuật và đóng góp cho tổ chức
-
-Phong cách phỏng vấn:
-- Thân thiện, chuyên nghiệp, tạo không khí thoải mái
-- Lắng nghe chủ động, không ngắt lời ứng viên
-- Câu hỏi rõ ràng, không dùng thuật ngữ gây nhầm lẫn
-- Giữ nhịp độ phỏng vấn tự nhiên, không vội vàng
-
-NÓI TIẾNG VIỆT HOÀN TOÀN TRONG SUỐT CUỘC PHỎNG VẤN.`,
-            },
-          ],
-          temperature: 0.7,
-          maxTokens: 200,
-        },
-        // voice is intentionally omitted — uses the voice configured in Vapi dashboard
-        firstMessage: `Xin chào ${jobInfo.name}! Tôi là AI Interviewer. Hôm nay tôi sẽ phỏng vấn bạn cho vị trí ${jobInfo.title}. Bạn đã sẵn sàng chưa?`,
-        name: "AI Interviewer",
-      })
+      await vapi.start(
+        ...buildVapiStartCallArgs({
+          assistantId: env.NEXT_PUBLIC_VAPI_ASSISTANT_ID,
+          jobInfo,
+        }),
+      )
     } catch (error) {
       console.error("❌ Failed to start call:", error)
       toast.error("Không thể bắt đầu cuộc gọi")
@@ -1001,7 +771,7 @@ NÓI TIẾNG VIỆT HOÀN TOÀN TRONG SUỐT CUỘC PHỎNG VẤN.`,
                 <span className="text-2xl">🤖</span>
               </div>
               <div>
-                <h2 className="font-semibold">AI Interviewer</h2>
+                <h2 className="font-semibold">{INTERVIEWER_DISPLAY_NAME}</h2>
                 <p className="text-sm text-muted-foreground">
                   Câu hỏi {currentQuestion}/5 • {duration}
                 </p>
