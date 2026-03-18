@@ -12,6 +12,9 @@ import {
   Star,
   ShieldCheck,
   Zap,
+  Check,
+  Crown,
+  Rocket,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -185,12 +188,12 @@ function Hero() {
               <Button
                 size="lg"
                 className="h-12 px-6 rounded-2xl 
-  bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 
-  text-white font-medium
-  shadow-lg shadow-red-500/25
-  transition-all duration-300
-  hover:shadow-xl hover:shadow-red-500/40 hover:-translate-y-0.5
-  active:scale-[0.98]"
+              bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 
+              text-white font-medium
+              shadow-lg shadow-red-500/25
+              transition-all duration-300
+              hover:shadow-xl hover:shadow-red-500/40 hover:-translate-y-0.5
+              active:scale-[0.98]"
                 asChild
               >
                 <Link href="/app">
@@ -856,175 +859,219 @@ function Testimonials() {
   );
 }
 
-import { Check } from "lucide-react";
-
 function Pricing() {
+  const plans = [
+    {
+      name: "Free",
+      price: "0đ",
+      period: "",
+      description: "Dành cho người mới bắt đầu muốn thử sản phẩm trước.",
+      badge: "Miễn phí",
+      icon: Sparkles,
+      highlight: false,
+      cta: "Dùng miễn phí",
+      href: "/app",
+      features: [
+        "Chấm điểm CV 3 ngày/lần",
+        "Feedback CV cơ bản",
+        "Gợi ý keyword đơn giản theo JD",
+        "Phù hợp để trải nghiệm sản phẩm",
+      ],
+    },
+    {
+      name: "Start",
+      price: "399k",
+      period: "/tháng",
+      description:
+        "Gói phù hợp nhất để tối ưu CV và tăng cơ hội được gọi phỏng vấn.",
+      badge: "Phổ biến nhất",
+      icon: Rocket,
+      highlight: true,
+      cta: "Chọn gói Start",
+      href: "/checkout?plan=start&billing=monthly&price=399000",
+      features: [
+        "Chấm điểm CV không giới hạn",
+        "Sửa CV bằng AI",
+        "100 lượt sử dụng/tháng",
+        "Feedback chi tiết, actionable",
+        "Tối ưu CV theo JD cụ thể",
+      ],
+    },
+    {
+      name: "Premium",
+      price: "799k",
+      period: "/tháng",
+      description:
+        "Dành cho người nghiêm túc muốn luyện toàn diện từ CV đến phỏng vấn.",
+      badge: "Nổi bật",
+      icon: Crown,
+      highlight: false,
+      cta: "Nâng cấp Premium",
+      href: "/checkout?plan=premium&billing=monthly&price=799000",
+      features: [
+        "Tất cả tính năng của Start",
+        "Mock Interview 10 lần/tháng",
+        "Feedback nâng cao cho câu trả lời",
+        "Lưu lịch sử và theo dõi tiến bộ",
+        "Ưu tiên trải nghiệm tính năng mới",
+      ],
+    },
+  ];
+
   return (
-    <section id="pricing" className="py-20 bg-muted/20">
-      <div className="container">
-        <div className="text-center mb-12">
-          <h3 className="text-3xl font-semibold tracking-tight md:text-4xl bg-gradient-to-r from-indigo-500 via-violet-500 to-pink-500 bg-clip-text text-transparent">
-            Bảng giá
+    <section
+      id="pricing"
+      className="relative overflow-hidden bg-muted/20 py-16 md:py-20"
+    >
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute left-1/2 top-0 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-fuchsia-500/10 blur-3xl" />
+      </div>
+
+      <div className="container mx-auto px-4">
+        <div className="mx-auto max-w-3xl text-center">
+          <h3 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">
+            Chọn gói giúp bạn{" "}
+            <span className="bg-gradient-to-r from-red-600 via-rose-500 to-fuchsia-500 bg-clip-text text-transparent">
+              tăng cơ hội được gọi phỏng vấn
+            </span>
           </h3>
-          <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-            Chọn gói phù hợp: trải nghiệm miễn phí, trả theo lượt hoặc gói
-            Premium hàng tháng với đầy đủ tính năng.
+
+          <p className="mt-3 text-muted-foreground md:text-base">
+            Bắt đầu miễn phí, nâng cấp khi bạn cần tối ưu CV mạnh hơn hoặc luyện
+            phỏng vấn nghiêm túc hơn.
           </p>
         </div>
 
-        <div className="mx-auto max-w-5xl">
-          <div className="grid gap-6 md:grid-cols-3 items-stretch">
-            {/* Freemium */}
-            <Card className="flex flex-col justify-between rounded-3xl border bg-card/60 p-6 shadow-sm">
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium">Freemium</div>
-                  <div className="text-xs rounded-full bg-muted/50 px-2 py-1">
-                    0 VNĐ
-                  </div>
-                </div>
+        <div className="mx-auto mt-12 grid max-w-6xl items-stretch gap-6 md:grid-cols-3">
+          {plans.map((plan) => {
+            const Icon = plan.icon;
+            const isPremium = plan.name === "Premium";
 
-                <div className="mt-4">
-                  <div className="text-3xl font-bold">0 VNĐ</div>
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    Dùng thử cơ bản để làm quen sản phẩm
-                  </div>
-
-                  <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                    <FeatureItem>1 lần chấm CV miễn phí mỗi 48 giờ</FeatureItem>
-                    <FeatureItem>3 câu hỏi phỏng vấn thử cơ bản</FeatureItem>
-                    <FeatureItem>
-                      Tổng quan feedback & gợi ý cải thiện
-                    </FeatureItem>
-                    <FeatureItem>Gợi ý keyword theo JD (cơ bản)</FeatureItem>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <Button
-                  variant="outline"
-                  asChild
-                  className="w-full rounded-2xl"
-                >
-                  <Link href="/app">Bắt đầu miễn phí</Link>
-                </Button>
-              </div>
-            </Card>
-
-            {/* Standard (single) */}
-            <Card className="flex flex-col justify-between rounded-3xl border bg-card/60 p-6 shadow-sm">
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium">Standard (Lẻ)</div>
-                  <div className="text-xs rounded-full bg-muted/50 px-2 py-1">
-                    15.000 VNĐ/lượt
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <div className="text-3xl font-bold">15.000 VNĐ</div>
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    Mua theo nhu cầu — dùng lúc cần kết quả nhanh
-                  </div>
-
-                  <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                    <FeatureItem>
-                      1 lần{" "}
-                      <span className="font-medium text-foreground">
-                        Deep Scan
-                      </span>{" "}
-                      CV (sửa lỗi chi tiết)
-                    </FeatureItem>
-                    <FeatureItem>
-                      Hoặc 1 phiên{" "}
-                      <span className="font-medium text-foreground">
-                        Mock Interview chuyên sâu
-                      </span>{" "}
-                      (15 phút)
-                    </FeatureItem>
-                    <FeatureItem>
-                      Checklist cải thiện + gợi ý rewrite
-                    </FeatureItem>
-                    <FeatureItem>Chấm điểm theo JD & rubric</FeatureItem>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <Button asChild className="w-full rounded-2xl">
-                  <Link href="/checkout?plan=standard&type=single&price=15000">
-                    Mua lượt
-                  </Link>
-                </Button>
-              </div>
-            </Card>
-
-            {/* Premium (monthly) - highlighted */}
-            <Card className="relative flex flex-col justify-between rounded-3xl border-0 p-0 shadow-lg">
-              <div
-                className="rounded-3xl p-6"
-                style={{
-                  background:
-                    "linear-gradient(135deg, rgba(236,72,153,0.12) 0%, rgba(99,102,241,0.12) 40%, rgba(249,115,22,0.12) 100%)",
-                }}
+            return (
+              <Card
+                key={plan.name}
+                className={[
+                  "relative flex h-full flex-col overflow-hidden rounded-3xl transition-all duration-300",
+                  isPremium
+                    ? "border-0 bg-gradient-to-br from-rose-500/30 via-fuchsia-500/25 to-amber-400/30 p-[1px] shadow-xl shadow-rose-500/10"
+                    : plan.highlight
+                      ? "border-primary bg-background/85 shadow-lg shadow-primary/10 ring-1 ring-primary/15 md:scale-[1.03]"
+                      : "border-border/70 bg-background/80 shadow-sm",
+                  "hover:-translate-y-1 hover:shadow-xl",
+                ].join(" ")}
               >
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-foreground">
-                    Premium (Tháng)
-                  </div>
-                  <div className="text-xs rounded-full bg-gradient-to-r from-pink-500 to-amber-400 text-white px-2 py-1">
-                    Nổi bật
-                  </div>
-                </div>
+                <div className="flex h-full flex-col rounded-[calc(1.5rem-1px)] bg-background/90 backdrop-blur-xl">
+                  {plan.highlight && !isPremium && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <div className="rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground shadow-md">
+                        {plan.badge}
+                      </div>
+                    </div>
+                  )}
 
-                <div className="mt-4">
-                  <div className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-indigo-500 to-amber-400">
-                    99.000 VNĐ
-                  </div>
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    Dùng toàn bộ tính năng cao cấp trong tháng (giới hạn theo
-                    ngày)
-                  </div>
+                  {isPremium && (
+                    <div className="absolute right-4 top-4">
+                      <div className="rounded-full bg-gradient-to-r from-pink-500 to-amber-400 px-3 py-1 text-xs font-medium text-white shadow-md">
+                        {plan.badge}
+                      </div>
+                    </div>
+                  )}
 
-                  <ul className="mt-4 space-y-2 text-sm text-foreground">
-                    <FeatureItem strong>
-                      Tối đa <span className="font-semibold">20 lần/ngày</span>{" "}
-                      (Mock Interview, Deep Scan)
-                    </FeatureItem>
-                    <FeatureItem strong>
-                      Truy cập mọi tính năng cao cấp
-                    </FeatureItem>
-                    <FeatureItem strong>
-                      Xuất báo cáo & lưu lịch sử không giới hạn
-                    </FeatureItem>
-                    <FeatureItem strong>
-                      Ưu tiên hỗ trợ & cập nhật tính năng mới
-                    </FeatureItem>
-                    <FeatureItem strong>
-                      Gợi ý lộ trình luyện theo mục tiêu
-                    </FeatureItem>
-                  </ul>
-                </div>
+                  <CardHeader className="pb-4 pt-6">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={[
+                            "flex h-11 w-11 items-center justify-center rounded-2xl border",
+                            isPremium
+                              ? "border-pink-500/20 bg-gradient-to-br from-pink-500/15 to-amber-400/15 text-pink-500"
+                              : plan.highlight
+                                ? "border-primary/20 bg-primary/10 text-primary"
+                                : "border-border bg-muted text-foreground",
+                          ].join(" ")}
+                        >
+                          <Icon className="h-5 w-5" />
+                        </div>
 
-                <div className="mt-6">
-                  <Button
-                    className="w-full rounded-2xl bg-gradient-to-r from-pink-500 via-indigo-500 to-amber-400 text-white shadow-lg"
-                    asChild
-                  >
-                    <Link href="/checkout?plan=premium&type=monthly&price=99000">
-                      Đăng ký Premium
-                    </Link>
-                  </Button>
+                        <div>
+                          <CardTitle className="text-xl">{plan.name}</CardTitle>
+                          {!plan.highlight && !isPremium && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {plan.badge}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-6">
+                      <div className="flex items-end gap-1">
+                        <span
+                          className={[
+                            "text-4xl font-extrabold tracking-tight",
+                            isPremium
+                              ? "bg-gradient-to-r from-pink-500 via-purple-500 to-amber-400 bg-clip-text text-transparent"
+                              : "",
+                          ].join(" ")}
+                        >
+                          {plan.price}
+                        </span>
+
+                        {plan.period && (
+                          <span className="pb-1 text-sm text-muted-foreground">
+                            {plan.period}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                        {plan.description}
+                      </p>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="flex flex-1 flex-col">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Bao gồm
+                      </p>
+
+                      <ul className="mt-4 space-y-3">
+                        {plan.features.map((feature) => (
+                          <FeatureItem key={feature} highlight={isPremium}>
+                            {feature}
+                          </FeatureItem>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="mt-6 flex-1" />
+
+                    <Button
+                      asChild
+                      className={[
+                        "h-12 w-full rounded-2xl text-sm font-medium transition-all",
+                        isPremium
+                          ? "bg-gradient-to-r from-pink-500 via-purple-500 to-amber-400 text-white shadow-lg shadow-pink-500/25 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-pink-500/35 mb-6"
+                          : plan.highlight
+                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90"
+                            : "bg-foreground text-background hover:opacity-90",
+                      ].join(" ")}
+                    >
+                      <Link href={plan.href}>{plan.cta}</Link>
+                    </Button>
+                  </CardContent>
                 </div>
-              </div>
-            </Card>
-          </div>
+              </Card>
+            );
+          })}
         </div>
 
-        <div className="text-center mt-8">
+        <div className="mx-auto mt-8 max-w-3xl text-center">
           <p className="text-sm text-muted-foreground">
-            Hoàn tiền trong 7 ngày. Huỷ bất kỳ lúc nào.
+            Start phù hợp để tối ưu CV và tăng callback. Premium phù hợp khi bạn
+            muốn vừa tối ưu CV vừa luyện mock interview một cách nghiêm túc.
           </p>
         </div>
       </div>
@@ -1032,25 +1079,27 @@ function Pricing() {
   );
 }
 
-/** Check item (đồng bộ spacing + màu) */
 function FeatureItem({
   children,
-  strong,
+  highlight = false,
 }: {
   children: React.ReactNode;
-  strong?: boolean;
+  highlight?: boolean;
 }) {
   return (
-    <li className="flex items-start gap-2">
-      <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
-        <Check className="h-3.5 w-3.5" />
-      </span>
+    <li className="flex items-start gap-3">
       <span
         className={[
-          "leading-relaxed",
-          strong ? "text-foreground" : "text-muted-foreground",
+          "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+          highlight
+            ? "bg-gradient-to-r from-pink-500 to-amber-400 text-white"
+            : "bg-primary/10 text-primary",
         ].join(" ")}
       >
+        <Check className="h-3.5 w-3.5" />
+      </span>
+
+      <span className="text-sm leading-relaxed text-foreground/85">
         {children}
       </span>
     </li>
