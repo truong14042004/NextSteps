@@ -8,8 +8,12 @@ export async function upsertUser(user: typeof UserTable.$inferInsert) {
     .insert(UserTable)
     .values(user)
     .onConflictDoUpdate({
-      target: [UserTable.id],
-      set: user,
+      target: [UserTable.email],
+      set: {
+        name: user.name,
+        imageUrl: user.imageUrl,
+        updatedAt: new Date(),
+      },
     })
 
   revalidateUserCache(user.id)

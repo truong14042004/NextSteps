@@ -74,6 +74,7 @@ export default async function InterviewPage({
               i.feedback == null ? (
                 <ActionButton
                   action={generateInterviewFeedback.bind(null, i.id)}
+                  successMessage="Generated feedback"
                 >
                   Generate Feedback
                 </ActionButton>

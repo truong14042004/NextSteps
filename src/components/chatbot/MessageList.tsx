@@ -3,12 +3,12 @@
 import { useRef, useEffect } from 'react';
 import { MessageBubble } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
-import { Message } from '@/lib/chatbot/types';
+import { ChatbotConfig, Message } from '@/lib/chatbot/types';
 
 interface MessageListProps {
   messages: Message[];
   isTyping: boolean;
-  theme?: any;
+  theme?: ChatbotConfig['theme'];
 }
 
 export function MessageList({ messages, isTyping, theme }: MessageListProps) {

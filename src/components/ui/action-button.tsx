@@ -1,6 +1,7 @@
 "use client"
 
 import { type ComponentProps, type ReactNode, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { LoadingSwap } from "@/components/ui/loading-swap"
@@ -20,18 +21,40 @@ export function ActionButton({
   action,
   requireAreYouSure = false,
   areYouSureDescription = "This action cannot be undone.",
+  successMessage,
+  refreshOnSuccess = true,
   ...props
 }: ComponentProps<typeof Button> & {
   action: () => Promise<{ error: boolean; message?: string }>
   requireAreYouSure?: boolean
   areYouSureDescription?: ReactNode
+  successMessage?: string
+  refreshOnSuccess?: boolean
 }) {
   const [isLoading, startTransition] = useTransition()
+  const router = useRouter()
 
   function performAction() {
     startTransition(async () => {
-      const data = await action()
-      if (data.error) toast.error(data.message ?? "Error")
+      try {
+        const data = await action()
+        if (data.error) {
+          toast.error(data.message ?? "Error")
+          return
+        }
+
+        if (successMessage) {
+          toast.success(successMessage)
+        }
+
+        if (refreshOnSuccess) {
+          router.refresh()
+        }
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Action failed. Please try again."
+        )
+      }
     })
   }
 

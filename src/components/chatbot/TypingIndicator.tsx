@@ -1,7 +1,9 @@
 'use client';
 
+import { ChatbotConfig } from '@/lib/chatbot/types';
+
 interface TypingIndicatorProps {
-  theme?: any;
+  theme?: ChatbotConfig['theme'];
 }
 
 export function TypingIndicator({ theme }: TypingIndicatorProps) {

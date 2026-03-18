@@ -32,7 +32,10 @@ export function StartCall({
   const [interviewId, setInterviewId] = useState<string | null>(null)
   const durationRef = useRef(callDurationTimestamp)
   const router = useRouter()
-  durationRef.current = callDurationTimestamp
+
+  useEffect(() => {
+    durationRef.current = callDurationTimestamp
+  }, [callDurationTimestamp])
 
   // Sync chat ID
   useEffect(() => {

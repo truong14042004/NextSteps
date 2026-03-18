@@ -49,7 +49,10 @@ export function Navbar({ user }: { user: { name: string; imageUrl: string } }) {
                 <UserAvatar user={user} />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem disabled>
+                <DropdownMenuItem
+                  onClick={() => router.push("/profile")}
+                  disabled={isSigningOut}
+                >
                   <User className="mr-2" />
                   {user.name}
                 </DropdownMenuItem>
@@ -58,7 +61,7 @@ export function Navbar({ user }: { user: { name: string; imageUrl: string } }) {
                   disabled={isSigningOut}
                 >
                   <LogOut className="mr-2" />
-                  Logout
+                  Đăng xuất
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

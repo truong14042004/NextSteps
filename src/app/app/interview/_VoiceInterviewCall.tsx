@@ -23,10 +23,13 @@ export function VoiceInterviewCall({
   const { connect, disconnect, readyState, chatMetadata, callDurationTimestamp, isMuted, unmute, mute, error } =
     useVoice()
   const [interviewId, setInterviewId] = useState<string | null>(null)
-  const [connectionAttempted, setConnectionAttempted] = useState(false)
+  const connectionAttemptedRef = useRef(false)
   const durationRef = useRef(callDurationTimestamp)
   const router = useRouter()
-  durationRef.current = callDurationTimestamp
+
+  useEffect(() => {
+    durationRef.current = callDurationTimestamp
+  }, [callDurationTimestamp])
 
   // Log ready state changes
   useEffect(() => {
@@ -46,7 +49,7 @@ export function VoiceInterviewCall({
 
   // Handle connection failure
   useEffect(() => {
-    if (connectionAttempted && readyState === VoiceReadyState.CLOSED && !chatMetadata?.chatId) {
+    if (connectionAttemptedRef.current && readyState === VoiceReadyState.CLOSED && !chatMetadata?.chatId) {
       console.error("❌ Connection failed immediately after attempt")
       console.log("📋 Debug Info:")
       console.log("  - Config ID:", env.NEXT_PUBLIC_HUME_CONFIG_ID)
@@ -55,9 +58,9 @@ export function VoiceInterviewCall({
       console.log("  - Error object:", error)
       
       toast.error("Không thể kết nối với AI. Vui lòng kiểm tra cấu hình Hume.")
-      setConnectionAttempted(false)
+      connectionAttemptedRef.current = false
     }
-  }, [readyState, connectionAttempted, chatMetadata?.chatId, error, accessToken])
+  }, [readyState, chatMetadata?.chatId, error, accessToken])
 
   // Sync chat ID
   useEffect(() => {
@@ -151,7 +154,7 @@ export function VoiceInterviewCall({
                 experienceLevel: jobInfo.experienceLevel,
               })
               
-              setConnectionAttempted(true)
+              connectionAttemptedRef.current = true
               
               try {
                 await connect({
@@ -171,7 +174,7 @@ export function VoiceInterviewCall({
               } catch (err) {
                 console.error("❌ Connect function threw error:", err)
                 errorToast("Lỗi kết nối: " + (err instanceof Error ? err.message : String(err)))
-                setConnectionAttempted(false)
+                connectionAttemptedRef.current = false
               }
             }}
           >

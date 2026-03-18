@@ -1,8 +1,8 @@
 "use client"
 
-import * as React from "react"
+import { useSyncExternalStore } from "react"
 import { useTheme } from "next-themes"
-import { Monitor, Moon, Sun } from "lucide-react"
+import { Moon, Sun } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -11,36 +11,37 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 
 const themes = [
   {
-    name: "Light",
+    name: "Sáng",
     Icon: Sun,
     value: "light",
   },
   {
-    name: "Dark",
+    name: "Tối",
     Icon: Moon,
     value: "dark",
-  },
-  {
-    name: "System",
-    Icon: Monitor,
-    value: "system",
   },
 ] as const
 
 export function ThemeToggle() {
-  const [mounted, setMounted] = useState(false)
   const { setTheme, theme, resolvedTheme } = useTheme()
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) return null
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="icon" type="button" disabled aria-label="Theme menu loading">
+        <Sun />
+        <span className="sr-only">Toggle theme</span>
+      </Button>
+    )
+  }
 
   return (
     <DropdownMenu>

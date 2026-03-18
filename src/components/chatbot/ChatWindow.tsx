@@ -4,12 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChatHeader } from './ChatHeader';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
-import { ChatbotConfig } from '@/lib/chatbot/types';
+import { ChatbotConfig, Message } from '@/lib/chatbot/types';
 
 interface ChatWindowProps {
   isOpen: boolean;
   onClose: () => void;
-  messages: any[];
+  messages: Message[];
   isTyping: boolean;
   botName: string;
   botAvatar?: string;

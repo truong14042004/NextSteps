@@ -11,13 +11,14 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { LoadingSwap } from "@/components/ui/loading-swap";
-import { MailIcon, ShieldCheckIcon } from "lucide-react";
-import { AppLogo } from "@/components/ui/AppLogo";
-type Mode = "sign_in" | "sign_up";
-type Step = "form" | "verify_otp";
+} from "@/components/ui/card"
+import { AppLogo } from "@/components/ui/AppLogo"
+import { Input } from "@/components/ui/input"
+import { LoadingSwap } from "@/components/ui/loading-swap"
+import { MailIcon, Eye, EyeOff } from "lucide-react"
+
+type Mode = "sign_in" | "sign_up"
+type Step = "form" | "verify_otp"
 
 type SignUpFormState = {
   firstName: string;
@@ -128,10 +129,11 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
     confirmPassword: "",
   });
 
-  const [code, setCode] = useState("");
-  const [step, setStep] = useState<Step>("form");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [resendInSeconds, setResendInSeconds] = useState(0);
+  const [code, setCode] = useState("")
+  const [step, setStep] = useState<Step>("form")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [resendInSeconds, setResendInSeconds] = useState(0)
+  const [showSignInPassword, setShowSignInPassword] = useState(false)
 
   const altLink = mode === "sign_up" ? "/sign-in" : "/sign-up";
   const altText =
@@ -184,6 +186,25 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
     }
   }
 
+  function validatePassword(password: string): string | null {
+    if (password.length < 8) {
+      return "Mật khẩu phải có ít nhất 8 ký tự"
+    }
+    if (!/[a-z]/.test(password)) {
+      return "Mật khẩu phải chứa chữ cái thường"
+    }
+    if (!/[A-Z]/.test(password)) {
+      return "Mật khẩu phải chứa chữ cái hoa"
+    }
+    if (!/[0-9]/.test(password)) {
+      return "Mật khẩu phải chứa ít nhất một số"
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      return "Mật khẩu phải chứa ký tự đặc biệt (!@#$%^&* v.v.)"
+    }
+    return null
+  }
+
   async function onSignUpRequestOtp(e: FormEvent) {
     e.preventDefault();
 
@@ -192,7 +213,13 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
       return;
     }
 
-    setIsSubmitting(true);
+    const passwordError = validatePassword(signUpForm.password)
+    if (passwordError) {
+      toast.error(passwordError)
+      return
+    }
+
+    setIsSubmitting(true)
     try {
       await callApi("/api/auth/request-otp", {
         email: signUpForm.email,
@@ -331,28 +358,51 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
     return (
       <AuthShell
         title="Đăng nhập"
-        description="Nhập email và mật khẩu để truy cập tài khoản NextStep."
+        description="Tiếp tục với tài khoản NextStep của bạn để vào dashboard và xem lịch sử luyện tập."
       >
         <form onSubmit={onSignInWithPassword} className="space-y-4">
           <Input
             type="email"
             value={signInEmail}
             onChange={(e) => setSignInEmail(e.target.value)}
-            placeholder="Email"
+            placeholder="you@example.com"
             autoComplete="email"
             className="h-12 rounded-2xl border-primary/10"
             required
           />
 
-          <Input
-            type="password"
-            value={signInPassword}
-            onChange={(e) => setSignInPassword(e.target.value)}
-            placeholder="Mật khẩu"
-            autoComplete="current-password"
-            className="h-12 rounded-2xl border-primary/10"
-            required
-          />
+          <div className="space-y-2">
+            <div className="relative">
+              <Input
+                type={showSignInPassword ? "text" : "password"}
+                value={signInPassword}
+                onChange={(e) => setSignInPassword(e.target.value)}
+                placeholder="Mật khẩu"
+                autoComplete="current-password"
+                className="h-12 rounded-2xl border-primary/10 pr-10"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowSignInPassword(!showSignInPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                disabled={isSubmitting}
+              >
+                {showSignInPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+
+            <Link
+              href="/forgot-password"
+              className="block text-right text-sm text-primary hover:underline"
+            >
+              Quên mật khẩu?
+            </Link>
+          </div>
 
           <Button
             className="btn-cta h-12 w-full rounded-2xl"
@@ -381,18 +431,15 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
             Đăng nhập bằng Google
           </Button>
 
-          <p className="pt-2 text-center text-sm text-muted-foreground">
+          <p className="pt-1 text-center text-sm text-muted-foreground">
             {altText}{" "}
-            <Link
-              href={altLink}
-              className="font-medium text-primary hover:underline"
-            >
+            <Link href={altLink} className="font-medium text-primary hover:underline">
               {altCta}
             </Link>
           </p>
         </form>
       </AuthShell>
-    );
+    )
   }
 
   return (

@@ -7,7 +7,7 @@ import { insertJobInfo, updateJobInfo as updateJobInfoDb } from "./db"
 import { redirect } from "next/navigation"
 import { db } from "@/drizzle/db"
 import { and, eq } from "drizzle-orm"
-import { JobInfoTable } from "@/drizzle/schema"
+import { JobInfoTable, type ExperienceLevel } from "@/drizzle/schema"
 import { cacheTag } from "next/dist/server/use-cache/cache-tag"
 import { getJobInfoIdTag } from "./dbCache"
 
@@ -69,7 +69,7 @@ export async function updateJobInfo(
 export async function createQuickInterview(data: {
   candidateName: string
   jobTitle: string
-  experienceLevel: string
+  experienceLevel: ExperienceLevel
   jobDescription: string
 }): Promise<
   | { error: true; message: string }
@@ -96,7 +96,7 @@ export async function createQuickInterview(data: {
     const jobInfo = await insertJobInfo({
       name: data.candidateName,
       title: data.jobTitle,
-      experienceLevel: data.experienceLevel as any,
+      experienceLevel: data.experienceLevel,
       description: data.jobDescription,
       userId,
     })
@@ -166,7 +166,7 @@ export async function getUserJobInfosBasic(limit = 10) {
 export async function createJobInfoForAnalysis(data: {
   candidateName: string
   jobTitle: string
-  experienceLevel: string
+  experienceLevel: ExperienceLevel
   jobDescription: string
 }): Promise<{ error: true; message: string } | { error: false; id: string }> {
   const { userId } = await getCurrentUser()
@@ -178,7 +178,7 @@ export async function createJobInfoForAnalysis(data: {
     const jobInfo = await insertJobInfo({
       name: data.candidateName,
       title: data.jobTitle,
-      experienceLevel: data.experienceLevel as any,
+      experienceLevel: data.experienceLevel,
       description: data.jobDescription,
       userId,
     })
@@ -210,7 +210,11 @@ async function getJobInfo(id: string, userId: string) {
 
 export async function updateJobInfoDirect(
   id: string,
-  data: { title?: string; experienceLevel: string; description: string }
+  data: {
+    title?: string
+    experienceLevel: ExperienceLevel
+    description: string
+  }
 ): Promise<{ error: true; message: string } | { error: false }> {
   const { userId } = await getCurrentUser()
   if (userId == null) {
@@ -224,7 +228,7 @@ export async function updateJobInfoDirect(
 
   await updateJobInfoDb(id, {
     title: data.title,
-    experienceLevel: data.experienceLevel as any,
+    experienceLevel: data.experienceLevel,
     description: data.description,
   })
 

@@ -7,126 +7,479 @@ import { errorToast } from "@/lib/errorToast"
 import Vapi from "@vapi-ai/web"
 import { Loader2Icon, MicIcon, MicOffIcon, PhoneOffIcon, ArrowLeftIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { InterviewJobInfo } from "./page"
 import { toast } from "sonner"
+import { syncAssistantMessagesFromConversation } from "./vapiAssistantMessageSync.mjs"
+import { INTERVIEWER_DISPLAY_NAME } from "./vapiInterviewPrompt.mjs"
+import { buildVapiStartCallArgs } from "./vapiStartCallConfig.mjs"
+
+type InterviewTranscriptMessage = {
+  role: "assistant" | "user"
+  content: string
+}
+
+type VapiErrorDetails = {
+  type: string | null
+  message: string | null
+}
+
+function getVapiErrorDetails(error: unknown): VapiErrorDetails {
+  if (typeof error === "string") {
+    return { type: null, message: error }
+  }
+
+  if (error == null || typeof error !== "object") {
+    return { type: null, message: null }
+  }
+
+  const payload = error as Record<string, unknown>
+  const type = typeof payload.type === "string" ? payload.type : null
+  const directMessage =
+    typeof payload.message === "string" ? payload.message : null
+
+  if (typeof payload.error === "string") {
+    return { type, message: payload.error }
+  }
+
+  if (payload.error != null && typeof payload.error === "object") {
+    const nested = payload.error as Record<string, unknown>
+    const message =
+      (typeof nested.message === "string" && nested.message) ||
+      (typeof nested.errorMsg === "string" && nested.errorMsg) ||
+      (typeof nested.errorDetail === "string" && nested.errorDetail) ||
+      (typeof nested.cause === "string" && nested.cause) ||
+      directMessage
+
+    return { type, message: message ?? null }
+  }
+
+  return { type, message: directMessage }
+}
+
+function isMeetingEndedMessage(message: string | null) {
+  if (message == null) return false
+
+  const normalized = message.toLowerCase()
+  return (
+    normalized.includes("meeting has ended") ||
+    normalized.includes("meeting ended due to ejection") ||
+    normalized.includes("ended due to ejection")
+  )
+}
 
 export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobInfo; onBack?: () => void }) {
-  const [vapi, setVapi] = useState<Vapi | null>(null)
   const [isConnecting, setIsConnecting] = useState(false)
   const [isCallActive, setIsCallActive] = useState(false)
   const [isInterviewComplete, setIsInterviewComplete] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
-  const [messages, setMessages] = useState<Array<{ role: "assistant" | "user"; content: string }>>([])
-  const [liveTranscript, setLiveTranscript] = useState<{ role: "assistant" | "user"; content: string } | null>(null)
+  const [messages, setMessages] = useState<InterviewTranscriptMessage[]>([])
+  const [liveTranscript, setLiveTranscript] = useState<InterviewTranscriptMessage | null>(null)
   const [duration, setDuration] = useState("00:00:00")
   const [interviewId, setInterviewId] = useState<string | null>(null)
   
+  const vapiRef = useRef<Vapi | null>(null)
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const callStartRef = useRef<number>(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const messagesRef = useRef<Array<{ role: "assistant" | "user"; content: string }>>([])
+  const messagesRef = useRef<InterviewTranscriptMessage[]>([])
   const interviewIdRef = useRef<string | null>(null)
   const durationRef = useRef<string>("00:00:00")
+  const hasFinalizedRef = useRef(false)
+  const manualStopRef = useRef(false)
+  const microphoneStreamRef = useRef<MediaStream | null>(null)
+  const microphoneDeviceIdRef = useRef<string | null>(null)
+  const microphoneRecoveryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const lastRecognizedSpeechAtRef = useRef(0)
+  const lastMicrophoneRecoveryAtRef = useRef(0)
+  const isRecoveringMicrophoneRef = useRef(false)
+  const hasReceivedUserAudioRef = useRef(false)
+  const endedReasonRef = useRef<string | null>(null)
   const router = useRouter()
+
+  const clearDurationTimer = useCallback(() => {
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current)
+      durationIntervalRef.current = null
+    }
+  }, [])
+
+  const clearMicrophoneRecoveryTimer = useCallback(() => {
+    if (microphoneRecoveryTimeoutRef.current) {
+      clearTimeout(microphoneRecoveryTimeoutRef.current)
+      microphoneRecoveryTimeoutRef.current = null
+    }
+  }, [])
+
+  const stopMicrophoneStream = useCallback(() => {
+    microphoneStreamRef.current?.getTracks().forEach(track => track.stop())
+    microphoneStreamRef.current = null
+  }, [])
+
+  const prepareMicrophoneInput = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Browser does not support microphone capture.")
+    }
+
+    stopMicrophoneStream()
+
+    const buildAudioConstraints = (deviceId?: string | null): MediaTrackConstraints => ({
+      autoGainControl: true,
+      echoCancellation: true,
+      noiseSuppression: true,
+      ...(deviceId
+        ? {
+            deviceId: {
+              exact: deviceId,
+            },
+          }
+        : {}),
+    })
+
+    const preferredDeviceId = microphoneDeviceIdRef.current
+    let stream: MediaStream
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: buildAudioConstraints(preferredDeviceId),
+      })
+    } catch (error) {
+      if (preferredDeviceId == null) {
+        throw error
+      }
+
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: buildAudioConstraints(),
+      })
+    }
+
+    microphoneStreamRef.current = stream
+    const [track] = stream.getAudioTracks()
+
+    if (!track) {
+      stopMicrophoneStream()
+      throw new Error("No microphone track available.")
+    }
+
+    track.enabled = true
+
+    const currentDeviceId = track.getSettings().deviceId
+    microphoneDeviceIdRef.current =
+      typeof currentDeviceId === "string" && currentDeviceId !== ""
+        ? currentDeviceId
+        : preferredDeviceId
+
+    stopMicrophoneStream()
+    return microphoneDeviceIdRef.current
+  }, [stopMicrophoneStream])
+
+  const stopVapiCall = useCallback(async (source: string) => {
+    const vapi = vapiRef.current
+    if (!vapi) return
+
+    try {
+      await vapi.stop()
+    } catch (error) {
+      const details = getVapiErrorDetails(error)
+      if (!isMeetingEndedMessage(details.message)) {
+        console.warn(`Failed to stop Vapi call during ${source}`, error)
+      }
+    }
+  }, [])
+
+  const recoverMicrophoneInput = useCallback(async (reason: string) => {
+    const vapi = vapiRef.current
+    if (
+      !vapi ||
+      !isCallActive ||
+      isMuted ||
+      hasFinalizedRef.current ||
+      manualStopRef.current
+    ) {
+      return
+    }
+
+    const now = Date.now()
+    if (
+      isRecoveringMicrophoneRef.current ||
+      now - lastMicrophoneRecoveryAtRef.current < 8000
+    ) {
+      return
+    }
+
+    isRecoveringMicrophoneRef.current = true
+
+    try {
+      const microphoneDeviceId = await prepareMicrophoneInput()
+      if (!microphoneDeviceId) {
+        console.warn("Skipping microphone recovery because no deviceId is available", {
+          reason,
+        })
+        return
+      }
+
+      await vapi.setInputDevicesAsync({ audioDeviceId: microphoneDeviceId })
+      lastMicrophoneRecoveryAtRef.current = Date.now()
+      lastRecognizedSpeechAtRef.current = Date.now()
+      console.info("Recovered microphone input", {
+        reason,
+        microphoneDeviceId,
+      })
+    } catch (error) {
+      console.warn("Failed to recover microphone input", {
+        reason,
+        error,
+      })
+    } finally {
+      isRecoveringMicrophoneRef.current = false
+    }
+  }, [isCallActive, isMuted, prepareMicrophoneInput])
+
+  const markRecognizedSpeech = useCallback(() => {
+    lastRecognizedSpeechAtRef.current = Date.now()
+    clearMicrophoneRecoveryTimer()
+  }, [clearMicrophoneRecoveryTimer])
+
+  const scheduleMicrophoneRecovery = useCallback((reason: string) => {
+    if (!isCallActive || isMuted) return
+
+    clearMicrophoneRecoveryTimer()
+    const scheduledAt = Date.now()
+
+    microphoneRecoveryTimeoutRef.current = setTimeout(() => {
+      if (lastRecognizedSpeechAtRef.current >= scheduledAt) {
+        return
+      }
+
+      void recoverMicrophoneInput(reason)
+    }, 6000)
+  }, [clearMicrophoneRecoveryTimer, isCallActive, isMuted, recoverMicrophoneInput])
+
+  const finalizeCall = useCallback(async (options?: {
+    notice?: { type: "info" | "error"; message: string }
+    fallbackNotice?: { type: "info" | "error"; message: string }
+  }) => {
+    if (hasFinalizedRef.current) return
+    hasFinalizedRef.current = true
+
+    clearDurationTimer()
+    clearMicrophoneRecoveryTimer()
+    stopMicrophoneStream()
+    setIsCallActive(false)
+    setIsConnecting(false)
+    setLiveTranscript(null)
+
+    const currentId = interviewIdRef.current
+    const currentDuration = durationRef.current
+    const currentMessages = messagesRef.current
+    const hasStartedCall =
+      callStartRef.current > 0 || currentMessages.length > 0
+    callStartRef.current = 0
+
+    if (currentId && hasStartedCall) {
+      try {
+        const result = await updateInterview(currentId, {
+          duration: currentDuration,
+          vapiTranscript: JSON.stringify(currentMessages),
+        })
+
+        if (result.error) {
+          throw new Error(result.message ?? "Failed to save interview")
+        }
+      } catch (error) {
+        console.error("Failed to persist Vapi interview:", error)
+        toast.error("Cuoc goi da ket thuc nhung khong luu duoc ket qua.")
+        return
+      }
+
+      if (options?.notice) {
+        if (options.notice.type === "error") {
+          toast.error(options.notice.message)
+        } else {
+          toast.info(options.notice.message)
+        }
+      }
+
+      router.push(`/app/interview/${currentId}`)
+      return
+    }
+
+    const fallbackNotice =
+      options?.fallbackNotice ??
+      ({ type: "info", message: "Phong van chua duoc bat dau" } as const)
+
+    if (fallbackNotice.type === "error") {
+      toast.error(fallbackNotice.message)
+    } else {
+      toast.info(fallbackNotice.message)
+    }
+
+    router.push("/app/interview")
+  }, [clearDurationTimer, clearMicrophoneRecoveryTimer, router, stopMicrophoneStream])
 
   // Keep refs in sync with state
   useEffect(() => { messagesRef.current = messages }, [messages])
   useEffect(() => { interviewIdRef.current = interviewId }, [interviewId])
   useEffect(() => { durationRef.current = duration }, [duration])
 
-  // Initialize Vapi
-  useEffect(() => {
+  const createVapiInstance = useCallback((audioSource?: string | null) => {
     if (!env.NEXT_PUBLIC_VAPI_PUBLIC_KEY) {
-      console.error("❌ Vapi public key not found")
-      return
+      console.error("Vapi public key not found")
+      return null
     }
 
-    const vapiInstance = new Vapi(env.NEXT_PUBLIC_VAPI_PUBLIC_KEY)
-    setVapi(vapiInstance)
+    vapiRef.current?.removeAllListeners()
 
-    // Event listeners
+    const vapiInstance = new Vapi(
+      env.NEXT_PUBLIC_VAPI_PUBLIC_KEY,
+      undefined,
+      { alwaysIncludeMicInPermissionPrompt: true },
+      audioSource ? { audioSource } : undefined,
+    )
+    vapiRef.current = vapiInstance
+
     vapiInstance.on("call-start", () => {
-      console.log("✅ Call started")
+      console.log("Vapi call started")
+      hasFinalizedRef.current = false
+      manualStopRef.current = false
       setIsConnecting(false)
       setIsCallActive(true)
       callStartRef.current = Date.now()
-      
+
       // Start duration tracker
+      clearDurationTimer()
       durationIntervalRef.current = setInterval(() => {
         const elapsed = Math.floor((Date.now() - callStartRef.current) / 1000)
         const hours = Math.floor(elapsed / 3600).toString().padStart(2, "0")
         const minutes = Math.floor((elapsed % 3600) / 60).toString().padStart(2, "0")
         const seconds = (elapsed % 60).toString().padStart(2, "0")
-        setDuration(`${hours}:${minutes}:${seconds}`)
+        const nextDuration = `${hours}:${minutes}:${seconds}`
+        durationRef.current = nextDuration
+        setDuration(nextDuration)
       }, 1000)
     })
 
-    vapiInstance.on("call-end", async () => {
-      console.log("📞 Call ended")
-      setIsCallActive(false)
-      setIsConnecting(false)
-      if (durationIntervalRef.current) {
-        clearInterval(durationIntervalRef.current)
-      }
-
-      const currentId = interviewIdRef.current
-      const currentDuration = durationRef.current
-      const currentMessages = messagesRef.current
-
-      if (currentId && currentDuration !== "00:00:00") {
-        // Save final duration + vapi transcript
-        await updateInterview(currentId, {
-          duration: currentDuration,
-          vapiTranscript: JSON.stringify(currentMessages),
-        })
-        router.push(`/app/interview/${currentId}`)
-      } else {
-        toast.info("Phỏng vấn chưa được bắt đầu")
-        router.push("/app/interview")
-      }
+    vapiInstance.on("call-end", () => {
+      console.log("Vapi call ended")
+      void finalizeCall()
     })
 
     vapiInstance.on("speech-start", () => {
-      console.log("🗣️ User started speaking")
+      console.log("Vapi speech started")
     })
 
     vapiInstance.on("speech-end", () => {
-      console.log("🤐 User stopped speaking")
+      console.log("Vapi speech ended")
     })
 
-    vapiInstance.on("message", (message: any) => {
+    vapiInstance.on("network-quality-change", (event: unknown) => {
+      console.info("Vapi network quality changed", event)
+    })
+
+    vapiInstance.on("network-connection", (event: unknown) => {
+      console.info("Vapi network connection changed", event)
+    })
+
+    vapiInstance.on("call-start-progress", (event: unknown) => {
+      console.info("Vapi call start progress", event)
+    })
+
+    vapiInstance.on("message", (event: unknown) => {
+      if (event == null || typeof event !== "object") {
+        return
+      }
+      const message = event as Record<string, unknown>
+
+      if (message.type === "status-update" && message.status === "ended") {
+        const endedReason =
+          typeof message.endedReason === "string" ? message.endedReason : null
+        endedReasonRef.current = endedReason
+        if (
+          endedReason != null &&
+          endedReason !== "customer-ended-call" &&
+          !manualStopRef.current
+        ) {
+          console.info("Vapi ended call:", endedReason)
+        }
+      }
+
+      if (
+        message.type === "speech-update" &&
+        message.role === "user" &&
+        message.status === "started"
+      ) {
+        hasReceivedUserAudioRef.current = true
+        console.info("User speech detected by Vapi")
+        scheduleMicrophoneRecovery("speech-detected-without-transcript")
+      }
+
+      if (message.type === "voice-input") {
+        const input = typeof message.input === "string" ? message.input : ""
+        if (input.trim() !== "") {
+          hasReceivedUserAudioRef.current = true
+          markRecognizedSpeech()
+          console.info("Vapi voice input:", input)
+        }
+      }
+
       // User speech: use Deepgram transcript (final only)
-      if (message.type === "transcript" && message.role === "user") {
+      const isTranscriptMessage =
+        message.type === "transcript" ||
+        message.type === "transcript[transcriptType='final']"
+
+      if (isTranscriptMessage && message.role === "user") {
+        const transcript = message.transcript
+        if (typeof transcript !== "string") {
+          return
+        }
+
+        hasReceivedUserAudioRef.current = true
+        markRecognizedSpeech()
+
         if (message.transcriptType === "final") {
-          setMessages(prev => [...prev, { role: "user", content: message.transcript }])
+          setMessages(prev => {
+            const nextMessages = [...prev, { role: "user" as const, content: transcript }]
+            messagesRef.current = nextMessages
+            return nextMessages
+          })
           setLiveTranscript(null)
         } else {
-          setLiveTranscript({ role: "user", content: message.transcript })
+          setLiveTranscript({ role: "user", content: transcript })
         }
       }
 
       // AI text: use actual LLM output from conversation-update (not garbled audio transcription)
       if (message.type === "conversation-update") {
-        const conversation: Array<{ role: string; content: string }> = message.conversation ?? []
-        // Find the last assistant message from the full conversation
+        const conversation = Array.isArray(message.conversation)
+          ? message.conversation.filter(
+              (item): item is { role: string; content: string } =>
+                item != null &&
+                typeof item === "object" &&
+                "role" in item &&
+                "content" in item &&
+                typeof item.role === "string" &&
+                typeof item.content === "string"
+            )
+          : []
+
         const lastAssistant = [...conversation].reverse().find(m => m.role === "assistant")
         if (lastAssistant?.content) {
           setMessages(prev => {
-            // Avoid duplicating if already the last message
-            const last = prev.at(-1)
-            if (last?.role === "assistant" && last.content === lastAssistant.content) return prev
-            // Replace the last assistant message (streaming update) or append
-            if (last?.role === "assistant") {
-              return [...prev.slice(0, -1), { role: "assistant", content: lastAssistant.content }]
-            }
-            return [...prev, { role: "assistant", content: lastAssistant.content }]
+            const nextMessages = syncAssistantMessagesFromConversation(prev, conversation)
+            messagesRef.current = nextMessages
+            return nextMessages
           })
           setLiveTranscript(null)
 
-          // Detect closing phrase → mark interview as complete
-          const closingPhrases = ["chúc bạn may mắn", "buổi phỏng vấn đã hoàn tất", "cảm ơn bạn đã dành thời gian"]
-          const isClosing = closingPhrases.some(p => lastAssistant.content.toLowerCase().includes(p))
+          const closingPhrases = [
+            "chúc bạn may mắn",
+            "buổi phỏng vấn đã hoàn tất",
+            "cảm ơn bạn đã dành thời gian",
+          ]
+          const isClosing = closingPhrases.some(p =>
+            lastAssistant.content.toLowerCase().includes(p)
+          )
+
           if (isClosing) {
             setIsInterviewComplete(true)
           }
@@ -134,20 +487,110 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
       }
     })
 
-    vapiInstance.on("error", (error: any) => {
-      console.error("❌ Vapi error:", error)
-      toast.error("Lỗi kết nối voice interview")
+    vapiInstance.on("error", (error: unknown) => {
+      const details = getVapiErrorDetails(error)
+      const hasStartedCall =
+        callStartRef.current > 0 || messagesRef.current.length > 0
+      const errorMessage = details.message ?? "Loi ket noi voice interview"
+      const endedReason = endedReasonRef.current
+      const hasMicInputIssue =
+        !hasReceivedUserAudioRef.current &&
+        typeof endedReason === "string" &&
+        (endedReason.includes("silence") || endedReason.includes("microphone"))
+
+      if (manualStopRef.current || isMeetingEndedMessage(details.message)) {
+        console.info("Vapi call ended:", {
+          ...details,
+          endedReason,
+          hasReceivedUserAudio: hasReceivedUserAudioRef.current,
+        })
+        void finalizeCall({
+          notice: hasStartedCall
+            ? hasMicInputIssue
+              ? {
+                  type: "error",
+                  message: "Cuoc goi ket thuc vi Vapi khong nhan duoc am thanh tu microphone.",
+                }
+              : {
+                  type: "info",
+                  message: "Cuoc goi da ket thuc. Dang mo ket qua da luu.",
+                }
+            : undefined,
+          fallbackNotice: hasMicInputIssue
+            ? {
+                type: "error",
+                message: "Khong nhan duoc am thanh tu microphone. Kiem tra browser permission va input device.",
+              }
+            : {
+                type: "error",
+                message: "Cuoc goi da ket thuc truoc khi phong van bat dau.",
+              },
+        })
+        return
+      }
+
+      if (hasStartedCall) {
+        console.error("Unexpected Vapi error:", details.type ?? "unknown-error", error)
+        void finalizeCall({
+          notice: {
+            type: "error",
+            message: "Ket noi cuoc goi bi gian doan. Dang mo ket qua da luu.",
+          },
+          fallbackNotice: {
+            type: "error",
+            message: errorMessage,
+          },
+        })
+        return
+      }
+
+      console.error("Unexpected Vapi startup error:", details.type ?? "unknown-error", error)
+      toast.error(errorMessage)
       setIsConnecting(false)
       setIsCallActive(false)
     })
 
-    return () => {
-      if (durationIntervalRef.current) {
-        clearInterval(durationIntervalRef.current)
-      }
-      vapiInstance.stop()
+    return vapiInstance
+  }, [clearDurationTimer, finalizeCall, markRecognizedSpeech, scheduleMicrophoneRecovery])
+
+  useEffect(() => {
+    if (!env.NEXT_PUBLIC_VAPI_PUBLIC_KEY) {
+      console.error("Vapi public key not found")
+      return
     }
-  }, [])
+
+    return () => {
+      clearDurationTimer()
+      clearMicrophoneRecoveryTimer()
+      stopMicrophoneStream()
+      if (!hasFinalizedRef.current) {
+        void stopVapiCall("cleanup")
+      }
+      vapiRef.current?.removeAllListeners()
+      vapiRef.current = null
+    }
+  }, [clearDurationTimer, clearMicrophoneRecoveryTimer, stopMicrophoneStream, stopVapiCall])
+
+  useEffect(() => {
+    if (
+      !isCallActive ||
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices?.addEventListener
+    ) {
+      return
+    }
+
+    const handleDeviceChange = () => {
+      console.info("Detected media device change during interview")
+      void recoverMicrophoneInput("media-device-change")
+    }
+
+    navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange)
+
+    return () => {
+      navigator.mediaDevices.removeEventListener("devicechange", handleDeviceChange)
+    }
+  }, [isCallActive, recoverMicrophoneInput])
 
   // Update interview duration periodically
   useEffect(() => {
@@ -166,116 +609,81 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   useEffect(() => {
     if (!isInterviewComplete) return
     const timer = setTimeout(() => {
-      if (vapi) vapi.stop()
+      manualStopRef.current = true
+      void stopVapiCall("auto-end")
     }, 5000)
     return () => clearTimeout(timer)
-  }, [isInterviewComplete, vapi])
+  }, [isInterviewComplete, stopVapiCall])
 
   const handleStartCall = async () => {
-    if (!vapi || !env.NEXT_PUBLIC_VAPI_ASSISTANT_ID) {
+    if (!env.NEXT_PUBLIC_VAPI_ASSISTANT_ID) {
       toast.error("Vapi chưa được cấu hình đúng")
       return
     }
 
     console.log("🎤 Starting interview...")
+    hasFinalizedRef.current = false
+    manualStopRef.current = false
+    endedReasonRef.current = null
+    hasReceivedUserAudioRef.current = false
+    clearDurationTimer()
+    callStartRef.current = 0
+    interviewIdRef.current = null
+    durationRef.current = "00:00:00"
+    messagesRef.current = []
+    setInterviewId(null)
+    setMessages([])
+    setLiveTranscript(null)
+    setDuration("00:00:00")
+    setIsInterviewComplete(false)
+    setIsMuted(false)
     setIsConnecting(true)
 
     try {
+      const microphoneDeviceId = await prepareMicrophoneInput()
+      const vapi = createVapiInstance(microphoneDeviceId)
+      if (!vapi) {
+        throw new Error("Vapi instance could not be created.")
+      }
+
       // Create interview in database
       const res = await createInterview({ jobInfoId: jobInfo.id })
       if (res.error) {
         console.error("❌ Failed to create interview:", res.message)
         setIsConnecting(false)
+        stopMicrophoneStream()
         return errorToast(res.message)
       }
 
       console.log("✅ Interview created, ID:", res.id)
       setInterviewId(res.id)
+      interviewIdRef.current = res.id
+      console.info("Using assistant dashboard transcriber configuration")
 
       // Start Vapi call - override system prompt with dynamic candidate info
-      await vapi.start({
-        transcriber: {
-          provider: "deepgram",
-          model: "nova-2",
-          language: "vi", // Vietnamese transcription
-        },
-        model: {
-          provider: "openai",
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "system",
-              content: `Bạn là một AI interviewer chuyên nghiệp đang phỏng vấn tuyển dụng. 
-
-QUAN TRỌNG: Bạn PHẢI nói và trả lời HOÀN TOÀN BẰNG TIẾNG VIỆT. Không được dùng tiếng Anh.
-
-Thông tin ứng viên:
-- Tên: ${jobInfo.name}
-- Vị trí ứng tuyển: ${jobInfo.title}
-- Cấp độ kinh nghiệm: ${jobInfo.experienceLevel}
-- Mô tả công việc: ${jobInfo.description}${jobInfo.cvSummary ? `\n- Thông tin CV ứng viên:\n${jobInfo.cvSummary}` : ""}
-
-Nhiệm vụ:
-1. Chào hỏi ứng viên thân thiện, giới thiệu bản thân và mục đích buổi phỏng vấn
-2. Hỏi đúng 5 câu hỏi phỏng vấn phù hợp với vị trí và cấp độ kinh nghiệm
-3. Từng câu hỏi một — chờ ứng viên trả lời hoàn toàn xong mới hỏi tiếp
-4. Sau mỗi câu trả lời, phản hồi ngắn gọn (1 câu) thể hiện bạn đã lắng nghe trước khi chuyển sang câu tiếp theo
-5. Nếu ứng viên trả lời quá ngắn hoặc không rõ, hỏi thêm 1 câu làm rõ
-6. Kết thúc: "Cảm ơn bạn đã dành thời gian tham gia buổi phỏng vấn hôm nay. Chúc bạn may mắn!"
-
-Cấu trúc 5 câu hỏi theo cấp độ:
-
-Intern/Fresher:
-- Câu 1: Giới thiệu bản thân và lý do ứng tuyển vị trí này
-- Câu 2: Kiến thức nền tảng liên quan đến vị trí (lý thuyết, học phần)
-- Câu 3: Dự án cá nhân hoặc đồ án đã làm
-- Câu 4: Khả năng học hỏi và xử lý khi gặp vấn đề mới
-- Câu 5: Mục tiêu nghề nghiệp trong 1-2 năm tới
-
-Junior:
-- Câu 1: Giới thiệu kinh nghiệm làm việc và dự án nổi bật nhất
-- Câu 2: Công nghệ/tech stack đã sử dụng và mức độ thành thạo
-- Câu 3: Tình huống cụ thể gặp bug hoặc vấn đề kỹ thuật và cách giải quyết
-- Câu 4: Cách làm việc nhóm và giao tiếp với đồng nghiệp/khách hàng
-- Câu 5: Định hướng phát triển kỹ năng trong thời gian tới
-
-Mid-level/Senior:
-- Câu 1: Dự án lớn nhất từng tham gia và vai trò cụ thể
-- Câu 2: Kinh nghiệm thiết kế hệ thống hoặc kiến trúc giải pháp
-- Câu 3: Cách mentor/hỗ trợ thành viên junior trong team
-- Câu 4: Tình huống xử lý conflict trong team hoặc với stakeholder
-- Câu 5: Tầm nhìn kỹ thuật và đóng góp cho tổ chức
-
-Phong cách phỏng vấn:
-- Thân thiện, chuyên nghiệp, tạo không khí thoải mái
-- Lắng nghe chủ động, không ngắt lời ứng viên
-- Câu hỏi rõ ràng, không dùng thuật ngữ gây nhầm lẫn
-- Giữ nhịp độ phỏng vấn tự nhiên, không vội vàng
-
-NÓI TIẾNG VIỆT HOÀN TOÀN TRONG SUỐT CUỘC PHỎNG VẤN.`,
-            },
-          ],
-          temperature: 0.7,
-          maxTokens: 200,
-        },
-        // voice is intentionally omitted — uses the voice configured in Vapi dashboard
-        firstMessage: `Xin chào ${jobInfo.name}! Tôi là AI Interviewer. Hôm nay tôi sẽ phỏng vấn bạn cho vị trí ${jobInfo.title}. Bạn đã sẵn sàng chưa?`,
-        name: "AI Interviewer",
-      })
+      await vapi.start(
+        ...buildVapiStartCallArgs({
+          assistantId: env.NEXT_PUBLIC_VAPI_ASSISTANT_ID,
+          jobInfo,
+        }),
+      )
     } catch (error) {
       console.error("❌ Failed to start call:", error)
       toast.error("Không thể bắt đầu cuộc gọi")
       setIsConnecting(false)
+      manualStopRef.current = true
+      await stopVapiCall("start-failure")
+      stopMicrophoneStream()
     }
   }
 
   const handleEndCall = () => {
-    if (vapi) {
-      vapi.stop()
-    }
+    manualStopRef.current = true
+    void stopVapiCall("manual-end")
   }
 
   const handleToggleMute = () => {
+    const vapi = vapiRef.current
     if (vapi) {
       if (isMuted) {
         vapi.setMuted(false)
@@ -363,7 +771,7 @@ NÓI TIẾNG VIỆT HOÀN TOÀN TRONG SUỐT CUỘC PHỎNG VẤN.`,
                 <span className="text-2xl">🤖</span>
               </div>
               <div>
-                <h2 className="font-semibold">AI Interviewer</h2>
+                <h2 className="font-semibold">{INTERVIEWER_DISPLAY_NAME}</h2>
                 <p className="text-sm text-muted-foreground">
                   Câu hỏi {currentQuestion}/5 • {duration}
                 </p>
