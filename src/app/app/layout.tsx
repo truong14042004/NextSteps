@@ -12,6 +12,15 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   if (userId == null) return redirectToSignIn();
   if (user == null) return redirect("/sign-up");
 
+  // Nếu user có role admin => chuyển tới dashboard admin
+  // Hỗ trợ nhiều thuộc tính có thể lưu role (publicMetadata, role, isAdmin)
+  const isAdmin =
+    (user as any)?.publicMetadata?.role === "admin" ||
+    (user as any)?.role === "admin" ||
+    (user as any)?.isAdmin === true;
+
+  if (isAdmin) return redirect("/admin");
+
   return (
     // root provides viewport height; child pages must NOT use min-h-screen
     <div className="min-h-screen flex bg-background">
