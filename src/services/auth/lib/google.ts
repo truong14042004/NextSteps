@@ -12,6 +12,7 @@ import { createSession } from "./session"
 
 const GOOGLE_STATE_COOKIE = "ns_google_state"
 const GOOGLE_MODE_COOKIE = "ns_google_mode"
+const GOOGLE_REDIRECT_COOKIE = "ns_google_redirect"
 const GOOGLE_STATE_TTL_SECONDS = 60 * 10
 
 type AuthPageMode = "sign_in" | "sign_up"
@@ -52,9 +53,25 @@ function getGoogleRedirectUri(request: Request) {
   return `${buildBaseUrl(request)}/api/auth/google/callback`
 }
 
-function getErrorPath(mode: AuthPageMode, errorCode: string) {
+function getSafeRedirectPath(value: string | null) {
+  if (value == null || !value.startsWith("/") || value.startsWith("//")) {
+    return "/app"
+  }
+
+  try {
+    const url = new URL(value, "https://nextsteps.local")
+    return `${url.pathname}${url.search}${url.hash}`
+  } catch {
+    return "/app"
+  }
+}
+
+function getErrorPath(mode: AuthPageMode, errorCode: string, redirectPath?: string) {
   const basePath = mode === "sign_up" ? "/sign-up" : "/sign-in"
   const params = new URLSearchParams({ error: errorCode })
+  if (redirectPath != null && redirectPath !== "/app") {
+    params.set("redirect_url", redirectPath)
+  }
   return `${basePath}?${params.toString()}`
 }
 
@@ -129,10 +146,11 @@ async function getOrCreateUserFromGoogleProfile(profile: {
 export async function beginGoogleAuth(request: Request) {
   const requestUrl = new URL(request.url)
   const mode = resolveMode(requestUrl.searchParams.get("mode"))
+  const redirectPath = getSafeRedirectPath(requestUrl.searchParams.get("redirect_url"))
 
   if (!isGoogleConfigured()) {
     return NextResponse.redirect(
-      new URL(getErrorPath(mode, "google_not_configured"), requestUrl.origin)
+      new URL(getErrorPath(mode, "google_not_configured", redirectPath), requestUrl.origin)
     )
   }
 
@@ -150,6 +168,15 @@ export async function beginGoogleAuth(request: Request) {
   cookieStore.set({
     name: GOOGLE_MODE_COOKIE,
     value: mode,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: GOOGLE_STATE_TTL_SECONDS,
+  })
+  cookieStore.set({
+    name: GOOGLE_REDIRECT_COOKIE,
+    value: redirectPath,
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -180,14 +207,18 @@ export async function finishGoogleAuth(request: Request) {
   const cookieStore = await cookies()
   const expectedState = cookieStore.get(GOOGLE_STATE_COOKIE)?.value ?? null
   const mode = resolveMode(cookieStore.get(GOOGLE_MODE_COOKIE)?.value ?? null)
+  const redirectPath = getSafeRedirectPath(
+    cookieStore.get(GOOGLE_REDIRECT_COOKIE)?.value ?? null
+  )
 
   cookieStore.delete(GOOGLE_STATE_COOKIE)
   cookieStore.delete(GOOGLE_MODE_COOKIE)
+  cookieStore.delete(GOOGLE_REDIRECT_COOKIE)
 
   if (googleError != null) {
     logAuthWarn("google_oauth_provider_error", { googleError, mode })
     return NextResponse.redirect(
-      new URL(getErrorPath(mode, "google_rejected"), requestUrl.origin)
+      new URL(getErrorPath(mode, "google_rejected", redirectPath), requestUrl.origin)
     )
   }
 
@@ -198,7 +229,7 @@ export async function finishGoogleAuth(request: Request) {
       hasExpectedState: expectedState != null,
     })
     return NextResponse.redirect(
-      new URL(getErrorPath(mode, "google_state_invalid"), requestUrl.origin)
+      new URL(getErrorPath(mode, "google_state_invalid", redirectPath), requestUrl.origin)
     )
   }
 
@@ -224,7 +255,7 @@ export async function finishGoogleAuth(request: Request) {
         status: tokenResponse.status,
       })
       return NextResponse.redirect(
-        new URL(getErrorPath(mode, "google_token_failed"), requestUrl.origin)
+        new URL(getErrorPath(mode, "google_token_failed", redirectPath), requestUrl.origin)
       )
     }
 
@@ -232,14 +263,14 @@ export async function finishGoogleAuth(request: Request) {
   } catch {
     logAuthWarn("google_oauth_token_request_error")
     return NextResponse.redirect(
-      new URL(getErrorPath(mode, "google_token_failed"), requestUrl.origin)
+      new URL(getErrorPath(mode, "google_token_failed", redirectPath), requestUrl.origin)
     )
   }
 
   if (tokenJson.access_token == null) {
     logAuthWarn("google_oauth_missing_access_token")
     return NextResponse.redirect(
-      new URL(getErrorPath(mode, "google_token_failed"), requestUrl.origin)
+      new URL(getErrorPath(mode, "google_token_failed", redirectPath), requestUrl.origin)
     )
   }
 
@@ -260,7 +291,7 @@ export async function finishGoogleAuth(request: Request) {
         status: userInfoResponse.status,
       })
       return NextResponse.redirect(
-        new URL(getErrorPath(mode, "google_profile_failed"), requestUrl.origin)
+        new URL(getErrorPath(mode, "google_profile_failed", redirectPath), requestUrl.origin)
       )
     }
 
@@ -268,7 +299,7 @@ export async function finishGoogleAuth(request: Request) {
   } catch {
     logAuthWarn("google_oauth_userinfo_request_error")
     return NextResponse.redirect(
-      new URL(getErrorPath(mode, "google_profile_failed"), requestUrl.origin)
+      new URL(getErrorPath(mode, "google_profile_failed", redirectPath), requestUrl.origin)
     )
   }
 
@@ -283,7 +314,7 @@ export async function finishGoogleAuth(request: Request) {
       emailVerified: profile.email_verified,
     })
     return NextResponse.redirect(
-      new URL(getErrorPath(mode, "google_profile_invalid"), requestUrl.origin)
+      new URL(getErrorPath(mode, "google_profile_invalid", redirectPath), requestUrl.origin)
     )
   }
 
@@ -300,11 +331,11 @@ export async function finishGoogleAuth(request: Request) {
 
     await createSession(userId)
     logAuthInfo("google_oauth_success", { userId })
-    return NextResponse.redirect(new URL("/app", requestUrl.origin))
+    return NextResponse.redirect(new URL(redirectPath, requestUrl.origin))
   } catch {
     logAuthError("google_oauth_db_failed")
     return NextResponse.redirect(
-      new URL(getErrorPath(mode, "google_db_failed"), requestUrl.origin)
+      new URL(getErrorPath(mode, "google_db_failed", redirectPath), requestUrl.origin)
     )
   }
 }

@@ -12,6 +12,13 @@ export function HEAD() {
   return new Response(null, { status: 204 })
 }
 
+export function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: { Allow: "GET, HEAD, POST, OPTIONS" },
+  })
+}
+
 export async function POST(request: Request) {
   const payload = await request.json().catch(() => null)
 

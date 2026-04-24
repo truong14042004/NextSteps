@@ -80,6 +80,19 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+function getSafeRedirectPath(value: string | null) {
+  if (value == null || !value.startsWith("/") || value.startsWith("//")) {
+    return "/app"
+  }
+
+  try {
+    const url = new URL(value, "https://nextsteps.local")
+    return `${url.pathname}${url.search}${url.hash}`
+  } catch {
+    return "/app"
+  }
+}
+
 function AuthShell({
   title,
   description,
@@ -136,6 +149,7 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
   const [showSignInPassword, setShowSignInPassword] = useState(false)
 
   const altLink = mode === "sign_up" ? "/sign-in" : "/sign-up";
+  const redirectPath = getSafeRedirectPath(searchParams.get("redirect_url"))
   const altText =
     mode === "sign_up" ? "Đã có tài khoản?" : "Chưa có tài khoản?";
   const altCta = mode === "sign_up" ? "Đăng nhập" : "Đăng ký";
@@ -173,7 +187,7 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
         password: signInPassword,
       });
       toast.success("Đăng nhập thành công.");
-      router.push("/");
+      router.push(redirectPath);
       router.refresh();
     } catch (error) {
       toast.error(
@@ -255,7 +269,7 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
       });
 
       toast.success("Xác thực thành công. Chào mừng bạn đến dashboard.");
-      router.push("/app");
+      router.push(redirectPath);
       router.refresh();
     } catch (error) {
       toast.error(
@@ -290,7 +304,8 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
   }
 
   function onGoogleAuth() {
-    window.location.href = `/api/auth/google/start?mode=${mode}`;
+    const params = new URLSearchParams({ mode, redirect_url: redirectPath })
+    window.location.href = `/api/auth/google/start?${params.toString()}`;
   }
 
   if (mode === "sign_up" && step === "verify_otp") {
