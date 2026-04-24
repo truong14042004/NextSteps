@@ -3,6 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { clerkMiddleware } from "@clerk/nextjs/server";
 
 const arcjetKey = process.env.ARCJET_KEY;
+const publicApiPaths = new Set([
+  "/api/auth/google/start",
+  "/api/auth/google/callback",
+  "/api/payments/payos/webhook",
+]);
 
 const aj =
   arcjetKey != null && arcjetKey !== "placeholder"
@@ -28,7 +33,7 @@ const aj =
     : null;
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
-  if (req.nextUrl.pathname === "/api/payments/payos/webhook") {
+  if (publicApiPaths.has(req.nextUrl.pathname)) {
     return NextResponse.next();
   }
 
@@ -49,7 +54,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
 
 export const config = {
   matcher: [
-    "/((?!api/payments/payos/webhook|_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    "/((?!api/payments/payos/webhook)(?:api|trpc)(?:.*))",
+    "/((?!api/auth/google/start|api/auth/google/callback|api/payments/payos/webhook|_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/((?!api/auth/google/start|api/auth/google/callback|api/payments/payos/webhook)(?:api|trpc)(?:.*))",
   ],
 };
