@@ -4,6 +4,14 @@ import { verifyPayOSWebhook } from "@/features/payments/payos"
 
 export const dynamic = "force-dynamic"
 
+export function GET() {
+  return NextResponse.json({ ok: true })
+}
+
+export function HEAD() {
+  return new Response(null, { status: 204 })
+}
+
 export async function POST(request: Request) {
   const payload = await request.json().catch(() => null)
 

@@ -28,6 +28,10 @@ const aj =
     : null;
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
+  if (req.nextUrl.pathname === "/api/payments/payos/webhook") {
+    return NextResponse.next();
+  }
+
   if (aj == null) return NextResponse.next();
 
   try {
@@ -45,7 +49,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
 
 export const config = {
   matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    "/(api|trpc)(.*)",
+    "/((?!api/payments/payos/webhook|_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/((?!api/payments/payos/webhook)(?:api|trpc)(?:.*))",
   ],
 };
