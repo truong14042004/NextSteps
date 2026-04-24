@@ -5,28 +5,19 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-const monthlyData = [
-  { month: "Jan", value: 38 },
-  { month: "Feb", value: 42 },
-  { month: "Mar", value: 50 },
-  { month: "Apr", value: 48 },
-  { month: "May", value: 58 },
-  { month: "Jun", value: 64 },
-  { month: "Jul", value: 60 },
-  { month: "Aug", value: 76 },
-  { month: "Sep", value: 82 },
-  { month: "Oct", value: 96 },
-];
-
 const filters = ["Daily", "Monthly", "Yearly"] as const;
 type Filter = (typeof filters)[number];
 
-export function RevenueGrowthChart() {
+export function RevenueGrowthChart({
+  data,
+}: {
+  data: { month: string; value: number }[];
+}) {
   const [activeFilter, setActiveFilter] = useState<Filter>("Monthly");
 
   const maxValue = useMemo(
-    () => Math.max(...monthlyData.map((item) => item.value)),
-    [],
+    () => Math.max(1, ...data.map((item) => item.value)),
+    [data],
   );
 
   return (
@@ -62,9 +53,9 @@ export function RevenueGrowthChart() {
 
       <CardContent>
         <div className="flex h-[320px] items-end gap-4 rounded-2xl bg-muted/20 px-4 pb-6 pt-4">
-          {monthlyData.map((item, index) => {
+          {data.map((item, index) => {
             const height = `${(item.value / maxValue) * 100}%`;
-            const isLast = index === monthlyData.length - 1;
+            const isLast = index === data.length - 1;
 
             return (
               <div

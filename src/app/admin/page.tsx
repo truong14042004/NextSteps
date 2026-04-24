@@ -1,5 +1,3 @@
-"use client";
-
 import { BarChart3, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -15,8 +13,11 @@ import { StatsCard } from "@/components/admin/dashboard/stats-card";
 import { AiPerformanceCard } from "@/components/admin/dashboard/ai-performance-card";
 import { GrowthChart } from "@/components/admin/dashboard/growth-chart";
 import { UserActivityTable } from "@/components/admin/dashboard/user-activity-table";
+import { getAdminDashboard } from "@/features/admin/metrics";
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  const dashboard = await getAdminDashboard(30);
+
   return (
     <div className="space-y-6">
       <section className="flex items-start justify-between gap-6">
@@ -52,37 +53,37 @@ export default function AdminPage() {
           <StatsCard
             icon={Users}
             label="Người dùng hoạt động"
-            value="240"
-            growthText="+12.8%"
-            growthKind="positive"
+            value={dashboard.stats.activeUsers.value}
+            growthText={dashboard.stats.activeUsers.growthText}
+            growthKind={dashboard.stats.activeUsers.growthKind}
           />
           <StatsCard
             icon={BarChart3}
             label="Tổng số phỏng vấn AI"
-            value="4,800"
-            growthText="+4.2%"
-            growthKind="positive"
+            value={dashboard.stats.totalInterviews.value}
+            growthText={dashboard.stats.totalInterviews.growthText}
+            growthKind={dashboard.stats.totalInterviews.growthKind}
           />
           <StatsCard
             icon={BarChart3}
             label="Tổng doanh thu"
-            value="220,200,000₫"
-            growthText="+12.5%"
-            growthKind="positive"
+            value={dashboard.stats.totalRevenue.value}
+            growthText={dashboard.stats.totalRevenue.growthText}
+            growthKind={dashboard.stats.totalRevenue.growthKind}
           />
           <StatsCard
             icon={Users}
             label="Số lượng đăng ký"
-            value="850"
-            growthText="+5.2%"
-            growthKind="positive"
+            value={dashboard.stats.registrations.value}
+            growthText={dashboard.stats.registrations.growthText}
+            growthKind={dashboard.stats.registrations.growthKind}
           />
         </div>
       </section>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <GrowthChart />
-        <AiPerformanceCard />
+        <GrowthChart data={dashboard.registrationGrowth} />
+        <AiPerformanceCard distribution={dashboard.planDistribution.items} />
       </section>
 
       <section>

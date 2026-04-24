@@ -5,35 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
-const rows = [
-  {
-    plan: "Free",
-    description: "Gói cơ bản, quyền truy cập giới hạn",
-    activeUsers: "8,120",
-    conversion: "N/A",
-    revenue: "$0.00",
-    retention: 42,
-    badge: "free",
-  },
-  {
-    plan: "Start",
-    description: "399k/tháng - Công cụ cốt lõi",
-    activeUsers: "3,450",
-    conversion: "14.2%",
-    revenue: "$65,550.00",
-    retention: 88,
-    badge: "start",
-  },
-  {
-    plan: "Premium",
-    description: "799k/tháng - Full tính năng & hỗ trợ",
-    activeUsers: "1,272",
-    conversion: "8.5%",
-    revenue: "$62,328.00",
-    retention: 94,
-    badge: "premium",
-  },
-];
+type PlanPerformanceRow = {
+  plan: string;
+  description: string;
+  activeUsers: number;
+  conversion: string;
+  revenue: string;
+  retention: number;
+  badge: string;
+};
 
 function ConversionBadge({
   value,
@@ -72,7 +52,11 @@ function PlanIcon({ type }: { type: "free" | "start" | "premium" }) {
   return <div className={`h-9 w-9 rounded-2xl ${color}`} />;
 }
 
-export function PlanPerformanceTable() {
+export function PlanPerformanceTable({
+  rows,
+}: {
+  rows: PlanPerformanceRow[];
+}) {
   return (
     <Card className="rounded-2xl border-border/60 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -120,7 +104,7 @@ export function PlanPerformanceTable() {
                   </td>
 
                   <td className="px-2 py-4 text-lg font-semibold tracking-tight">
-                    {row.activeUsers}
+                    {row.activeUsers.toLocaleString()}
                   </td>
 
                   <td className="px-2 py-4">
@@ -152,12 +136,6 @@ export function PlanPerformanceTable() {
               ))}
             </tbody>
           </table>
-        </div>
-
-        <div className="pointer-events-none fixed bottom-8 right-8 hidden xl:block">
-          <div className="rounded-full bg-primary px-6 py-4 text-sm font-semibold text-primary-foreground shadow-xl">
-            Generate Report
-          </div>
         </div>
       </CardContent>
     </Card>

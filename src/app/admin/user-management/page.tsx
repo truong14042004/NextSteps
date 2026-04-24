@@ -28,6 +28,8 @@ export default function AdminUserManagementPage() {
   const [showAdd, setShowAdd] = useState(false);
 
   useEffect(() => {
+    const focus = new URLSearchParams(window.location.search).get("focus");
+    if (focus) setQuery(focus);
     fetchUsers();
   }, []);
 

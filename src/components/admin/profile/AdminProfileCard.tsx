@@ -10,7 +10,13 @@ import { Card, CardContent } from "@/components/ui/card";
 export function AdminProfileCard({
   user,
 }: {
-  user: { name: string; imageUrl?: string };
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    imageUrl?: string;
+    role: string;
+  };
 }) {
   return (
     <Card className="overflow-hidden rounded-3xl border-border/60 shadow-sm">
@@ -37,7 +43,7 @@ export function AdminProfileCard({
                     {user.name}
                   </h2>
                   <Badge className="rounded-full bg-primary/10 px-3 py-1 text-primary hover:bg-primary/10">
-                    Super Administrator
+                    {user.role === "admin" ? "Super Administrator" : user.role}
                   </Badge>
                 </div>
 
@@ -51,12 +57,12 @@ export function AdminProfileCard({
                     <Shield className="h-4 w-4 text-primary" />
                     Admin ID:{" "}
                     <span className="font-medium text-foreground">
-                      #NS-8842-ADMIN
+                      {user.id}
                     </span>
                   </span>
                   <span className="inline-flex items-center gap-2">
                     <Mail className="h-4 w-4 text-primary" />
-                    tuan.nguyen@example.com
+                    {user.email}
                   </span>
                 </div>
               </div>

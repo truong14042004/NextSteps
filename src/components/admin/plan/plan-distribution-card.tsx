@@ -1,15 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const items = [
-  { label: "Free", value: 63, color: "bg-slate-300" },
-  { label: "Start", value: 27, color: "bg-slate-500" },
-  { label: "Premium", value: 10, color: "bg-primary" },
-];
+type PlanDistribution = {
+  total: number;
+  items: { label: string; value: number; count: number }[];
+};
 
-export function PlanDistributionCard() {
-  const free = 63;
-  const start = 27;
-  const premium = 10;
+const colors = ["bg-slate-300", "bg-slate-500", "bg-primary"];
+
+export function PlanDistributionCard({
+  distribution,
+}: {
+  distribution: PlanDistribution;
+}) {
+  const free = distribution.items[0]?.value ?? 0;
+  const start = distribution.items[1]?.value ?? 0;
+  const premium = distribution.items[2]?.value ?? 0;
 
   const background = `conic-gradient(
     #1e3a8a 0% ${premium}%,
@@ -30,7 +35,9 @@ export function PlanDistributionCard() {
             style={{ background }}
           >
             <div className="flex h-28 w-28 flex-col items-center justify-center rounded-full bg-background shadow-sm">
-              <div className="text-2xl font-semibold tracking-tight">12.8k</div>
+              <div className="text-2xl font-semibold tracking-tight">
+                {distribution.total.toLocaleString()}
+              </div>
               <div className="text-sm font-medium text-muted-foreground">
                 TOTAL
               </div>
@@ -39,10 +46,12 @@ export function PlanDistributionCard() {
         </div>
 
         <div className="space-y-4">
-          {items.map((item) => (
+          {distribution.items.map((item, index) => (
             <div key={item.label} className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className={`h-3 w-3 rounded-full ${item.color}`} />
+                <span
+                  className={`h-3 w-3 rounded-full ${colors[index] ?? "bg-primary"}`}
+                />
                 <span className="text-base">{item.label}</span>
               </div>
               <span className="text-base font-semibold">{item.value}%</span>

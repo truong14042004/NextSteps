@@ -77,7 +77,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   const [liveTranscript, setLiveTranscript] = useState<InterviewTranscriptMessage | null>(null)
   const [duration, setDuration] = useState("00:00:00")
   const [interviewId, setInterviewId] = useState<string | null>(null)
-  
+
   const vapiRef = useRef<Vapi | null>(null)
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const callStartRef = useRef<number>(0)
@@ -129,10 +129,10 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
       noiseSuppression: true,
       ...(deviceId
         ? {
-            deviceId: {
-              exact: deviceId,
-            },
-          }
+          deviceId: {
+            exact: deviceId,
+          },
+        }
         : {}),
     })
 
@@ -452,14 +452,14 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
       if (message.type === "conversation-update") {
         const conversation = Array.isArray(message.conversation)
           ? message.conversation.filter(
-              (item): item is { role: string; content: string } =>
-                item != null &&
-                typeof item === "object" &&
-                "role" in item &&
-                "content" in item &&
-                typeof item.role === "string" &&
-                typeof item.content === "string"
-            )
+            (item): item is { role: string; content: string } =>
+              item != null &&
+              typeof item === "object" &&
+              "role" in item &&
+              "content" in item &&
+              typeof item.role === "string" &&
+              typeof item.content === "string"
+          )
           : []
 
         const lastAssistant = [...conversation].reverse().find(m => m.role === "assistant")
@@ -508,23 +508,23 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
           notice: hasStartedCall
             ? hasMicInputIssue
               ? {
-                  type: "error",
-                  message: "Cuoc goi ket thuc vi Vapi khong nhan duoc am thanh tu microphone.",
-                }
+                type: "error",
+                message: "Cuoc goi ket thuc vi Vapi khong nhan duoc am thanh tu microphone.",
+              }
               : {
-                  type: "info",
-                  message: "Cuoc goi da ket thuc. Dang mo ket qua da luu.",
-                }
+                type: "info",
+                message: "Cuoc goi da ket thuc. Dang mo ket qua da luu.",
+              }
             : undefined,
           fallbackNotice: hasMicInputIssue
             ? {
-                type: "error",
-                message: "Khong nhan duoc am thanh tu microphone. Kiem tra browser permission va input device.",
-              }
+              type: "error",
+              message: "Khong nhan duoc am thanh tu microphone. Kiem tra browser permission va input device.",
+            }
             : {
-                type: "error",
-                message: "Cuoc goi da ket thuc truoc khi phong van bat dau.",
-              },
+              type: "error",
+              message: "Cuoc goi da ket thuc truoc khi phong van bat dau.",
+            },
         })
         return
       }
@@ -695,8 +695,6 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   }
 
   // Derived values
-  const questionCount = messages.filter(m => m.role === "assistant").length
-  const currentQuestion = questionCount > 0 ? questionCount : 1
   const latestAiMessage =
     (liveTranscript?.role === "assistant" ? liveTranscript : null) ??
     messages.filter(m => m.role === "assistant").at(-1)
@@ -721,7 +719,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
             <p><strong>Vị trí:</strong> {jobInfo.title}</p>
           </div>
         </div>
-        
+
         <div className="flex gap-4">
           <Button
             variant="outline"
@@ -773,7 +771,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
               <div>
                 <h2 className="font-semibold">{INTERVIEWER_DISPLAY_NAME}</h2>
                 <p className="text-sm text-muted-foreground">
-                  Câu hỏi {currentQuestion}/5 • {duration}
+                  Thời lượng {duration}
                 </p>
               </div>
             </div>
@@ -815,9 +813,8 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
                   return (
                     <div
                       key={index}
-                      className={`flex items-start gap-3 ${
-                        message.role === "user" ? "justify-end" : "justify-start"
-                      }`}
+                      className={`flex items-start gap-3 ${message.role === "user" ? "justify-end" : "justify-start"
+                        }`}
                     >
                       {message.role === "assistant" && (
                         <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -825,11 +822,10 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
                         </div>
                       )}
                       <div
-                        className={`px-4 py-3 rounded-lg max-w-[80%] ${
-                          message.role === "user"
+                        className={`px-4 py-3 rounded-lg max-w-[80%] ${message.role === "user"
                             ? "bg-primary text-primary-foreground"
                             : "bg-muted"
-                        } ${isLive ? "opacity-70 italic" : ""}`}
+                          } ${isLive ? "opacity-70 italic" : ""}`}
                       >
                         <p className="text-sm">{message.content}</p>
                       </div>

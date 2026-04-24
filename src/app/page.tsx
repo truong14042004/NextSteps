@@ -21,8 +21,18 @@ import Image from "next/image";
 import { Suspense } from "react";
 import { UserAvatar } from "@/features/users/components/UserAvatar";
 import { PricingTable } from "@/services/clerk/components/PricingTable";
+import {
+  formatCompactPlanPrice,
+  formatUsageLimit,
+  listPublicPlanConfigs,
+  type AdminPlanConfig,
+} from "@/features/admin/plans";
 
-export default function LandingPage() {
+export const dynamic = "force-dynamic";
+
+export default async function LandingPage() {
+  const pricingPlans = await listPublicPlanConfigs();
+
   return (
     <div className="h-full bg-background">
       {/* Premium subtle background */}
@@ -41,7 +51,7 @@ export default function LandingPage() {
         <DetailedFeatures />
         <Stats />
         <Testimonials />
-        <Pricing />
+        <Pricing plans={pricingPlans} />
         <FAQ />
       </main>
 
@@ -859,7 +869,40 @@ function Testimonials() {
   );
 }
 
-function Pricing() {
+function getPricingIcon(key: string) {
+  if (key === "premium") return Crown;
+  if (key === "start") return Rocket;
+  return Sparkles;
+}
+
+function getPricingBadge(key: string) {
+  if (key === "premium") return "Nổi bật";
+  if (key === "start") return "Phổ biến nhất";
+  return "Miễn phí";
+}
+
+function getPricingCta(plan: AdminPlanConfig) {
+  if (plan.monthlyPrice === 0) return "Dùng miễn phí";
+  return plan.key === "premium" ? "Nâng cấp Premium" : `Chọn gói ${plan.name}`;
+}
+
+function getPricingHref(plan: AdminPlanConfig) {
+  if (plan.monthlyPrice === 0) return "/app";
+  return `/checkout?plan=${plan.key}&billing=monthly&price=${plan.monthlyPrice}`;
+}
+
+function getPlanFeatureText(plan: AdminPlanConfig) {
+  return [
+    `Phân tích CV: ${formatUsageLimit(plan.resumeAnalysisLimit)}`,
+    `Câu hỏi AI: ${formatUsageLimit(plan.aiQuestionLimit)}`,
+    `Mock Interview: ${formatUsageLimit(plan.mockInterviewLimit)}`,
+    ...plan.features
+      .filter(feature => feature.isEnabled)
+      .map(feature => feature.label),
+  ];
+}
+
+function Pricing({ plans: dbPlans }: { plans: AdminPlanConfig[] }) {
   const plans = [
     {
       name: "Free",
@@ -918,6 +961,22 @@ function Pricing() {
     },
   ];
 
+  const renderedPlans =
+    dbPlans.length > 0
+      ? dbPlans.map(plan => ({
+          name: plan.name,
+          price: formatCompactPlanPrice(plan.monthlyPrice),
+          period: plan.monthlyPrice > 0 ? "/tháng" : "",
+          description: plan.description,
+          badge: getPricingBadge(plan.key),
+          icon: getPricingIcon(plan.key),
+          highlight: plan.key === "start",
+          cta: getPricingCta(plan),
+          href: getPricingHref(plan),
+          features: getPlanFeatureText(plan),
+        }))
+      : plans;
+
   return (
     <section
       id="pricing"
@@ -944,7 +1003,7 @@ function Pricing() {
         </div>
 
         <div className="mx-auto mt-12 grid max-w-6xl items-stretch gap-6 md:grid-cols-3">
-          {plans.map((plan) => {
+          {renderedPlans.map((plan) => {
             const Icon = plan.icon;
             const isPremium = plan.name === "Premium";
 

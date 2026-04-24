@@ -30,6 +30,9 @@ export const env = createEnv({
     HUME_SECRET_KEY: z.string().min(1).default("placeholder"),
     VAPI_PRIVATE_KEY: z.string().min(1).optional(),
     GEMINI_API_KEY: z.string().min(1).default("placeholder"),
+    PAYOS_CLIENT_ID: z.string().min(1).default("placeholder"),
+    PAYOS_API_KEY: z.string().min(1).default("placeholder"),
+    PAYOS_CHECKSUM_KEY: z.string().min(1).default("placeholder"),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1).default("placeholder"),
@@ -96,6 +99,9 @@ export const env = createEnv({
         HUME_SECRET_KEY: val.HUME_SECRET_KEY,
         VAPI_PRIVATE_KEY: val.VAPI_PRIVATE_KEY,
         GEMINI_API_KEY: val.GEMINI_API_KEY!,
+        PAYOS_CLIENT_ID: val.PAYOS_CLIENT_ID!,
+        PAYOS_API_KEY: val.PAYOS_API_KEY!,
+        PAYOS_CHECKSUM_KEY: val.PAYOS_CHECKSUM_KEY!,
       }
     })
   },

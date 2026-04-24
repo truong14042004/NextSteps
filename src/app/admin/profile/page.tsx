@@ -4,7 +4,7 @@ import { AdminProfileCard } from "@/components/admin/profile/AdminProfileCard";
 import { AdminPermissionsCard } from "@/components/admin/profile/AdminPermissionsCard";
 import { AdminSecurityCard } from "@/components/admin/profile/AdminSecurityCard";
 import { Card, CardContent } from "@/components/ui/card";
-import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser";
+import { requireAdminForPage } from "@/features/admin/auth";
 
 function OverviewCard({
   title,
@@ -34,9 +34,7 @@ function OverviewCard({
 }
 
 export default async function AdminProfilePage() {
-  const { user } = await getCurrentUser({ allData: true });
-  const name = (user as any)?.fullName || (user as any)?.firstName || "Admin";
-  const imageUrl = (user as any)?.imageUrl || "/avatar.png";
+  const { user } = await requireAdminForPage();
 
   return (
     <div className="min-h-0 bg-background">
@@ -61,7 +59,15 @@ export default async function AdminProfilePage() {
 
           <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
             <div className="space-y-6">
-              <AdminProfileCard user={{ name, imageUrl }} />
+              <AdminProfileCard
+                user={{
+                  id: user.id,
+                  name: user.name,
+                  email: user.email,
+                  imageUrl: user.imageUrl,
+                  role: user.role,
+                }}
+              />
               <AdminPermissionsCard />
             </div>
 

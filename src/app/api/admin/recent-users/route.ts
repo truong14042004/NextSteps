@@ -1,25 +1,16 @@
 import { NextResponse } from "next/server"
 
-import { db } from "@/drizzle/db"
-import { UserTable } from "@/drizzle/schema"
-import { desc } from "drizzle-orm"
+import { requireAdminForApi } from "@/features/admin/auth"
+import { getRecentAdminUsers } from "@/features/admin/metrics"
+
+export const dynamic = "force-dynamic"
 
 export async function GET() {
-  try {
-    const users = await db.query.UserTable.findMany({
-      columns: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        updatedAt: true,
-        createdAt: true,
-      },
-      orderBy: [desc(UserTable.updatedAt)],
-      limit: 10,
-    })
+  const admin = await requireAdminForApi()
+  if (!admin.ok) return admin.response
 
-    return NextResponse.json({ users })
+  try {
+    return NextResponse.json({ users: await getRecentAdminUsers() })
   } catch (err) {
     console.error("Error fetching recent users", err)
     return NextResponse.json({ users: [] }, { status: 500 })

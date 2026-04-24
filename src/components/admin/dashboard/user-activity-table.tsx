@@ -1,11 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MoreHorizontal } from "lucide-react";
+import Link from "next/link";
+import { Copy, ExternalLink, MoreHorizontal, Users } from "lucide-react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -20,12 +28,13 @@ type UserRow = {
   name: string | null;
   email: string | null;
   role: string | null;
+  status?: "Active" | "Inactive";
   updatedAt?: string | null;
   createdAt?: string | null;
 };
 
-function StatusBadge({ status }: { status: string | null }) {
-  if (status === "Active" || status === "admin") {
+function StatusBadge({ status }: { status?: string | null }) {
+  if (status === "Active") {
     return (
       <Badge
         variant="secondary"
@@ -58,7 +67,13 @@ function timeAgo(date?: string | null) {
   if (hr < 24) return `${hr} giờ trước`;
   const days = Math.floor(hr / 24);
   if (days < 7) return `${days} ngày trước`;
-  return d.toLocaleDateString();
+  return d.toLocaleDateString("vi-VN");
+}
+
+async function copyEmail(email: string | null) {
+  if (!email) return;
+  await navigator.clipboard.writeText(email);
+  toast.success("Đã sao chép email");
 }
 
 export function UserActivityTable() {
@@ -99,14 +114,14 @@ export function UserActivityTable() {
       <div className="flex items-start justify-between gap-4 p-6">
         <div>
           <h2 className="text-base font-semibold">
-            Hoạt động người dùng gần đây
+            Người dùng cập nhật gần đây
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Cập nhật thời gian thực về các tương tác trên nền tảng
+            10 tài khoản có thay đổi hồ sơ hoặc phiên đăng nhập mới nhất
           </p>
         </div>
-        <Button variant="link" className="h-auto px-0">
-          Xem Tất Cả Hoạt Động
+        <Button variant="link" className="h-auto px-0" asChild>
+          <Link href="/admin/user-management">Xem tất cả người dùng</Link>
         </Button>
       </div>
 
@@ -114,11 +129,11 @@ export function UserActivityTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="min-w-[160px]">Tên Người Dùng</TableHead>
+              <TableHead className="min-w-[160px]">Tên người dùng</TableHead>
               <TableHead className="min-w-[220px]">Email</TableHead>
-              <TableHead className="min-w-[120px]">Trạng Thái</TableHead>
-              <TableHead className="min-w-[160px]">Hoạt Động Gần Đây</TableHead>
-              <TableHead className="w-[80px]">Hành Động</TableHead>
+              <TableHead className="min-w-[120px]">Trạng thái</TableHead>
+              <TableHead className="min-w-[160px]">Cập nhật gần nhất</TableHead>
+              <TableHead className="w-[80px]">Hành động</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -141,27 +156,51 @@ export function UserActivityTable() {
                 </TableCell>
               </TableRow>
             ) : (
-              users.map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell className="font-medium">{u.name ?? "-"}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {u.email ?? "-"}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={u.role ?? "user"} />
+              users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">
+                    {user.name ?? "-"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {timeAgo(u.updatedAt ?? u.createdAt)}
+                    {user.email ?? "-"}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 rounded-xl"
-                      aria-label={`Action for ${u.name}`}
-                    >
-                      <MoreHorizontal className="size-4" />
-                    </Button>
+                    <StatusBadge status={user.status} />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {timeAgo(user.updatedAt ?? user.createdAt)}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-xl"
+                          aria-label={`Mở hành động cho ${user.name ?? "user"}`}
+                        >
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin/user-management">
+                            <Users className="mr-2 h-4 w-4" />
+                            Quản lý người dùng
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => copyEmail(user.email)}>
+                          <Copy className="mr-2 h-4 w-4" />
+                          Sao chép email
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/user-management?focus=${user.id}`}>
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            Mở tài khoản này
+                          </Link>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))

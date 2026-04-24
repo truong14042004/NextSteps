@@ -42,23 +42,8 @@ function CustomTooltip({
   );
 }
 
-export function GrowthChart() {
-  const data = useMemo<Point[]>(
-    () => [
-      { day: "10 OCT", value: 84 },
-      { day: "12 OCT", value: 92 },
-      { day: "14 OCT", value: 88 },
-      { day: "16 OCT", value: 96 },
-      { day: "18 OCT", value: 104 },
-      { day: "20 OCT", value: 101 },
-      { day: "22 OCT", value: 112 },
-      { day: "24 OCT", value: 121 },
-      { day: "26 OCT", value: 118 },
-      { day: "28 OCT", value: 132 },
-      { day: "30 OCT", value: 139 },
-    ],
-    [],
-  );
+export function GrowthChart({ data }: { data: Point[] }) {
+  const chartData = useMemo(() => data, [data]);
 
   return (
     // unify card inner spacing with other admin cards
@@ -84,7 +69,7 @@ export function GrowthChart() {
         <div className="mt-4">
           <ResponsiveContainer width="100%" height={240}>
             <LineChart
-              data={data}
+              data={chartData}
               margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
             >
               <defs>

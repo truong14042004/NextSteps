@@ -3,17 +3,18 @@ import {
   User,
   Rocket,
   Gem,
-  Settings2,
-  BadgeDollarSign,
 } from "lucide-react";
 
 import { PlanStatCard } from "@/components/admin/plan/plan-stat-card";
 import { PlanDistributionCard } from "@/components/admin/plan/plan-distribution-card";
 import { PlanGrowthChart } from "@/components/admin/plan/plan-growth-chart";
 import { PlanPerformanceTable } from "@/components/admin/plan/plan-performance-table";
-import { PlanActionCard } from "@/components/admin/plan/plan-action-card";
+import { AdminPlanManager } from "@/components/admin/plan/admin-plan-manager";
+import { getAdminPlans } from "@/features/admin/metrics";
 
-export default function PlanManagementPage() {
+export default async function PlanManagementPage() {
+  const plans = await getAdminPlans();
+
   return (
     <div className="space-y-6">
       <section>
@@ -30,30 +31,29 @@ export default function PlanManagementPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <PlanStatCard
             title="Tổng người đăng ký"
-            value="12,842"
-            change="+12.4%"
-            changeType="positive"
+            value={plans.stats.totalSubscribers.toLocaleString()}
+            changeType="neutral"
             icon={Users}
           />
           <PlanStatCard
             title="Người dùng Free"
-            value="8,120"
-            badge="Stable"
+            value={plans.stats.freeUsers.toLocaleString()}
+            badge="Live"
             changeType="neutral"
             icon={User}
           />
           <PlanStatCard
             title="Người dùng Start"
-            value="3,450"
-            change="+4.2%"
-            changeType="positive"
+            value={plans.stats.startUsers.toLocaleString()}
+            badge="Live"
+            changeType="neutral"
             icon={Rocket}
           />
           <PlanStatCard
             title="Người dùng Premium"
-            value="1,272"
-            change="+18.9%"
-            changeType="positive"
+            value={plans.stats.premiumUsers.toLocaleString()}
+            badge="Live"
+            changeType="neutral"
             icon={Gem}
             featured
           />
@@ -61,29 +61,15 @@ export default function PlanManagementPage() {
       </section>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[0.9fr_2.1fr]">
-        <PlanDistributionCard />
-        <PlanGrowthChart />
+        <PlanDistributionCard distribution={plans.distribution} />
+        <PlanGrowthChart data={plans.growth} />
       </section>
 
       <section>
-        <PlanPerformanceTable />
+        <PlanPerformanceTable rows={plans.performance} />
       </section>
 
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <PlanActionCard
-          title="Feature Allocation"
-          description="Thêm hoặc gỡ các tính năng nền tảng cho từng gói hiện có."
-          buttonText="Quản lý tính năng"
-          icon={Settings2}
-        />
-        <PlanActionCard
-          title="Pricing Engine"
-          description="Điều chỉnh giá tháng, giảm giá năm và thời gian dùng thử."
-          buttonText="Cập nhật giá"
-          icon={BadgeDollarSign}
-          darkButton
-        />
-      </section>
+      <AdminPlanManager initialPlans={plans.configs} />
     </div>
   );
 }

@@ -4,44 +4,15 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const transactions = [
-  {
-    id: "1",
-    name: "John Doe",
-    initials: "JD",
-    plan: "Premium",
-    amount: "$49.00",
-    date: "Oct 24, 2023",
-    status: "Success",
-  },
-  {
-    id: "2",
-    name: "Sarah Miller",
-    initials: "SM",
-    plan: "Start",
-    amount: "$19.00",
-    date: "Oct 23, 2023",
-    status: "Pending",
-  },
-  {
-    id: "3",
-    name: "Robert Kang",
-    initials: "RK",
-    plan: "Premium",
-    amount: "$49.00",
-    date: "Oct 22, 2023",
-    status: "Success",
-  },
-  {
-    id: "4",
-    name: "Amanda Lee",
-    initials: "AL",
-    plan: "Free",
-    amount: "$0.00",
-    date: "Oct 21, 2023",
-    status: "Success",
-  },
-];
+type TransactionRow = {
+  id: string;
+  name: string;
+  initials: string;
+  plan: string;
+  amount: string;
+  date: string;
+  status: string;
+};
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "Success") {
@@ -87,7 +58,11 @@ function PlanBadge({ plan }: { plan: string }) {
   );
 }
 
-export function RecentTransactionsTable() {
+export function RecentTransactionsTable({
+  transactions,
+}: {
+  transactions: TransactionRow[];
+}) {
   return (
     <Card className="rounded-3xl border-border/60 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -123,33 +98,44 @@ export function RecentTransactionsTable() {
             </thead>
 
             <tbody>
-              {transactions.map((item) => (
-                <tr key={item.id} className="border-b last:border-0">
-                  <td className="px-2 py-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarFallback className="bg-slate-100 text-xs font-medium text-slate-700">
-                          {item.initials}
-                        </AvatarFallback>
-                      </Avatar>
-
-                      <div className="font-medium">{item.name}</div>
-                    </div>
-                  </td>
-
-                  <td className="px-2 py-4">
-                    <PlanBadge plan={item.plan} />
-                  </td>
-
-                  <td className="px-2 py-4 font-medium">{item.amount}</td>
-                  <td className="px-2 py-4 text-sm text-muted-foreground">
-                    {item.date}
-                  </td>
-                  <td className="px-2 py-4">
-                    <StatusBadge status={item.status} />
+              {transactions.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-2 py-8 text-center text-sm text-muted-foreground"
+                  >
+                    Chưa có dữ liệu giao dịch
                   </td>
                 </tr>
-              ))}
+              ) : (
+                transactions.map((item) => (
+                  <tr key={item.id} className="border-b last:border-0">
+                    <td className="px-2 py-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarFallback className="bg-slate-100 text-xs font-medium text-slate-700">
+                            {item.initials}
+                          </AvatarFallback>
+                        </Avatar>
+
+                        <div className="font-medium">{item.name}</div>
+                      </div>
+                    </td>
+
+                    <td className="px-2 py-4">
+                      <PlanBadge plan={item.plan} />
+                    </td>
+
+                    <td className="px-2 py-4 font-medium">{item.amount}</td>
+                    <td className="px-2 py-4 text-sm text-muted-foreground">
+                      {item.date}
+                    </td>
+                    <td className="px-2 py-4">
+                      <StatusBadge status={item.status} />
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
