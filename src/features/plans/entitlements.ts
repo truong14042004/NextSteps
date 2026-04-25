@@ -151,6 +151,18 @@ export async function getActivePlanForUser(userId: string, now = new Date()) {
   return getFreePlan(now)
 }
 
+export async function getPlanSummaryForUser(userId: string) {
+  const plan = await getActivePlanForUser(userId)
+
+  return {
+    planKey: plan.planKey,
+    planName: formatPlanName(plan.planKey),
+    resetText: formatResetText(plan),
+    periodStart: plan.periodStart.toISOString(),
+    periodEnd: plan.periodEnd.toISOString(),
+  }
+}
+
 export async function canUseFeature(feature: UsageFeature) {
   const { userId } = await getCurrentUser()
   if (userId == null) return false
