@@ -5,6 +5,7 @@ import {
   QuestionTable,
 } from "@/drizzle/schema"
 import { getJobInfoIdTag } from "@/features/jobInfos/dbCache"
+import { recordFeatureUsage } from "@/features/plans/entitlements"
 import { insertQuestion } from "@/features/questions/db"
 import { getQuestionJobInfoTag } from "@/features/questions/dbCache"
 import { canCreateQuestion } from "@/features/questions/permissions"
@@ -61,6 +62,7 @@ export async function POST(req: Request) {
             jobInfoId,
             difficulty,
           })
+          await recordFeatureUsage("ai_question")
 
           dataStream.writeData({ questionId: id })
         },

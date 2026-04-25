@@ -1,5 +1,5 @@
-import { hasPermission } from "@/services/clerk/lib/hasPermission"
+import { canUseFeature } from "@/features/plans/entitlements"
 
 export async function canRunResumeAnalysis() {
-  return hasPermission("unlimited_resume_analysis")
+  return canUseFeature("resume_analysis")
 }

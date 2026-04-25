@@ -658,7 +658,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
       console.log("✅ Interview created, ID:", res.id)
       setInterviewId(res.id)
       interviewIdRef.current = res.id
-      console.info("Using assistant dashboard transcriber configuration")
+      console.info("Using interview turn-taking configuration")
 
       // Start Vapi call - override system prompt with dynamic candidate info
       await vapi.start(

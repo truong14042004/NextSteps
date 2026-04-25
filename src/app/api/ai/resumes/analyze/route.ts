@@ -1,4 +1,5 @@
 ﻿import { canRunResumeAnalysis } from "@/features/resumeAnalyses/permissions"
+import { recordFeatureUsage } from "@/features/plans/entitlements"
 import { PLAN_LIMIT_MESSAGE } from "@/lib/errorToast"
 import { analyzeResumeForJob } from "@/services/ai/resumes/ai"
 import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
@@ -60,23 +61,25 @@ export async function POST(req: Request) {
     return new Response(PLAN_LIMIT_MESSAGE, { status: 403 })
   }
 
-  const saveResult = jobInfoId
-    ? async (result: { object: unknown }) => {
-        try {
-          await db
-            .update(JobInfoTable)
-            .set({ analysisResult: JSON.stringify(result.object) })
-            .where(and(eq(JobInfoTable.id, jobInfoId), eq(JobInfoTable.userId, userId)))
-        } catch (e) {
-          console.error("Failed to save analysis result:", e)
-        }
+  const handleFinish = async (result: { object: unknown }) => {
+    await recordFeatureUsage("resume_analysis")
+
+    if (jobInfoId != null) {
+      try {
+        await db
+          .update(JobInfoTable)
+          .set({ analysisResult: JSON.stringify(result.object) })
+          .where(and(eq(JobInfoTable.id, jobInfoId), eq(JobInfoTable.userId, userId)))
+      } catch (e) {
+        console.error("Failed to save analysis result:", e)
       }
-    : undefined
+    }
+  }
 
   const res = await analyzeResumeForJob({
     resumeFile,
     jobInfo: { title: jobTitle, experienceLevel, description },
-    onFinish: saveResult,
+    onFinish: handleFinish,
   })
 
   return res.toTextStreamResponse()

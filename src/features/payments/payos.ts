@@ -1,16 +1,16 @@
 import "server-only"
 
 import { PayOS } from "@payos/node"
-import { and, eq } from "drizzle-orm"
+import { and, eq, ne } from "drizzle-orm"
 
 import { env } from "@/data/env/server"
 import { db } from "@/drizzle/db"
 import {
   AdminPlanTable,
   PaymentTransactionTable,
-  UserTable,
   type PaymentStatus,
 } from "@/drizzle/schema"
+import { activateSubscriptionFromPayment } from "@/features/plans/entitlements"
 
 const PAID_STATUSES = new Set(["PAID", "paid"])
 const CANCELLED_STATUSES = new Set(["CANCELLED", "cancelled"])
@@ -56,10 +56,6 @@ function mapPayOSStatus(status: string): PaymentStatus {
   return "pending"
 }
 
-async function activatePaidPlan(userId: string) {
-  await db.update(UserTable).set({ role: "pro" }).where(eq(UserTable.id, userId))
-}
-
 async function markTransactionStatus(
   orderCode: number,
   status: PaymentStatus,
@@ -67,12 +63,26 @@ async function markTransactionStatus(
 ) {
   const existing = await db.query.PaymentTransactionTable.findFirst({
     where: eq(PaymentTransactionTable.orderCode, orderCode),
-    columns: { id: true, userId: true, status: true },
+    columns: {
+      id: true,
+      userId: true,
+      planId: true,
+      planKey: true,
+      status: true,
+    },
   })
 
   if (existing == null) return null
 
   const paidAt = status === "paid" ? new Date() : undefined
+  const where =
+    status === "paid"
+      ? and(
+          eq(PaymentTransactionTable.orderCode, orderCode),
+          ne(PaymentTransactionTable.status, "paid")
+        )
+      : eq(PaymentTransactionTable.orderCode, orderCode)
+
   const [transaction] = await db
     .update(PaymentTransactionTable)
     .set({
@@ -80,14 +90,19 @@ async function markTransactionStatus(
       providerPayload,
       ...(paidAt != null ? { paidAt } : {}),
     })
-    .where(eq(PaymentTransactionTable.orderCode, orderCode))
+    .where(where)
     .returning()
 
-  if (status === "paid" && existing.status !== "paid") {
-    await activatePaidPlan(existing.userId)
+  if (status === "paid" && transaction != null) {
+    await activateSubscriptionFromPayment({
+      userId: existing.userId,
+      planId: existing.planId,
+      planKey: existing.planKey,
+      paymentTransactionId: existing.id,
+    })
   }
 
-  return transaction
+  return transaction ?? null
 }
 
 export async function createPayOSPaymentLink({

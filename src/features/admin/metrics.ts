@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, count, desc, gt, gte, inArray, isNull, sql } from "drizzle-orm"
+import { and, count, desc, eq, gt, gte, inArray, isNull, lte, sql } from "drizzle-orm"
 
 import { db } from "@/drizzle/db"
 import {
@@ -9,6 +9,7 @@ import {
   JobInfoTable,
   PaymentTransactionTable,
   QuestionTable,
+  UserSubscriptionTable,
   UserTable,
 } from "@/drizzle/schema"
 import { formatPlanPrice, listAdminPlanConfigs } from "./plans"
@@ -264,18 +265,29 @@ export async function getRecentAdminUsers(limit = 10) {
 }
 
 export async function getPlanDistribution() {
-  const rows = await db
-    .select({
-      role: UserTable.role,
-      total: count(),
-    })
-    .from(UserTable)
-    .groupBy(UserTable.role)
+  const now = new Date()
+  const [totalUsersRow, rows] = await Promise.all([
+    db.select({ total: count() }).from(UserTable),
+    db
+      .select({
+        planKey: UserSubscriptionTable.planKey,
+        total: count(),
+      })
+      .from(UserSubscriptionTable)
+      .where(
+        and(
+          eq(UserSubscriptionTable.status, "active"),
+          lte(UserSubscriptionTable.currentPeriodStart, now),
+          gt(UserSubscriptionTable.currentPeriodEnd, now)
+        )
+      )
+      .groupBy(UserSubscriptionTable.planKey),
+  ])
 
-  const free = rows.find(row => row.role === "user")?.total ?? 0
-  const premium = rows.find(row => row.role === "pro")?.total ?? 0
-  const start = 0
-  const total = free + start + premium
+  const total = totalUsersRow[0]?.total ?? 0
+  const start = rows.find(row => row.planKey === "start")?.total ?? 0
+  const premium = rows.find(row => row.planKey === "premium")?.total ?? 0
+  const free = Math.max(0, total - start - premium)
 
   const toPercent = (value: number) =>
     total === 0 ? 0 : Math.round((value / total) * 100)

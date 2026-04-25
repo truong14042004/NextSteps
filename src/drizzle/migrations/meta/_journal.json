@@ -64,6 +64,13 @@
       "when": 1772825000000,
       "tag": "0008_payos_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1777059500000,
+      "tag": "0009_subscriptions_usage",
+      "breakpoints": true
     }
   ]
 }

@@ -1,12 +1,18 @@
 import "server-only"
 
 import { randomUUID } from "node:crypto"
-import { and, count, desc, eq, gt, ilike, inArray, isNull, or } from "drizzle-orm"
+import { and, count, desc, eq, gt, ilike, inArray, isNull, lte, or } from "drizzle-orm"
 import { revalidateTag } from "next/cache"
 import { z } from "zod"
 
 import { db } from "@/drizzle/db"
-import { AuthCredentialTable, AuthSessionTable, UserTable, userRoles } from "@/drizzle/schema"
+import {
+  AuthCredentialTable,
+  AuthSessionTable,
+  UserSubscriptionTable,
+  UserTable,
+  userRoles,
+} from "@/drizzle/schema"
 import { getUserIdTag } from "@/features/users/dbCache"
 import { hashPassword } from "@/services/auth/lib/password"
 
@@ -34,8 +40,14 @@ function normalizeEmail(email: string) {
 
 function getPlanFromRole(role: string) {
   if (role === "admin") return "Admin"
-  if (role === "pro") return "Premium"
   return "Free"
+}
+
+function getPlanLabel(planKey: string | undefined, role: string) {
+  if (role === "admin") return "Admin"
+  if (planKey === "premium") return "Premium"
+  if (planKey === "start") return "Start"
+  return getPlanFromRole(role)
 }
 
 function clampPage(value: string | null) {
@@ -124,11 +136,36 @@ export async function listAdminUsers({
       : []
 
   const activeUserIds = new Set(activeSessionRows.map(session => session.userId))
+  const now = new Date()
+  const subscriptions =
+    ids.length > 0
+      ? await db
+          .select({
+            userId: UserSubscriptionTable.userId,
+            planKey: UserSubscriptionTable.planKey,
+          })
+          .from(UserSubscriptionTable)
+          .where(
+            and(
+              inArray(UserSubscriptionTable.userId, ids),
+              eq(UserSubscriptionTable.status, "active"),
+              lte(UserSubscriptionTable.currentPeriodStart, now),
+              gt(UserSubscriptionTable.currentPeriodEnd, now)
+            )
+          )
+          .orderBy(desc(UserSubscriptionTable.currentPeriodEnd))
+      : []
+  const activePlanByUserId = new Map<string, string>()
+  for (const subscription of subscriptions) {
+    if (!activePlanByUserId.has(subscription.userId)) {
+      activePlanByUserId.set(subscription.userId, subscription.planKey)
+    }
+  }
 
   return {
     users: rows.map(user => ({
       ...user,
-      plan: getPlanFromRole(user.role),
+      plan: getPlanLabel(activePlanByUserId.get(user.id), user.role),
       status: activeUserIds.has(user.id) ? "Active" : "Inactive",
     })) satisfies AdminUserRow[],
     pagination: {

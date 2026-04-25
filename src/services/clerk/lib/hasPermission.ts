@@ -1,4 +1,5 @@
 import { getCurrentUser } from "./getCurrentUser"
+import { canUseFeature } from "@/features/plans/entitlements"
 
 type Permission =
   | "unlimited_resume_analysis"
@@ -7,11 +8,17 @@ type Permission =
   | "1_interview"
   | "5_questions"
 
-export async function hasPermission(_permission: Permission) {
+const PERMISSION_FEATURES: Record<Permission, Parameters<typeof canUseFeature>[0]> = {
+  unlimited_resume_analysis: "resume_analysis",
+  unlimited_interviews: "mock_interview",
+  unlimited_questions: "ai_question",
+  "1_interview": "mock_interview",
+  "5_questions": "ai_question",
+}
+
+export async function hasPermission(permission: Permission) {
   const { userId } = await getCurrentUser()
   if (userId == null) return false
 
-  // Temporary unlock: allow all authenticated users to use all features.
-  // Revert this when plan-based permissions are needed again.
-  return true
+  return canUseFeature(PERMISSION_FEATURES[permission])
 }

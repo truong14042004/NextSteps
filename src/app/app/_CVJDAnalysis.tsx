@@ -76,84 +76,48 @@ type JobInfoHistory = Awaited<ReturnType<typeof getUserJobInfos>>;
 
 type UsageInfo = {
   used: number;
-  total: number;
-  remaining: number;
+  total: number | null;
+  remaining: number | null;
   planName: string;
   resetText: string;
   billingMode: "subscription" | "pay_per_use";
 };
 
-function UsageBanner({ usage }: { usage: UsageInfo }) {
-  const percent =
-    usage.total > 0 ? Math.min((usage.used / usage.total) * 100, 100) : 0;
-  const isLow = usage.remaining <= 2 && usage.remaining > 0;
-  const isExhausted = usage.remaining <= 0;
+const defaultUsage: UsageInfo = {
+  used: 0,
+  total: 0,
+  remaining: 0,
+  planName: "Free",
+  resetText: "Dang tai...",
+  billingMode: "subscription",
+};
 
-  return (
-    <div className="relative overflow-hidden rounded-[28px] border border-violet-200/60 bg-gradient-to-r from-violet-50 via-fuchsia-50 to-amber-50 p-5 shadow-sm dark:border-violet-900/40 dark:from-violet-950/40 dark:via-fuchsia-950/20 dark:to-amber-950/10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,0.18),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(236,72,153,0.12),transparent_26%)]" />
+function getUsagePercent(usage: UsageInfo) {
+  return usage.total != null && usage.total > 0
+    ? Math.min((usage.used / usage.total) * 100, 100)
+    : 100;
+}
 
-      <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-start gap-4">
-          <div className="rounded-2xl bg-white/70 p-3 shadow-sm dark:bg-white/10">
-            <ZapIcon className="size-5 text-violet-600" />
-          </div>
+function hasUsageRemaining(usage: UsageInfo) {
+  return usage.remaining == null || usage.remaining > 0;
+}
 
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-base font-semibold text-foreground">
-                {usage.remaining}/{usage.total} lượt phân tích còn lại
-              </p>
-              <Badge className="rounded-full bg-violet-600 hover:bg-violet-600">
-                {usage.planName}
-              </Badge>
-            </div>
+function isUsageLow(usage: UsageInfo) {
+  return usage.remaining != null && usage.remaining <= 2 && usage.remaining > 0;
+}
 
-            <p className="mt-1 text-sm text-muted-foreground">
-              {isExhausted
-                ? "Bạn đã dùng hết lượt hiện tại."
-                : isLow
-                  ? "Bạn sắp hết lượt. Nên mua thêm để không bị gián đoạn."
-                  : `Đã dùng ${usage.used}/${usage.total} lượt • ${usage.resetText}`}
-            </p>
+function formatUsageCount(value: number | null) {
+  return value == null ? "Khong gioi han" : value.toLocaleString("vi-VN");
+}
 
-            <div className="mt-3 h-2.5 w-full max-w-md overflow-hidden rounded-full bg-white/60 dark:bg-white/10">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all",
-                  isExhausted
-                    ? "bg-rose-500"
-                    : isLow
-                      ? "bg-amber-500"
-                      : "bg-gradient-to-r from-violet-600 via-fuchsia-500 to-amber-400",
-                )}
-                style={{ width: `${percent}%` }}
-              />
-            </div>
-          </div>
-        </div>
+async function fetchFeatureUsage(feature: string) {
+  const response = await fetch(`/api/user/usage?feature=${feature}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) return null;
 
-        <div className="flex flex-wrap gap-2">
-          <Button
-            asChild
-            className="rounded-xl bg-violet-600 hover:bg-violet-700"
-          >
-            <Link href="/#pricing">Mua thêm lượt</Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            className="rounded-xl border-violet-200 bg-white/70 dark:bg-background/40"
-          >
-            <Link href="/#pricing">
-              <CreditCardIcon className="mr-2 size-4" />
-              Xem bảng giá
-            </Link>
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
+  const data = (await response.json()) as { usage?: UsageInfo | null };
+  return data.usage ?? null;
 }
 
 function UploadCard({
@@ -246,17 +210,18 @@ export default function CVJDAnalysisPage() {
   const searchParams = useSearchParams();
   const defaultTab = searchParams.get("tab") === "history" ? "history" : "new";
 
-  // Mock data - khi nào có db thì gọi API để lấy thông tin này
-  const usage: UsageInfo = {
-    used: 7,
-    total: 10,
-    remaining: 3,
-    planName: "Gói lượt",
-    resetText: "Không tự làm mới",
-    billingMode: "pay_per_use",
-  };
+  const [usage, setUsage] = useState<UsageInfo>(defaultUsage);
 
-  const hasRemainingUsage = usage.remaining > 0;
+  const hasRemainingUsage = hasUsageRemaining(usage);
+
+  async function refreshUsage() {
+    const nextUsage = await fetchFeatureUsage("resume_analysis");
+    if (nextUsage != null) setUsage(nextUsage);
+  }
+
+  useEffect(() => {
+    refreshUsage();
+  }, []);
 
   const form = useForm<AnalysisFormData>({
     resolver: zodResolver(analysisSchema),
@@ -295,6 +260,14 @@ export default function CVJDAnalysisPage() {
       return fetch(url, { ...options, headers, body: formData });
     },
   });
+
+  const wasAnalyzingRef = useRef(false);
+  useEffect(() => {
+    if (wasAnalyzingRef.current && !isLoading) {
+      refreshUsage();
+    }
+    wasAnalyzingRef.current = isLoading;
+  }, [isLoading]);
 
   function handleFileUpload(file: File | null) {
     if (!file) return;
@@ -417,7 +390,7 @@ export default function CVJDAnalysisPage() {
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-base font-semibold text-foreground">
-                          {usage.remaining}/{usage.total} lượt phân tích còn lại
+                          {formatUsageCount(usage.remaining)}/{formatUsageCount(usage.total)} lượt phân tích còn lại
                         </p>
                         <Badge className="rounded-full bg-primary text-primary-foreground hover:bg-primary">
                           {usage.planName}
@@ -427,9 +400,9 @@ export default function CVJDAnalysisPage() {
                       <p className="mt-1 text-sm text-muted-foreground">
                         {!hasRemainingUsage
                           ? "Bạn đã dùng hết lượt hiện tại."
-                          : usage.remaining <= 2
+                          : isUsageLow(usage)
                             ? "Bạn sắp hết lượt. Nên mua thêm để không bị gián đoạn."
-                            : `Đã dùng ${usage.used}/${usage.total} lượt • ${usage.resetText}`}
+                            : `Đã dùng ${usage.used}/${formatUsageCount(usage.total)} lượt • ${usage.resetText}`}
                       </p>
 
                       <div className="mt-3 h-2.5 w-full max-w-md overflow-hidden rounded-full bg-primary/10">
@@ -438,18 +411,13 @@ export default function CVJDAnalysisPage() {
                             "h-full rounded-full transition-all",
                             !hasRemainingUsage
                               ? "bg-destructive"
-                              : usage.remaining <= 2
+                              : isUsageLow(usage)
                                 ? "bg-warning"
                                 : "bg-gradient-to-r from-primary via-[#c83a3a] to-secondary",
                           )}
                           style={{
                             width: `${
-                              usage.total > 0
-                                ? Math.min(
-                                    (usage.used / usage.total) * 100,
-                                    100,
-                                  )
-                                : 0
+                              getUsagePercent(usage)
                             }%`,
                           }}
                         />

@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  MicIcon,
   SparklesIcon,
   HistoryIcon,
   PlusCircleIcon,
@@ -35,28 +34,57 @@ type SourceMode = "previous" | "new";
 
 type UsageInfo = {
   used: number;
-  total: number;
-  remaining: number;
+  total: number | null;
+  remaining: number | null;
   planName: string;
   resetText: string;
 };
+
+const defaultUsage: UsageInfo = {
+  used: 0,
+  total: 0,
+  remaining: 0,
+  planName: "Free",
+  resetText: "Dang tai...",
+};
+
+function getUsagePercent(usage: UsageInfo) {
+  return usage.total != null && usage.total > 0
+    ? Math.min((usage.used / usage.total) * 100, 100)
+    : 100;
+}
+
+function formatUsageCount(value: number | null) {
+  return value == null ? "Khong gioi han" : value.toLocaleString("vi-VN");
+}
 
 export default function InterviewPage() {
   const [selectedJobInfo, setSelectedJobInfo] =
     useState<InterviewJobInfo | null>(null);
   const [sourceMode, setSourceMode] = useState<SourceMode>("previous");
 
-  // mock tạm cho UI, sau này nối data thật
-  const usage: UsageInfo = {
-    used: 7,
-    total: 10,
-    remaining: 3,
-    planName: "Gói lượt",
-    resetText: "Không tự làm mới",
-  };
+  const [usage, setUsage] = useState<UsageInfo>(defaultUsage);
 
-  const percent =
-    usage.total > 0 ? Math.min((usage.used / usage.total) * 100, 100) : 0;
+  const percent = getUsagePercent(usage);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadUsage() {
+      const response = await fetch("/api/user/usage?feature=mock_interview", {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+
+      const data = (await response.json()) as { usage?: UsageInfo | null };
+      if (!ignore && data.usage != null) setUsage(data.usage);
+    }
+
+    loadUsage();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   if (selectedJobInfo) {
     return (
@@ -120,7 +148,7 @@ export default function InterviewPage() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-base font-semibold text-foreground">
-                          {usage.remaining}/{usage.total} lượt phỏng vấn còn lại
+                          {formatUsageCount(usage.remaining)}/{formatUsageCount(usage.total)} lượt phỏng vấn còn lại
                         </p>
                         <Badge className="rounded-full bg-primary text-primary-foreground hover:bg-primary">
                           {usage.planName}
@@ -128,7 +156,7 @@ export default function InterviewPage() {
                       </div>
 
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Đã dùng {usage.used}/{usage.total} lượt •{" "}
+                        Đã dùng {usage.used}/{formatUsageCount(usage.total)} lượt •{" "}
                         {usage.resetText}
                       </p>
 

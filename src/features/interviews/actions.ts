@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm"
 import { InterviewTable, JobInfoTable } from "@/drizzle/schema"
 import { insertInterview, updateInterview as updateInterviewDb, getInterviewsByJobInfoId } from "./db"
 import { canCreateInterview } from "./permissions"
+import { recordFeatureUsage } from "@/features/plans/entitlements"
 import { PLAN_LIMIT_MESSAGE, RATE_LIMIT_MESSAGE } from "@/lib/errorToast"
 import { env } from "@/data/env/server"
 import arcjet, { tokenBucket, request } from "@arcjet/next"
@@ -68,6 +69,7 @@ export async function createInterview({
   }
 
   const interview = await insertInterview({ jobInfoId, duration: "00:00:00" })
+  await recordFeatureUsage("mock_interview")
 
   return { error: false, id: interview.id }
 }
