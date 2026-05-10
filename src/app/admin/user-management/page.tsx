@@ -19,34 +19,52 @@ type UserRow = {
   createdAt?: string | null;
 };
 
+type UsersPagination = {
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
+const userRoleOptions = ["user", "pro", "admin"] as const;
+
 export default function AdminUserManagementPage() {
   const [users, setUsers] = useState<UserRow[] | null>(null);
+  const [pagination, setPagination] = useState<UsersPagination | null>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
+  const [focusedUserId, setFocusedUserId] = useState<string | null>(null);
   const [selected, setSelected] = useState<UserRow | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
 
   useEffect(() => {
     const focus = new URLSearchParams(window.location.search).get("focus");
-    if (focus) setQuery(focus);
+    if (focus) setFocusedUserId(focus);
     fetchUsers();
   }, []);
 
   async function fetchUsers() {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/users");
+      const res = await fetch("/api/admin/users?pageSize=100", {
+        cache: "no-store",
+      });
       if (res.ok) {
-        const data = await res.json();
+        const data = (await res.json()) as {
+          users?: UserRow[];
+          pagination?: UsersPagination;
+        };
         setUsers(data.users ?? []);
+        setPagination(data.pagination ?? null);
       } else {
         console.error("Failed to fetch users", await res.text());
         setUsers([]);
+        setPagination(null);
       }
     } catch (err) {
       console.error(err);
       setUsers([]);
+      setPagination(null);
     } finally {
       setLoading(false);
     }
@@ -86,6 +104,7 @@ export default function AdminUserManagementPage() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Quản lý người dùng, xem vai trò và theo dõi hoạt động.
+            {pagination ? ` Đang hiển thị ${filtered.length}/${pagination.total} người dùng.` : ""}
           </p>
         </div>
 
@@ -158,8 +177,14 @@ export default function AdminUserManagementPage() {
                   )}
 
                   {!loading &&
-                    filtered.map((u) => (
-                      <tr key={u.id} className="border-t">
+                    filtered.map((u) => {
+                      const isFocused = focusedUserId === u.id;
+
+                      return (
+                        <tr
+                          key={u.id}
+                          className={`border-t ${isFocused ? "bg-primary/5 ring-1 ring-inset ring-primary/20" : ""}`}
+                        >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-9 w-9">
@@ -250,8 +275,9 @@ export default function AdminUserManagementPage() {
                             </Button>
                           </div>
                         </td>
-                      </tr>
-                    ))}
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
@@ -291,6 +317,8 @@ function UserForm({
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [email, setEmail] = useState(initial?.email ?? "");
+  const [role, setRole] = useState(initial?.role ?? "user");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(e?: React.FormEvent) {
@@ -298,7 +326,12 @@ function UserForm({
     setLoading(true);
 
     try {
-      const payload = { name, email };
+      const payload = {
+        name,
+        email,
+        role,
+        ...(password.trim() ? { password: password.trim() } : {}),
+      };
       const url = initial
         ? `/api/admin/users/${initial.id}`
         : "/api/admin/users";
@@ -329,7 +362,7 @@ function UserForm({
           {initial ? "Chỉnh sửa người dùng" : "Thêm người dùng mới"}
         </h3>
         <p className="text-sm text-muted-foreground">
-          Vai trò người dùng chỉ hiển thị để xem, không chỉnh sửa tại đây.
+          Cập nhật thông tin tài khoản, vai trò và mật khẩu đăng nhập custom auth.
         </p>
       </div>
 
@@ -349,12 +382,32 @@ function UserForm({
           required
         />
 
-        {initial && (
-          <div className="rounded-xl border bg-muted/30 px-4 py-3">
-            <div className="mb-1 text-sm text-muted-foreground">Vai trò</div>
-            <Badge variant="outline">{initial.role ?? "User"}</Badge>
-          </div>
-        )}
+        <label className="grid gap-1 text-sm">
+          <span className="text-muted-foreground">Vai trò</span>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          >
+            {userRoleOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <Input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder={
+            initial
+              ? "Mật khẩu mới (bỏ trống nếu không đổi)"
+              : "Mật khẩu đăng nhập (tuỳ chọn)"
+          }
+          minLength={password.trim() ? 8 : undefined}
+        />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" type="button" onClick={() => onSuccess?.()}>

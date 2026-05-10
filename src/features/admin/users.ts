@@ -20,7 +20,12 @@ const userPayloadSchema = z.object({
   name: z.string().trim().min(1).max(120),
   email: z.string().trim().email().max(255),
   role: z.enum(userRoles).optional(),
-  password: z.string().min(8).max(128).optional(),
+  password: z
+    .string()
+    .trim()
+    .transform(value => (value === "" ? undefined : value))
+    .pipe(z.string().min(8).max(128).optional())
+    .optional(),
 })
 
 export type AdminUserRow = {
@@ -215,7 +220,7 @@ export async function createAdminUser(payload: unknown) {
 }
 
 export async function updateAdminUser(id: string, payload: unknown) {
-  const parsed = userPayloadSchema.partial({ password: true }).safeParse(payload)
+  const parsed = userPayloadSchema.safeParse(payload)
   if (!parsed.success) {
     return { ok: false as const, status: 400, message: "Invalid user payload" }
   }
@@ -246,18 +251,20 @@ export async function updateAdminUser(id: string, payload: unknown) {
   }
 
   if (data.password != null) {
+    const passwordHash = await hashPassword(data.password)
+
     await db
       .insert(AuthCredentialTable)
       .values({
         userId: id,
         username: email,
-        passwordHash: await hashPassword(data.password),
+        passwordHash,
       })
       .onConflictDoUpdate({
         target: [AuthCredentialTable.userId],
         set: {
           username: email,
-          passwordHash: await hashPassword(data.password),
+          passwordHash,
           updatedAt: new Date(),
         },
       })

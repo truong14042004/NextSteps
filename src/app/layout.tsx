@@ -4,7 +4,6 @@ import "./globals.css"
 
 import { ThemeProvider } from "next-themes"
 import { Toaster } from "@/components/ui/sonner"
-import { syncUser } from "@/lib/sync-user"
 
 import { ChatWidget } from "@/components/chatbot/ChatWidget";
 

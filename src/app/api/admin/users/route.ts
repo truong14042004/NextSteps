@@ -17,7 +17,11 @@ export async function GET(request: Request) {
   const params = parseAdminUserListParams(url.searchParams)
   const data = await listAdminUsers(params)
 
-  return NextResponse.json(data)
+  return NextResponse.json(data, {
+    headers: {
+      "Cache-Control": "no-store",
+    },
+  })
 }
 
 export async function POST(request: Request) {
