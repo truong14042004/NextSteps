@@ -32,6 +32,7 @@ const pageSize = 20;
 export default function AdminUserManagementPage() {
   const [users, setUsers] = useState<UserRow[] | null>(null);
   const [pagination, setPagination] = useState<UsersPagination | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -67,15 +68,19 @@ export default function AdminUserManagementPage() {
         };
         setUsers(data.users ?? []);
         setPagination(data.pagination ?? null);
+        setErrorMessage(null);
       } else {
-        console.error("Failed to fetch users", await res.text());
+        const message = await res.text();
+        console.error("Failed to fetch users", message);
         setUsers([]);
         setPagination(null);
+        setErrorMessage(`Không tải được danh sách người dùng (${res.status}).`);
       }
     } catch (err) {
       console.error(err);
       setUsers([]);
       setPagination(null);
+      setErrorMessage("Không tải được danh sách người dùng. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -112,6 +117,11 @@ export default function AdminUserManagementPage() {
             Quản lý người dùng, xem vai trò và theo dõi hoạt động.
             {pagination ? ` Đang hiển thị ${users?.length ?? 0}/${pagination.total} người dùng.` : ""}
           </p>
+          {errorMessage && (
+            <p className="mt-2 text-sm font-medium text-destructive">
+              {errorMessage}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-3">

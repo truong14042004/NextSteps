@@ -1,7 +1,7 @@
 import "server-only"
 
 import { randomUUID } from "node:crypto"
-import { and, count, desc, eq, gt, ilike, inArray, isNull, lte, or, sql } from "drizzle-orm"
+import { and, count, desc, eq, gt, ilike, inArray, isNull, lte, or } from "drizzle-orm"
 import { revalidateTag } from "next/cache"
 import { z } from "zod"
 
@@ -11,7 +11,6 @@ import {
   AuthSessionTable,
   UserSubscriptionTable,
   UserTable,
-  UserUsageEventTable,
   userRoles,
 } from "@/drizzle/schema"
 import { getUserIdTag } from "@/features/users/dbCache"
@@ -108,17 +107,6 @@ export async function listAdminUsers({
 
   const where = filters.length > 0 ? and(...filters) : undefined
   const offset = (page - 1) * pageSize
-  const lastActivityAt = sql<Date>`greatest(
-    ${UserTable.updatedAt},
-    coalesce(
-      (select max(${AuthSessionTable.updatedAt}) from ${AuthSessionTable} where ${AuthSessionTable.userId} = ${UserTable.id}),
-      ${UserTable.updatedAt}
-    ),
-    coalesce(
-      (select max(${UserUsageEventTable.createdAt}) from ${UserUsageEventTable} where ${UserUsageEventTable.userId} = ${UserTable.id}),
-      ${UserTable.updatedAt}
-    )
-  )`
 
   const [rows, totalRows] = await Promise.all([
     db
@@ -129,51 +117,59 @@ export async function listAdminUsers({
         role: UserTable.role,
         createdAt: UserTable.createdAt,
         updatedAt: UserTable.updatedAt,
-        lastActiveAt: lastActivityAt,
+        lastActiveAt: UserTable.updatedAt,
       })
       .from(UserTable)
       .where(where)
-      .orderBy(desc(lastActivityAt), desc(UserTable.createdAt))
+      .orderBy(desc(UserTable.updatedAt), desc(UserTable.createdAt))
       .limit(pageSize)
       .offset(offset),
     db.select({ total: count() }).from(UserTable).where(where),
   ])
 
   const ids = rows.map(user => user.id)
-  const activeSessionRows =
-    ids.length > 0
-      ? await db
-          .select({ userId: AuthSessionTable.userId })
-          .from(AuthSessionTable)
-          .where(
-            and(
-              inArray(AuthSessionTable.userId, ids),
-              isNull(AuthSessionTable.revokedAt),
-              gt(AuthSessionTable.expiresAt, new Date())
-            )
+  let activeSessionRows: { userId: string }[] = []
+  if (ids.length > 0) {
+    try {
+      activeSessionRows = await db
+        .select({ userId: AuthSessionTable.userId })
+        .from(AuthSessionTable)
+        .where(
+          and(
+            inArray(AuthSessionTable.userId, ids),
+            isNull(AuthSessionTable.revokedAt),
+            gt(AuthSessionTable.expiresAt, new Date())
           )
-      : []
+        )
+    } catch (error) {
+      console.warn("Admin user list could not load active sessions", error)
+    }
+  }
 
   const activeUserIds = new Set(activeSessionRows.map(session => session.userId))
   const now = new Date()
-  const subscriptions =
-    ids.length > 0
-      ? await db
-          .select({
-            userId: UserSubscriptionTable.userId,
-            planKey: UserSubscriptionTable.planKey,
-          })
-          .from(UserSubscriptionTable)
-          .where(
-            and(
-              inArray(UserSubscriptionTable.userId, ids),
-              eq(UserSubscriptionTable.status, "active"),
-              lte(UserSubscriptionTable.currentPeriodStart, now),
-              gt(UserSubscriptionTable.currentPeriodEnd, now)
-            )
+  let subscriptions: { userId: string; planKey: string }[] = []
+  if (ids.length > 0) {
+    try {
+      subscriptions = await db
+        .select({
+          userId: UserSubscriptionTable.userId,
+          planKey: UserSubscriptionTable.planKey,
+        })
+        .from(UserSubscriptionTable)
+        .where(
+          and(
+            inArray(UserSubscriptionTable.userId, ids),
+            eq(UserSubscriptionTable.status, "active"),
+            lte(UserSubscriptionTable.currentPeriodStart, now),
+            gt(UserSubscriptionTable.currentPeriodEnd, now)
           )
-          .orderBy(desc(UserSubscriptionTable.currentPeriodEnd))
-      : []
+        )
+        .orderBy(desc(UserSubscriptionTable.currentPeriodEnd))
+    } catch (error) {
+      console.warn("Admin user list could not load subscriptions", error)
+    }
+  }
   const activePlanByUserId = new Map<string, string>()
   for (const subscription of subscriptions) {
     if (!activePlanByUserId.has(subscription.userId)) {
