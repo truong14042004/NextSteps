@@ -1,4 +1,18 @@
-export const INTERVIEWER_DISPLAY_NAME = "Minh Châu"
+const maleInterviewerNames = [
+  "Minh Quân",
+  "Anh Minh",
+  "Hoàng Nam",
+  "Quang Huy",
+  "Đức Anh",
+  "Tuấn Khang",
+  "Gia Bảo",
+  "Hữu Phúc",
+  "Bảo Long",
+  "Thanh Tùng",
+]
+
+export const getRandomMaleInterviewerName = () =>
+  maleInterviewerNames[Math.floor(Math.random() * maleInterviewerNames.length)]
 
 const getCandidateName = jobInfo => jobInfo.name?.trim() || "ứng viên"
 
@@ -18,7 +32,9 @@ const getCvSection = jobInfo => {
 ${cvSummary}`
 }
 
-export const buildInterviewSystemPrompt = jobInfo => {
+export const buildInterviewSystemPrompt = (jobInfo, options = {}) => {
+  const interviewerName =
+    options.interviewerName?.trim() || getRandomMaleInterviewerName()
   const candidateName = getCandidateName(jobInfo)
   const jobTitle = getJobTitle(jobInfo)
   const experienceLevel = getExperienceLevel(jobInfo)
@@ -53,6 +69,7 @@ QUY TẮC LẮNG NGHE VÀ NGẮT LƯỢT
 THÔNG TIN BUỔI PHỎNG VẤN
 ═══════════════════════════════════════
 - Tên ứng viên: ${candidateName}
+- Tên AI interviewer: ${interviewerName}
 - Vị trí ứng tuyển: ${jobTitle}
 - Cấp độ kinh nghiệm: ${experienceLevel}
 - Mô tả công việc: ${jobDescription}
@@ -62,7 +79,7 @@ CẤU TRÚC BUỔI PHỎNG VẤN
 ═══════════════════════════════════════
 
 [BƯỚC 1 — MỞ ĐẦU]
-Chào hỏi thân thiện, giới thiệu tên AI interviewer (tự đặt tên Việt), nêu mục đích buổi phỏng vấn và thời lượng dự kiến. Tạo không khí thoải mái trước khi bắt đầu.
+Chào hỏi thân thiện, giới thiệu đúng tên AI interviewer là ${interviewerName}, nêu mục đích buổi phỏng vấn và thời lượng dự kiến. Tạo không khí thoải mái trước khi bắt đầu.
 
 [BƯỚC 2 — 5 CÂU HỎI CHÍNH]
 Chọn ngẫu nhiên và sáng tạo 5 câu hỏi từ ngân hàng câu hỏi theo đúng cấp độ bên dưới. Không lặp lại câu hỏi giữa các buổi phỏng vấn. Ưu tiên các câu hỏi phù hợp với mô tả công việc và thông tin CV (nếu có).
@@ -196,5 +213,9 @@ HƯỚNG DẪN CHỌN VÀ ĐIỀU CHỈNH CÂU HỎI
 - Giữ giọng điệu nhất quán: thân thiện, chuyên nghiệp, tò mò thực sự`
 }
 
-export const buildInterviewFirstMessage = jobInfo =>
-  `Xin chào ${getCandidateName(jobInfo)}! Tôi là ${INTERVIEWER_DISPLAY_NAME}, người phỏng vấn trí tuệ nhân tạo đồng hành cùng bạn hôm nay. Buổi phỏng vấn của chúng ta dự kiến kéo dài khoảng 15 đến 20 phút. Bạn có thể dừng vài giây để suy nghĩ; tôi sẽ chờ bạn nói hết ý. Khi bạn sẵn sàng, chúng ta bắt đầu nhé.`
+export const buildInterviewFirstMessage = (jobInfo, options = {}) => {
+  const interviewerName =
+    options.interviewerName?.trim() || getRandomMaleInterviewerName()
+
+  return `Xin chào ${getCandidateName(jobInfo)}! Tôi là ${interviewerName}, người phỏng vấn trí tuệ nhân tạo đồng hành cùng bạn hôm nay. Buổi phỏng vấn của chúng ta dự kiến kéo dài khoảng 15 đến 20 phút. Bạn có thể dừng vài giây để suy nghĩ; tôi sẽ chờ bạn nói hết ý. Khi bạn sẵn sàng, chúng ta bắt đầu nhé.`
+}

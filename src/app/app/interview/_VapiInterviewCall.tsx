@@ -11,7 +11,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { InterviewJobInfo } from "./page"
 import { toast } from "sonner"
 import { syncAssistantMessagesFromConversation } from "./vapiAssistantMessageSync.mjs"
-import { INTERVIEWER_DISPLAY_NAME } from "./vapiInterviewPrompt.mjs"
+import { getRandomMaleInterviewerName } from "./vapiInterviewPrompt.mjs"
 import { buildVapiStartCallArgs } from "./vapiStartCallConfig.mjs"
 
 type InterviewTranscriptMessage = {
@@ -77,6 +77,9 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   const [liveTranscript, setLiveTranscript] = useState<InterviewTranscriptMessage | null>(null)
   const [duration, setDuration] = useState("00:00:00")
   const [interviewId, setInterviewId] = useState<string | null>(null)
+  const [interviewerName, setInterviewerName] = useState(() =>
+    getRandomMaleInterviewerName(),
+  )
 
   const vapiRef = useRef<Vapi | null>(null)
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -638,6 +641,8 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     setIsInterviewComplete(false)
     setIsMuted(false)
     setIsConnecting(true)
+    const nextInterviewerName = getRandomMaleInterviewerName()
+    setInterviewerName(nextInterviewerName)
 
     try {
       const microphoneDeviceId = await prepareMicrophoneInput()
@@ -665,6 +670,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
         ...buildVapiStartCallArgs({
           assistantId: env.NEXT_PUBLIC_VAPI_ASSISTANT_ID,
           jobInfo,
+          interviewerName: nextInterviewerName,
         }),
       )
     } catch (error) {
@@ -769,7 +775,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
                 <span className="text-2xl">🤖</span>
               </div>
               <div>
-                <h2 className="font-semibold">{INTERVIEWER_DISPLAY_NAME}</h2>
+                <h2 className="font-semibold">{interviewerName}</h2>
                 <p className="text-sm text-muted-foreground">
                   Thời lượng {duration}
                 </p>

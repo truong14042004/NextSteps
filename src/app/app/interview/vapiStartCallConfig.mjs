@@ -1,6 +1,7 @@
 import {
   buildInterviewFirstMessage,
   buildInterviewSystemPrompt,
+  getRandomMaleInterviewerName,
 } from "./vapiInterviewPrompt.mjs"
 
 const userDoneRegex =
@@ -55,9 +56,13 @@ const interruptionPhrases = [
 export const buildVapiStartCallArgs = ({
   assistantId,
   jobInfo,
-}) => [
-  assistantId,
-  {
+  interviewerName = getRandomMaleInterviewerName(),
+}) => {
+  const interviewPromptOptions = { interviewerName }
+
+  return [
+    assistantId,
+    {
     firstMessageInterruptionsEnabled: false,
     silenceTimeoutSeconds: 90,
     modelOutputInMessagesEnabled: true,
@@ -67,13 +72,13 @@ export const buildVapiStartCallArgs = ({
       messages: [
         {
           role: "system",
-          content: buildInterviewSystemPrompt(jobInfo),
+          content: buildInterviewSystemPrompt(jobInfo, interviewPromptOptions),
         },
       ],
       temperature: 0.3,
       maxTokens: 200,
     },
-    firstMessage: buildInterviewFirstMessage(jobInfo),
+    firstMessage: buildInterviewFirstMessage(jobInfo, interviewPromptOptions),
     backgroundSpeechDenoisingPlan: {
       smartDenoisingPlan: {
         enabled: true,
@@ -108,4 +113,5 @@ export const buildVapiStartCallArgs = ({
       interruptionPhrases,
     },
   },
-]
+  ]
+}
