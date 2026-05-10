@@ -12,7 +12,6 @@ export function PlanDistributionCard({
 }: {
   distribution: PlanDistribution;
 }) {
-  const free = distribution.items[0]?.value ?? 0;
   const start = distribution.items[1]?.value ?? 0;
   const premium = distribution.items[2]?.value ?? 0;
 
@@ -54,7 +53,9 @@ export function PlanDistributionCard({
                 />
                 <span className="text-base">{item.label}</span>
               </div>
-              <span className="text-base font-semibold">{item.value}%</span>
+              <span className="text-base font-semibold">
+                {item.count.toLocaleString("vi-VN")} người dùng
+              </span>
             </div>
           ))}
         </div>

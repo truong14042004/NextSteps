@@ -7,7 +7,7 @@ const colors = ["bg-gray-300", "bg-blue-500", "bg-indigo-600"];
 export function AiPerformanceCard({
   distribution,
 }: {
-  distribution: { label: string; value: number }[];
+  distribution: { label: string; value: number; count: number }[];
 }) {
   return (
     <Card className="rounded-2xl bg-card">
@@ -31,7 +31,9 @@ export function AiPerformanceCard({
             <div key={plan.label} className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{plan.label}</span>
-                <span className="font-medium">{plan.value}%</span>
+                <span className="font-medium">
+                  {plan.count.toLocaleString("vi-VN")} người dùng
+                </span>
               </div>
 
               <div className="h-2 w-full rounded-full bg-muted">

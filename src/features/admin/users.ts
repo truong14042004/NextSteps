@@ -1,7 +1,7 @@
 import "server-only"
 
 import { randomUUID } from "node:crypto"
-import { and, count, desc, eq, gt, ilike, inArray, isNull, lte, or } from "drizzle-orm"
+import { and, count, desc, eq, gt, ilike, inArray, isNull, lte, or, sql } from "drizzle-orm"
 import { revalidateTag } from "next/cache"
 import { z } from "zod"
 
@@ -11,6 +11,7 @@ import {
   AuthSessionTable,
   UserSubscriptionTable,
   UserTable,
+  UserUsageEventTable,
   userRoles,
 } from "@/drizzle/schema"
 import { getUserIdTag } from "@/features/users/dbCache"
@@ -37,6 +38,7 @@ export type AdminUserRow = {
   status: "Active" | "Inactive"
   createdAt: Date
   updatedAt: Date
+  lastActiveAt: Date
 }
 
 function normalizeEmail(email: string) {
@@ -106,6 +108,17 @@ export async function listAdminUsers({
 
   const where = filters.length > 0 ? and(...filters) : undefined
   const offset = (page - 1) * pageSize
+  const lastActivityAt = sql<Date>`greatest(
+    ${UserTable.updatedAt},
+    coalesce(
+      (select max(${AuthSessionTable.updatedAt}) from ${AuthSessionTable} where ${AuthSessionTable.userId} = ${UserTable.id}),
+      ${UserTable.updatedAt}
+    ),
+    coalesce(
+      (select max(${UserUsageEventTable.createdAt}) from ${UserUsageEventTable} where ${UserUsageEventTable.userId} = ${UserTable.id}),
+      ${UserTable.updatedAt}
+    )
+  )`
 
   const [rows, totalRows] = await Promise.all([
     db
@@ -116,10 +129,11 @@ export async function listAdminUsers({
         role: UserTable.role,
         createdAt: UserTable.createdAt,
         updatedAt: UserTable.updatedAt,
+        lastActiveAt: lastActivityAt,
       })
       .from(UserTable)
       .where(where)
-      .orderBy(desc(UserTable.createdAt))
+      .orderBy(desc(lastActivityAt), desc(UserTable.createdAt))
       .limit(pageSize)
       .offset(offset),
     db.select({ total: count() }).from(UserTable).where(where),

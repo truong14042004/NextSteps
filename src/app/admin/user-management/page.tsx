@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Plus, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ type UserRow = {
   plan?: string | null;
   status?: "Active" | "Pending" | "Banned" | "Inactive";
   createdAt?: string | null;
+  lastActiveAt?: string | null;
 };
 
 type UsersPagination = {
@@ -26,12 +27,14 @@ type UsersPagination = {
 };
 
 const userRoleOptions = ["user", "pro", "admin"] as const;
+const pageSize = 20;
 
 export default function AdminUserManagementPage() {
   const [users, setUsers] = useState<UserRow[] | null>(null);
   const [pagination, setPagination] = useState<UsersPagination | null>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const [focusedUserId, setFocusedUserId] = useState<string | null>(null);
   const [selected, setSelected] = useState<UserRow | null>(null);
   const [showEdit, setShowEdit] = useState(false);
@@ -40,13 +43,21 @@ export default function AdminUserManagementPage() {
   useEffect(() => {
     const focus = new URLSearchParams(window.location.search).get("focus");
     if (focus) setFocusedUserId(focus);
-    fetchUsers();
   }, []);
 
-  async function fetchUsers() {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/users?pageSize=100", {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        pageSize: pageSize.toString(),
+      });
+
+      if (query.trim()) {
+        params.set("q", query.trim());
+      }
+
+      const res = await fetch(`/api/admin/users?${params.toString()}`, {
         cache: "no-store",
       });
       if (res.ok) {
@@ -68,20 +79,15 @@ export default function AdminUserManagementPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [page, query]);
 
-  const filtered = useMemo(() => {
-    if (!users) return [];
-    if (!query.trim()) return users;
-    const q = query.toLowerCase();
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
-    return users.filter(
-      (u) =>
-        (u.name ?? "").toLowerCase().includes(q) ||
-        (u.email ?? "").toLowerCase().includes(q) ||
-        (u.id ?? "").toLowerCase().includes(q),
-    );
-  }, [users, query]);
+  const totalPages =
+    pagination != null ? Math.max(1, Math.ceil(pagination.total / pageSize)) : 1;
+  const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
 
   async function handleDelete(id: string) {
     if (!confirm("Xác nhận xóa người dùng này?")) return;
@@ -104,7 +110,7 @@ export default function AdminUserManagementPage() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Quản lý người dùng, xem vai trò và theo dõi hoạt động.
-            {pagination ? ` Đang hiển thị ${filtered.length}/${pagination.total} người dùng.` : ""}
+            {pagination ? ` Đang hiển thị ${users?.length ?? 0}/${pagination.total} người dùng.` : ""}
           </p>
         </div>
 
@@ -112,7 +118,10 @@ export default function AdminUserManagementPage() {
           <Input
             placeholder="Tìm theo tên, email hoặc ID..."
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(1);
+            }}
             className="w-80"
           />
 
@@ -148,6 +157,7 @@ export default function AdminUserManagementPage() {
                     <th className="px-6 py-4">Vai trò</th>
                     <th className="px-6 py-4">Gói dịch vụ</th>
                     <th className="px-6 py-4">Ngày tham gia</th>
+                    <th className="px-6 py-4">Gần nhất</th>
                     <th className="px-6 py-4">Trạng thái</th>
                     <th className="px-6 py-4">Thao tác</th>
                   </tr>
@@ -157,7 +167,7 @@ export default function AdminUserManagementPage() {
                   {loading && (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="px-6 py-8 text-center text-sm text-muted-foreground"
                       >
                         Đang tải...
@@ -165,10 +175,10 @@ export default function AdminUserManagementPage() {
                     </tr>
                   )}
 
-                  {!loading && filtered.length === 0 && (
+                  {!loading && (users?.length ?? 0) === 0 && (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="px-6 py-8 text-center text-sm text-muted-foreground"
                       >
                         Không tìm thấy người dùng
@@ -177,7 +187,7 @@ export default function AdminUserManagementPage() {
                   )}
 
                   {!loading &&
-                    filtered.map((u) => {
+                    users?.map((u) => {
                       const isFocused = focusedUserId === u.id;
 
                       return (
@@ -217,6 +227,12 @@ export default function AdminUserManagementPage() {
                         <td className="px-6 py-4 text-sm text-muted-foreground">
                           {u.createdAt
                             ? new Date(u.createdAt).toLocaleDateString()
+                            : "—"}
+                        </td>
+
+                        <td className="px-6 py-4 text-sm text-muted-foreground">
+                          {u.lastActiveAt
+                            ? new Date(u.lastActiveAt).toLocaleString("vi-VN")
                             : "—"}
                         </td>
 
@@ -283,6 +299,43 @@ export default function AdminUserManagementPage() {
             </div>
           </CardContent>
         </Card>
+
+        {pagination != null && totalPages > 1 && (
+          <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1 || loading}
+              onClick={() => setPage((value) => Math.max(1, value - 1))}
+            >
+              <ChevronLeft className="mr-1 size-4" />
+              Trước
+            </Button>
+
+            {pageNumbers.map((pageNumber) => (
+              <Button
+                key={pageNumber}
+                variant={pageNumber === page ? "default" : "outline"}
+                size="sm"
+                disabled={loading}
+                onClick={() => setPage(pageNumber)}
+                className="min-w-9"
+              >
+                {pageNumber}
+              </Button>
+            ))}
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages || loading}
+              onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+            >
+              Sau
+              <ChevronRight className="ml-1 size-4" />
+            </Button>
+          </div>
+        )}
       </section>
     </div>
   );
