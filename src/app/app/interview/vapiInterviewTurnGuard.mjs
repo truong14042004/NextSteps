@@ -133,13 +133,17 @@ export function getAnsweredQuestionsAfterUserTranscript({
   lastAssistantQuestion,
   userTranscript,
 }) {
-  if (
-    isReadyOnlyResponse(userTranscript) ||
-    !shouldTrackAssistantQuestion(lastAssistantQuestion)
-  ) {
+  // Chỉ bỏ qua nếu là câu "sẵn sàng" / "bắt đầu" - không phải câu trả lời thật
+  if (isReadyOnlyResponse(userTranscript)) {
     return answeredQuestions
   }
 
+  // Nếu câu trước không phải câu hỏi thì không cần track
+  if (!shouldTrackAssistantQuestion(lastAssistantQuestion)) {
+    return answeredQuestions
+  }
+
+  // Đã mark câu này rồi thì bỏ qua
   if (
     answeredQuestions.some(answeredQuestion =>
       areQuestionsSimilar(answeredQuestion, lastAssistantQuestion),
@@ -148,6 +152,7 @@ export function getAnsweredQuestionsAfterUserTranscript({
     return answeredQuestions
   }
 
+  // Dù câu trả lời ngắn vẫn mark là đã trả lời để không hỏi lại
   return [...answeredQuestions, lastAssistantQuestion]
 }
 
@@ -160,8 +165,8 @@ export function buildAnsweredQuestionsSystemMessage(answeredQuestions) {
     .map((question, index) => `${index + 1}. ${question}`)
     .join("\n")
 
-  return `Các câu hỏi ứng viên đã trả lời:
+  return `[SYSTEM NOTE - QUAN TRỌNG] Ứng viên đã trả lời các câu hỏi sau. TUYỆT ĐỐI KHÔNG hỏi lại hoặc paraphrase lại bất kỳ câu nào dưới đây:
 ${answeredQuestionList}
 
-Ở lượt tiếp theo, không hỏi lại hoặc hỏi biến thể của các câu trên. Nếu câu trả lời trước ngắn nhưng có nghĩa, vẫn xem là đã trả lời. Hãy hỏi một câu mới khác ý, ưu tiên chủ đề chưa khai thác.`
+Kể cả nếu câu trả lời chỉ 1-2 từ, vẫn xem là đã trả lời và chuyển sang câu hỏi hoàn toàn mới. Không nhắc lại nội dung câu trả lời cũ. Hỏi một câu mới khác chủ đề chưa khai thác.`
 }
