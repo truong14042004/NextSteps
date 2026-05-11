@@ -895,11 +895,10 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
               </p>
               <div className="space-y-4">
                 {allMessages.map((message, index) => {
-                  // isLive: message cuối trong list và đang là live (chưa confirm)
+                  // Chỉ user interim mới hiện mờ; AI luôn hiện rõ trong chat
                   const isLastMessage = index === allMessages.length - 1
                   const isLiveUser = isLastMessage && !!liveUserTranscript
-                  const isLiveAssistant = isLastMessage && !!liveAssistantTranscript
-                  const isLive = isLiveUser || isLiveAssistant
+                  const isStreamingAI = isLastMessage && !!liveAssistantTranscript
                   return (
                     <div
                       key={index}
@@ -915,9 +914,16 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
                         className={`px-4 py-3 rounded-lg max-w-[80%] ${message.role === "user"
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted"
-                          } ${isLive ? "opacity-70 italic" : ""}`}
+                          } ${isLiveUser ? "opacity-70 italic" : ""}`}
                       >
                         <p className="text-sm">{message.content}</p>
+                        {isStreamingAI && (
+                          <span className="inline-flex gap-0.5 items-center ml-1">
+                            <span className="w-1 h-1 rounded-full bg-foreground/40 animate-bounce [animation-delay:0ms]" />
+                            <span className="w-1 h-1 rounded-full bg-foreground/40 animate-bounce [animation-delay:150ms]" />
+                            <span className="w-1 h-1 rounded-full bg-foreground/40 animate-bounce [animation-delay:300ms]" />
+                          </span>
+                        )}
                       </div>
                       {message.role === "user" && (
                         <div className="size-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
