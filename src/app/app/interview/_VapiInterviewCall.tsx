@@ -633,6 +633,22 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
 
           if (shouldTrackAssistantQuestion(lastAssistant.content)) {
             lastAssistantQuestionRef.current = lastAssistant.content
+
+            // Nếu AI vừa hỏi câu mới trong khi đã có ≥5 câu đã trả lời
+            // → interrupt ngay: bắt AI kết thúc, không cho hỏi thêm
+            if (
+              answeredAssistantQuestionsRef.current.length >= 5 &&
+              !isClosingAssistantMessage(lastAssistant.content)
+            ) {
+              vapiRef.current?.send({
+                type: "add-message",
+                message: {
+                  role: "system",
+                  content: `[SYSTEM NOTE - BẮT BUỘC NGAY LẬP TỨC] Phỏng vấn đã đủ ${answeredAssistantQuestionsRef.current.length} câu. KHÔNG HỎI THÊM. Hãy đọc ngay câu kết thúc: "Cảm ơn bạn đã dành thời gian tham gia buổi phỏng vấn hôm nay. Chúc bạn may mắn!"`,
+                },
+                triggerResponseEnabled: true,
+              })
+            }
           }
 
           if (isClosingAssistantMessage(lastAssistant.content)) {
