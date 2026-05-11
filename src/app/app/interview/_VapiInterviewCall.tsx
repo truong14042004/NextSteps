@@ -397,6 +397,30 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
 
     vapiInstance.on("speech-end", () => {
       console.log("Vapi speech ended")
+
+      // Safety net: persist AI message ngay khi nói xong
+      // Tránh mất message nếu conversation-update fire muộn hoặc bị miss
+      const spokenContent = assistantModelOutputRef.current.trim()
+      if (!spokenContent) return
+
+      setMessages(prev => {
+        // Nếu message cuối cùng trong list đã là nội dung này rồi thì bỏ qua
+        const last = prev.at(-1)
+        if (last?.role === "assistant" && last.content === spokenContent) {
+          return prev
+        }
+        // Nếu message cuối là assistant nhưng khác nội dung (partial) → update
+        if (last?.role === "assistant") {
+          const updated = [...prev]
+          updated[updated.length - 1] = { role: "assistant", content: spokenContent }
+          messagesRef.current = updated
+          return updated
+        }
+        // Thêm message AI mới vào chat
+        const next = [...prev, { role: "assistant" as const, content: spokenContent }]
+        messagesRef.current = next
+        return next
+      })
     })
 
     vapiInstance.on("network-quality-change", (event: unknown) => {
