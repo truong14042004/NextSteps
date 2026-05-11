@@ -121,6 +121,8 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   const lastAssistantQuestionRef = useRef<string | null>(null)
   const answeredAssistantQuestionsRef = useRef<string[]>([])
   const assistantModelOutputRef = useRef("")
+  const questionsAskedCountRef = useRef(0)      // số câu hỏi AI đã hỏi
+  const isLastQuestionRef = useRef(false)       // flag: đây là câu cuối, user trả lời xong thì đóng
   const router = useRouter()
 
   const clearDurationTimer = useCallback(() => {
@@ -529,40 +531,37 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
         markRecognizedSpeech()
 
         if (message.transcriptType === "final") {
-          const nextAnsweredQuestions = getAnsweredQuestionsAfterUserTranscript({
-            answeredQuestions: answeredAssistantQuestionsRef.current,
-            lastAssistantQuestion: lastAssistantQuestionRef.current,
-            userTranscript: transcript,
-          })
+          // Câu hỏi thứ 5 đã được hỏi → user vừa trả lời → kết thúc ngay
+          if (isLastQuestionRef.current) {
+            isLastQuestionRef.current = false
+            vapiRef.current?.send({
+              type: "add-message",
+              message: {
+                role: "system",
+                content: `[SYSTEM NOTE - BẮT BUỘC] Ứng viên đã trả lời đủ 5 câu hỏi. DỮ̀NG HỎI THÊM. Đọc ngay câu kết thúc: "Cảm ơn bạn đã dành thời gian tham gia buổi phỏng vấn hôm nay. Chúc bạn may mắn!"`,
+              },
+              triggerResponseEnabled: true,
+            })
+          } else {
+            // Câu 1–4: track answered để tránh lặp câu hỏi
+            const nextAnsweredQuestions = getAnsweredQuestionsAfterUserTranscript({
+              answeredQuestions: answeredAssistantQuestionsRef.current,
+              lastAssistantQuestion: lastAssistantQuestionRef.current,
+              userTranscript: transcript,
+            })
 
-          if (
-            nextAnsweredQuestions.length !==
-            answeredAssistantQuestionsRef.current.length
-          ) {
-            answeredAssistantQuestionsRef.current = nextAnsweredQuestions
-            const answeredCount = nextAnsweredQuestions.length
-
-            // Đủ 5 câu → bắt AI kết thúc ngay, không để AI tự quyết
-            if (answeredCount >= 5) {
-              vapiRef.current?.send({
-                type: "add-message",
-                message: {
-                  role: "system",
-                  content: `[SYSTEM NOTE - BẮT BUỘC] Ứng viên đã trả lời đủ ${answeredCount} câu hỏi. DỪNG HỎI THÊM. Ngay bây giờ hãy đọc đúng câu kết thúc sau và không nói thêm gì: "Cảm ơn bạn đã dành thời gian tham gia buổi phỏng vấn hôm nay. Chúc bạn may mắn!"`,
-                },
-                triggerResponseEnabled: true,
-              })
-            } else {
+            if (
+              nextAnsweredQuestions.length !==
+              answeredAssistantQuestionsRef.current.length
+            ) {
+              answeredAssistantQuestionsRef.current = nextAnsweredQuestions
               const systemMessage =
                 buildAnsweredQuestionsSystemMessage(nextAnsweredQuestions)
 
               if (systemMessage != null) {
                 vapiRef.current?.send({
                   type: "add-message",
-                  message: {
-                    role: "system",
-                    content: systemMessage,
-                  },
+                  message: { role: "system", content: systemMessage },
                   triggerResponseEnabled: false,
                 })
               }
@@ -634,20 +633,14 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
           if (shouldTrackAssistantQuestion(lastAssistant.content)) {
             lastAssistantQuestionRef.current = lastAssistant.content
 
-            // Nếu AI vừa hỏi câu mới trong khi đã có ≥5 câu đã trả lời
-            // → interrupt ngay: bắt AI kết thúc, không cho hỏi thêm
-            if (
-              answeredAssistantQuestionsRef.current.length >= 5 &&
-              !isClosingAssistantMessage(lastAssistant.content)
-            ) {
-              vapiRef.current?.send({
-                type: "add-message",
-                message: {
-                  role: "system",
-                  content: `[SYSTEM NOTE - BẮT BUỘC NGAY LẬP TỨC] Phỏng vấn đã đủ ${answeredAssistantQuestionsRef.current.length} câu. KHÔNG HỎI THÊM. Hãy đọc ngay câu kết thúc: "Cảm ơn bạn đã dành thời gian tham gia buổi phỏng vấn hôm nay. Chúc bạn may mắn!"`,
-                },
-                triggerResponseEnabled: true,
-              })
+            // Đếm câu hỏi AI vừa hỏi
+            questionsAskedCountRef.current += 1
+            const count = questionsAskedCountRef.current
+            console.info(`AI hỏi câu ${count}`)
+
+            if (count >= 5) {
+              // Đây là câu hỏi thứ 5+: set flag để user trả lời xong sẽ kết thúc
+              isLastQuestionRef.current = true
             }
           }
 
@@ -804,6 +797,8 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     messagesRef.current = []
     lastAssistantQuestionRef.current = null
     answeredAssistantQuestionsRef.current = []
+    questionsAskedCountRef.current = 0
+    isLastQuestionRef.current = false
     setInterviewId(null)
     setMessages([])
     setLiveTranscript(null)
