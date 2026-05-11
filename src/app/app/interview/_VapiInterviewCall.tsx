@@ -15,7 +15,6 @@ import { getRandomMaleInterviewerName } from "./vapiInterviewPrompt.mjs"
 import { buildVapiStartCallArgs } from "./vapiStartCallConfig.mjs"
 import {
   getAnsweredQuestionsAfterUserTranscript,
-  isRepeatedAnsweredQuestion,
   shouldTrackAssistantQuestion,
 } from "./vapiInterviewTurnGuard.mjs"
 
@@ -116,7 +115,6 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   const endedReasonRef = useRef<string | null>(null)
   const lastAssistantQuestionRef = useRef<string | null>(null)
   const answeredAssistantQuestionsRef = useRef<string[]>([])
-  const pendingAssistantConversationRef = useRef<Array<{ role: string; content: string }> | null>(null)
   const router = useRouter()
 
   const clearDurationTimer = useCallback(() => {
@@ -277,43 +275,12 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     }, 6000)
   }, [clearMicrophoneRecoveryTimer, isCallActive, isMuted, recoverMicrophoneInput])
 
-  const flushPendingAssistantConversation = useCallback(() => {
-    const pendingConversation = pendingAssistantConversationRef.current
-    if (pendingConversation == null) return
-
-    pendingAssistantConversationRef.current = null
-
-    const lastAssistant = [...pendingConversation]
-      .reverse()
-      .find(message => message.role === "assistant")
-
-    const nextMessages = syncAssistantMessagesFromConversation(
-      messagesRef.current,
-      pendingConversation,
-    )
-    messagesRef.current = nextMessages
-    setMessages(nextMessages)
-    setLiveTranscript(null)
-
-    if (!lastAssistant?.content) return
-
-    if (shouldTrackAssistantQuestion(lastAssistant.content)) {
-      lastAssistantQuestionRef.current = lastAssistant.content
-    }
-
-    if (isClosingAssistantMessage(lastAssistant.content)) {
-      setIsInterviewComplete(true)
-    }
-  }, [])
-
   const finalizeCall = useCallback(async (options?: {
     notice?: { type: "info" | "error"; message: string }
     fallbackNotice?: { type: "info" | "error"; message: string }
   }) => {
     if (hasFinalizedRef.current) return
     hasFinalizedRef.current = true
-
-    flushPendingAssistantConversation()
 
     clearDurationTimer()
     clearMicrophoneRecoveryTimer()
@@ -368,13 +335,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     }
 
     router.push("/app/interview")
-  }, [
-    clearDurationTimer,
-    clearMicrophoneRecoveryTimer,
-    flushPendingAssistantConversation,
-    router,
-    stopMicrophoneStream,
-  ])
+  }, [clearDurationTimer, clearMicrophoneRecoveryTimer, router, stopMicrophoneStream])
 
   // Keep refs in sync with state
   useEffect(() => { messagesRef.current = messages }, [messages])
@@ -429,7 +390,6 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
 
     vapiInstance.on("speech-end", () => {
       console.log("Vapi speech ended")
-      flushPendingAssistantConversation()
     })
 
     vapiInstance.on("network-quality-change", (event: unknown) => {
@@ -546,26 +506,20 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
 
         const lastAssistant = [...conversation].reverse().find(m => m.role === "assistant")
         if (lastAssistant?.content) {
-          if (
-            isRepeatedAnsweredQuestion(
-              answeredAssistantQuestionsRef.current,
-              lastAssistant.content,
-            )
-          ) {
-            vapiRef.current?.send({
-              type: "add-message",
-              message: {
-                role: "system",
-                content:
-                  "Bạn vừa hỏi lại một câu ứng viên đã trả lời. Không lặp lại câu hỏi cũ. Hãy xin lỗi thật ngắn và hỏi một câu mới khác nội dung, ưu tiên kiến thức, dự án, tình huống làm việc hoặc kỹ năng liên quan vị trí.",
-              },
-              triggerResponseEnabled: false,
-            })
-            return
+          setMessages(prev => {
+            const nextMessages = syncAssistantMessagesFromConversation(prev, conversation)
+            messagesRef.current = nextMessages
+            return nextMessages
+          })
+          setLiveTranscript(null)
+
+          if (shouldTrackAssistantQuestion(lastAssistant.content)) {
+            lastAssistantQuestionRef.current = lastAssistant.content
           }
 
-          pendingAssistantConversationRef.current = conversation
-          setLiveTranscript(null)
+          if (isClosingAssistantMessage(lastAssistant.content)) {
+            setIsInterviewComplete(true)
+          }
         }
       }
     })
@@ -634,13 +588,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     })
 
     return vapiInstance
-  }, [
-    clearDurationTimer,
-    finalizeCall,
-    flushPendingAssistantConversation,
-    markRecognizedSpeech,
-    scheduleMicrophoneRecovery,
-  ])
+  }, [clearDurationTimer, finalizeCall, markRecognizedSpeech, scheduleMicrophoneRecovery])
 
   useEffect(() => {
     if (!env.NEXT_PUBLIC_VAPI_PUBLIC_KEY) {
@@ -722,7 +670,6 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     messagesRef.current = []
     lastAssistantQuestionRef.current = null
     answeredAssistantQuestionsRef.current = []
-    pendingAssistantConversationRef.current = null
     setInterviewId(null)
     setMessages([])
     setLiveTranscript(null)
