@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, CreditCard, Package, Settings, Users } from "lucide-react";
+import {
+  BarChart3,
+  CreditCard,
+  MessageSquareText,
+  Package,
+  ReceiptText,
+  Settings,
+  Users,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -27,10 +35,22 @@ const menu = [
     href: "/admin/revenue-management",
   },
   {
+    id: "transaction-management",
+    label: "Quản lý giao dịch",
+    icon: ReceiptText,
+    href: "/admin/transaction-management",
+  },
+  {
     id: "plan-management",
     label: "Quản lý gói mua",
     icon: Package,
     href: "/admin/plan-management",
+  },
+  {
+    id: "service-reviews",
+    label: "Đánh giá dịch vụ",
+    icon: MessageSquareText,
+    href: "/admin/service-reviews",
   },
   {
     id: "settings",

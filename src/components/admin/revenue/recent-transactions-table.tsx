@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -75,13 +76,13 @@ export function RecentTransactionsTable({
           </p>
         </div>
 
-        <button
-          type="button"
+        <Link
+          href="/admin/transaction-management"
           className="inline-flex items-center gap-1 text-sm font-medium text-primary"
         >
           Xem toàn bộ
           <ArrowRight className="h-4 w-4" />
-        </button>
+        </Link>
       </CardHeader>
 
       <CardContent>
