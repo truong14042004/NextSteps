@@ -14,9 +14,14 @@ import { syncAssistantMessagesFromConversation } from "./vapiAssistantMessageSyn
 import { getRandomMaleInterviewerName } from "./vapiInterviewPrompt.mjs"
 import { buildVapiStartCallArgs } from "./vapiStartCallConfig.mjs"
 import {
+  buildAnsweredQuestionsSystemMessage,
   getAnsweredQuestionsAfterUserTranscript,
   shouldTrackAssistantQuestion,
 } from "./vapiInterviewTurnGuard.mjs"
+import {
+  extractModelOutputText,
+  mergeModelOutputText,
+} from "./vapiModelOutputText.mjs"
 
 type InterviewTranscriptMessage = {
   role: "assistant" | "user"
@@ -115,6 +120,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   const endedReasonRef = useRef<string | null>(null)
   const lastAssistantQuestionRef = useRef<string | null>(null)
   const answeredAssistantQuestionsRef = useRef<string[]>([])
+  const assistantModelOutputRef = useRef("")
   const router = useRouter()
 
   const clearDurationTimer = useCallback(() => {
@@ -386,6 +392,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
 
     vapiInstance.on("speech-start", () => {
       console.log("Vapi speech started")
+      assistantModelOutputRef.current = ""
     })
 
     vapiInstance.on("speech-end", () => {
@@ -421,6 +428,14 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
         ) {
           console.info("Vapi ended call:", endedReason)
         }
+      }
+
+      if (
+        message.type === "speech-update" &&
+        message.role === "assistant" &&
+        message.status === "started"
+      ) {
+        assistantModelOutputRef.current = ""
       }
 
       if (
@@ -468,15 +483,19 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
             answeredAssistantQuestionsRef.current.length
           ) {
             answeredAssistantQuestionsRef.current = nextAnsweredQuestions
-            vapiRef.current?.send({
-              type: "add-message",
-              message: {
-                role: "system",
-                content:
-                  "Ứng viên đã trả lời câu hỏi vừa rồi. Dù câu trả lời ngắn, hãy xem câu đó là đã trả lời và chuyển sang một câu hỏi mới khác nội dung. Không hỏi lại cùng câu hỏi, không yêu cầu kể thêm cùng một ý nếu transcript vẫn có nghĩa.",
-              },
-              triggerResponseEnabled: false,
-            })
+            const systemMessage =
+              buildAnsweredQuestionsSystemMessage(nextAnsweredQuestions)
+
+            if (systemMessage != null) {
+              vapiRef.current?.send({
+                type: "add-message",
+                message: {
+                  role: "system",
+                  content: systemMessage,
+                },
+                triggerResponseEnabled: false,
+              })
+            }
           }
 
           setMessages(prev => {
@@ -487,6 +506,22 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
           setLiveTranscript(null)
         } else {
           setLiveTranscript({ role: "user", content: transcript })
+        }
+      }
+
+      if (message.type === "model-output") {
+        const outputText = extractModelOutputText(message.output ?? message)
+        const trimmedOutput = outputText.trim()
+
+        if (trimmedOutput !== "") {
+          assistantModelOutputRef.current = mergeModelOutputText(
+            assistantModelOutputRef.current,
+            outputText,
+          )
+          setLiveTranscript({
+            role: "assistant",
+            content: assistantModelOutputRef.current.trim(),
+          })
         }
       }
 
@@ -511,6 +546,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
             messagesRef.current = nextMessages
             return nextMessages
           })
+          assistantModelOutputRef.current = ""
           setLiveTranscript(null)
 
           if (shouldTrackAssistantQuestion(lastAssistant.content)) {

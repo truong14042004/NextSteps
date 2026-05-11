@@ -65,6 +65,14 @@ export const buildVapiStartCallArgs = ({
     assistantId,
     {
     firstMessageInterruptionsEnabled: false,
+    clientMessages: [
+      "conversation-update",
+      "model-output",
+      "speech-update",
+      "status-update",
+      "transcript",
+      "voice-input",
+    ],
     silenceTimeoutSeconds: 90,
     modelOutputInMessagesEnabled: true,
     model: {

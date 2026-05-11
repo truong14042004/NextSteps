@@ -150,3 +150,18 @@ export function getAnsweredQuestionsAfterUserTranscript({
 
   return [...answeredQuestions, lastAssistantQuestion]
 }
+
+export function buildAnsweredQuestionsSystemMessage(answeredQuestions) {
+  if (!Array.isArray(answeredQuestions) || answeredQuestions.length === 0) {
+    return null
+  }
+
+  const answeredQuestionList = answeredQuestions
+    .map((question, index) => `${index + 1}. ${question}`)
+    .join("\n")
+
+  return `Các câu hỏi ứng viên đã trả lời:
+${answeredQuestionList}
+
+Ở lượt tiếp theo, không hỏi lại hoặc hỏi biến thể của các câu trên. Nếu câu trả lời trước ngắn nhưng có nghĩa, vẫn xem là đã trả lời. Hãy hỏi một câu mới khác ý, ưu tiên chủ đề chưa khai thác.`
+}

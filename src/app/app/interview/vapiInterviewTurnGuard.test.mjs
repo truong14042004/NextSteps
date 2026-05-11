@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 
 import {
+  buildAnsweredQuestionsSystemMessage,
   getAnsweredQuestionsAfterUserTranscript,
   isReadyOnlyResponse,
   isRepeatedAnsweredQuestion,
@@ -59,5 +60,16 @@ describe("vapi interview turn guard", () => {
       ),
       false,
     )
+  })
+
+  it("builds a concrete system note with answered questions", () => {
+    const message = buildAnsweredQuestionsSystemMessage([
+      "Bạn có thể kể về bản thân và lý do ứng tuyển vị trí backend developer này không?",
+      "Bạn đã từng làm việc với REST API trong dự án nào chưa?",
+    ])
+
+    assert.match(message, /Các câu hỏi ứng viên đã trả lời/)
+    assert.match(message, /REST API/)
+    assert.match(message, /không hỏi lại/)
   })
 })
