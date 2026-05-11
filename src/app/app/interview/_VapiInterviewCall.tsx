@@ -348,6 +348,39 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   useEffect(() => { interviewIdRef.current = interviewId }, [interviewId])
   useEffect(() => { durationRef.current = duration }, [duration])
 
+  // Khi liveTranscript chuyển assistant → null: AI vừa nói xong, lưu vào messages[]
+  const prevLiveTranscriptRef = useRef<InterviewTranscriptMessage | null>(null)
+  useEffect(() => {
+    const prev = prevLiveTranscriptRef.current
+    prevLiveTranscriptRef.current = liveTranscript
+
+    if (prev?.role !== "assistant" || !prev.content.trim()) return
+    if (liveTranscript !== null) return // vẫn đang nói
+
+    const content = prev.content.trim()
+    setMessages(prevMsgs => {
+      // Đã có rồi (conversation-update đã save) thì bỏ qua
+      const alreadySaved = prevMsgs.some(
+        m => m.role === "assistant" && m.content === content
+      )
+      if (alreadySaved) return prevMsgs
+
+      // Message cuối là assistant partial → update thành full content
+      const last = prevMsgs.at(-1)
+      if (last?.role === "assistant") {
+        const updated = [...prevMsgs]
+        updated[updated.length - 1] = { role: "assistant", content }
+        messagesRef.current = updated
+        return updated
+      }
+
+      // Thêm mới
+      const next = [...prevMsgs, { role: "assistant" as const, content }]
+      messagesRef.current = next
+      return next
+    })
+  }, [liveTranscript])
+
   const createVapiInstance = useCallback((audioSource?: string | null) => {
     if (!env.NEXT_PUBLIC_VAPI_PUBLIC_KEY) {
       console.error("Vapi public key not found")
