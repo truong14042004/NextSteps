@@ -782,16 +782,17 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     liveAssistantTranscript ??
     messages.filter(m => m.role === "assistant").at(-1)
 
-  // Build message list: confirmed messages + live user transcript (nếu có)
+  // Build message list: confirmed messages + live AI + live user
   const allMessages = [
     ...messages,
+    ...(liveAssistantTranscript ? [liveAssistantTranscript] : []),
     ...(liveUserTranscript ? [liveUserTranscript] : []),
   ]
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom khi có message mới hoặc AI đang stream
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [allMessages.length])
+  }, [allMessages.length, liveTranscript?.content])
 
   // Idle state - show start button
   if (!isConnecting && !isCallActive) {
@@ -864,26 +865,15 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
         </div>
       </div>
 
-      {/* Current AI Message - hiện khi AI đang nói (live) hoặc câu hỏi gần nhất */}
+      {/* Câu hỏi hiện tại - luôn hiện label cố định */}
       {latestAiMessage && (
-        <div className={`border-b bg-primary/5 transition-colors ${liveAssistantTranscript ? "border-primary/30" : ""}`}>
-          <div className="container max-w-3xl py-6">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-primary flex items-center gap-2">
-                {liveAssistantTranscript ? (
-                  <>
-                    <span className="inline-flex gap-0.5 items-center">
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:0ms]" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:150ms]" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:300ms]" />
-                    </span>
-                    AI đang nói...
-                  </>
-                ) : (
-                  "Câu hỏi hiện tại:"
-                )}
+        <div className="border-b bg-primary/5">
+          <div className="container max-w-3xl py-4">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-primary uppercase tracking-wide">
+                Câu hỏi hiện tại
               </p>
-              <p className="text-lg leading-relaxed">
+              <p className="text-base leading-relaxed font-medium">
                 {latestAiMessage.content}
               </p>
             </div>
@@ -905,7 +895,11 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
               </p>
               <div className="space-y-4">
                 {allMessages.map((message, index) => {
-                  const isLive = liveUserTranscript && index === allMessages.length - 1
+                  // isLive: message cuối trong list và đang là live (chưa confirm)
+                  const isLastMessage = index === allMessages.length - 1
+                  const isLiveUser = isLastMessage && !!liveUserTranscript
+                  const isLiveAssistant = isLastMessage && !!liveAssistantTranscript
+                  const isLive = isLiveUser || isLiveAssistant
                   return (
                     <div
                       key={index}
