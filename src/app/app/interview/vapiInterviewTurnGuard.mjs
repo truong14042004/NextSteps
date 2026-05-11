@@ -117,7 +117,7 @@ export function areQuestionsSimilar(first, second) {
     if (secondTokens.has(token)) sharedTokenCount += 1
   })
 
-  return sharedTokenCount / smallerTokenCount >= 0.6
+  return sharedTokenCount / smallerTokenCount >= 0.4
 }
 
 export function isRepeatedAnsweredQuestion(answeredQuestions, assistantContent) {

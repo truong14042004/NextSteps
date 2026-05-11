@@ -540,22 +540,47 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
             answeredAssistantQuestionsRef.current.length
           ) {
             answeredAssistantQuestionsRef.current = nextAnsweredQuestions
-            const systemMessage =
-              buildAnsweredQuestionsSystemMessage(nextAnsweredQuestions)
+            const answeredCount = nextAnsweredQuestions.length
 
-            if (systemMessage != null) {
+            // Đủ 5 câu → bắt AI kết thúc ngay, không để AI tự quyết
+            if (answeredCount >= 5) {
               vapiRef.current?.send({
                 type: "add-message",
                 message: {
                   role: "system",
-                  content: systemMessage,
+                  content: `[SYSTEM NOTE - BẮT BUỘC] Ứng viên đã trả lời đủ ${answeredCount} câu hỏi. DỪNG HỎI THÊM. Ngay bây giờ hãy đọc đúng câu kết thúc sau và không nói thêm gì: "Cảm ơn bạn đã dành thời gian tham gia buổi phỏng vấn hôm nay. Chúc bạn may mắn!"`,
                 },
-                triggerResponseEnabled: false,
+                triggerResponseEnabled: true,
               })
+            } else {
+              const systemMessage =
+                buildAnsweredQuestionsSystemMessage(nextAnsweredQuestions)
+
+              if (systemMessage != null) {
+                vapiRef.current?.send({
+                  type: "add-message",
+                  message: {
+                    role: "system",
+                    content: systemMessage,
+                  },
+                  triggerResponseEnabled: false,
+                })
+              }
             }
           }
 
           setMessages(prev => {
+            const last = prev.at(-1)
+            // Nếu message trước cũng là user, ghép vào để tránh buột câu thành nhiều bubble
+            if (last?.role === "user") {
+              const merged = [...prev]
+              merged[merged.length - 1] = {
+                role: "user",
+                content: `${last.content} ${transcript}`.trim(),
+              }
+              messagesRef.current = merged
+              return merged
+            }
             const nextMessages = [...prev, { role: "user" as const, content: transcript }]
             messagesRef.current = nextMessages
             return nextMessages
