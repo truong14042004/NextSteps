@@ -59,6 +59,7 @@ export const buildVapiStartCallArgs = ({
   interviewerName = getRandomMaleInterviewerName(),
 }) => {
   const interviewPromptOptions = { interviewerName }
+  const firstMessage = buildInterviewFirstMessage(jobInfo, interviewPromptOptions)
 
   return [
     assistantId,
@@ -74,11 +75,15 @@ export const buildVapiStartCallArgs = ({
           role: "system",
           content: buildInterviewSystemPrompt(jobInfo, interviewPromptOptions),
         },
+        {
+          role: "system",
+          content: `Vapi sẽ phát firstMessage riêng cho ứng viên trước khi model trả lời. Nội dung firstMessage: "${firstMessage}". Không lặp lại lời chào, tên interviewer, thời lượng phỏng vấn, hoặc câu "khi bạn sẵn sàng" trong các lượt tiếp theo. Khi ứng viên xác nhận đã sẵn sàng, hãy hỏi câu hỏi phỏng vấn chính đầu tiên ngay.`,
+        },
       ],
       temperature: 0.3,
       maxTokens: 200,
     },
-    firstMessage: buildInterviewFirstMessage(jobInfo, interviewPromptOptions),
+    firstMessage,
     backgroundSpeechDenoisingPlan: {
       smartDenoisingPlan: {
         enabled: true,

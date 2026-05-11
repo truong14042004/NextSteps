@@ -1,3 +1,5 @@
+import { normalizeInterviewText } from "./vapiInterviewTurnGuard.mjs"
+
 const getAssistantContents = conversation =>
   conversation
     .filter(
@@ -8,13 +10,78 @@ const getAssistantContents = conversation =>
         typeof item.content === "string" &&
         item.content.trim() !== "",
     )
-    .map(item => item.content)
+    .map(item => item.content.trim())
+
+const isOpeningGreeting = content => {
+  const normalized = normalizeInterviewText(content)
+  return normalized.startsWith("xin chao") && normalized.length < 80
+}
+
+const isOpeningContinuation = content => {
+  const normalized = normalizeInterviewText(content)
+  return (
+    normalized.includes("nguoi phong van tri tue nhan tao") ||
+    normalized.includes("buoi phong van") ||
+    (
+      normalized.includes("san sang") &&
+      normalized.includes("bat dau")
+    )
+  )
+}
+
+const isEarlierPartial = (content, laterContents) => {
+  const normalized = normalizeInterviewText(content)
+  if (!normalized) return true
+
+  return laterContents.some(laterContent => {
+    const laterNormalized = normalizeInterviewText(laterContent)
+    return (
+      laterNormalized !== normalized &&
+      (
+        laterNormalized.startsWith(normalized) ||
+        laterNormalized.includes(normalized)
+      )
+    )
+  })
+}
+
+const compactAssistantContents = contents => {
+  const compacted = []
+
+  contents.forEach((content, index) => {
+    const laterContents = contents.slice(index + 1)
+    if (isEarlierPartial(content, laterContents)) return
+
+    const previous = compacted.at(-1)
+    if (
+      previous &&
+      isOpeningGreeting(previous) &&
+      isOpeningContinuation(content)
+    ) {
+      compacted[compacted.length - 1] = `${previous} ${content}`
+      return
+    }
+
+    if (
+      previous &&
+      normalizeInterviewText(previous) === normalizeInterviewText(content)
+    ) {
+      return
+    }
+
+    compacted.push(content)
+  })
+
+  return compacted
+}
 
 export const syncAssistantMessagesFromConversation = (
   previousMessages,
   conversation,
 ) => {
-  const assistantContents = getAssistantContents(conversation)
+  const assistantContents = compactAssistantContents(
+    getAssistantContents(conversation),
+  )
   if (assistantContents.length === 0) {
     return previousMessages
   }
