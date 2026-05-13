@@ -138,6 +138,7 @@ export async function getUserJobInfos(limit = 10) {
       description: true,
       createdAt: true,
       analysisResult: true,
+      resumeUrl: true,
     },
   })
 }

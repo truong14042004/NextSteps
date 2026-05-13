@@ -1151,6 +1151,23 @@ export default function CVJDAnalysisPage() {
                                         {item.description}
                                       </p>
                                     </div>
+
+                                    {item.resumeUrl && (
+                                      <div>
+                                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                          CV đã lưu
+                                        </p>
+                                        <a
+                                          href={item.resumeUrl}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-100 dark:border-violet-900/40 dark:bg-violet-950/20 dark:text-violet-300"
+                                        >
+                                          <FileTextIcon className="size-3.5" />
+                                          Mở CV đã upload
+                                        </a>
+                                      </div>
+                                    )}
                                   </div>
                                 </TabsContent>
 
