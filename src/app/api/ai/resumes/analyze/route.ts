@@ -9,8 +9,6 @@ import { JobInfoTable } from "@/drizzle/schema"
 import { uploadBufferToGoogleCloudStorage } from "@/lib/google-cloud-storage"
 import { and, eq } from "drizzle-orm"
 
-export const runtime = "nodejs"
-
 const RESUME_FILE_EXTENSIONS: Record<string, string> = {
   "application/pdf": "pdf",
   "application/msword": "doc",

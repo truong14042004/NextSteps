@@ -2,8 +2,6 @@ import { randomUUID } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { uploadBufferToGoogleCloudStorage } from "@/lib/google-cloud-storage"
 
-export const runtime = "nodejs"
-
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
 
 const ALLOWED_IMAGE_TYPES = new Map([
