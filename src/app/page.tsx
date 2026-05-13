@@ -27,11 +27,17 @@ import {
   listPublicPlanConfigs,
   type AdminPlanConfig,
 } from "@/features/admin/plans";
+import { listPublishedReviews } from "@/features/serviceReviews";
+import { TestimonialsSection } from "@/components/service-reviews/testimonials-section";
 
 export const dynamic = "force-dynamic";
 
 export default async function LandingPage() {
-  const pricingPlans = await listPublicPlanConfigs();
+  const [pricingPlans, publishedReviews, { userId }] = await Promise.all([
+    listPublicPlanConfigs(),
+    listPublishedReviews(),
+    getCurrentUser(),
+  ]);
 
   return (
     <div className="h-full bg-background">
@@ -50,7 +56,10 @@ export default async function LandingPage() {
         <Features />
         <DetailedFeatures />
         <Stats />
-        <Testimonials />
+        <TestimonialsSection
+          publishedReviews={publishedReviews}
+          isLoggedIn={userId != null}
+        />
         <Pricing plans={pricingPlans} />
         <FAQ />
       </main>
@@ -730,144 +739,8 @@ function Stats() {
   );
 }
 
-function Testimonials() {
-  const testimonials = [
-    {
-      name: "Sarah Chen",
-      role: "Software Engineer",
-      company: "Google",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108755-2616b612b47c?w=64&h=64&fit=crop&crop=face&auto=format&q=80",
-      content:
-        "NextStep completely transformed my interview preparation. The AI practice sessions felt so realistic that I walked into my Google interview feeling completely confident. Landed the offer on my first try!",
-      timeToOffer: "3 weeks",
-      rating: 5,
-    },
-    {
-      name: "Marcus Rodriguez",
-      role: "Product Manager",
-      company: "Stripe",
-      avatar:
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=64&h=64&fit=crop&crop=face&auto=format&q=80",
-      content:
-        "I was struggling with behavioral questions until I found NextStep. The AI helped me craft compelling stories and practice my delivery. Got offers from 3 different companies!",
-      timeToOffer: "5 weeks",
-      rating: 5,
-    },
-    {
-      name: "Emily Park",
-      role: "Data Scientist",
-      company: "Netflix",
-      avatar:
-        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=64&h=64&fit=crop&crop=face&auto=format&q=80",
-      content:
-        "The resume optimization feature was a game-changer. My callback rate tripled after implementing NextStep's suggestions. Worth every penny and more.",
-      timeToOffer: "4 weeks",
-      rating: 5,
-    },
-    {
-      name: "Alex Thompson",
-      role: "Frontend Developer",
-      company: "Airbnb",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=64&h=64&fit=crop&crop=face&auto=format&q=80",
-      content:
-        "The technical question practice was incredible. I went from failing coding interviews to acing them. The AI's feedback helped me identify and fix my weak spots immediately.",
-      timeToOffer: "2 weeks",
-      rating: 5,
-    },
-    {
-      name: "Priya Patel",
-      role: "UX Designer",
-      company: "Figma",
-      avatar:
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=64&h=64&fit=crop&crop=face&auto=format&q=80",
-      content:
-        "I was career-changing into tech and felt overwhelmed. NextStep's personalized guidance gave me the confidence to pursue design roles. Now I'm living my dream at Figma!",
-      timeToOffer: "6 weeks",
-      rating: 5,
-    },
-    {
-      name: "David Kim",
-      role: "DevOps Engineer",
-      company: "AWS",
-      avatar:
-        "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=64&h=64&fit=crop&crop=face&auto=format&q=80",
-      content:
-        "The salary negotiation tips alone paid for the platform 10x over. I increased my offer by $25K just by following NextStep's guidance. Absolutely worth it!",
-      timeToOffer: "4 weeks",
-      rating: 5,
-    },
-  ];
-
-  return (
-    <section id="reviews" className="py-16 md:py-20">
-      <div className="container mx-auto px-4">
-        <div className="mx-auto mb-12 max-w-2xl text-center">
-          <h3 className="text-3xl font-semibold tracking-tight md:text-4xl ">
-            Đánh giá từ{" "}
-            <span className="bg-gradient-to-r from-pink-500 via-red-500 to-orange-400 bg-clip-text text-transparent">
-              người dùng thật
-            </span>
-          </h3>
-          <p className="mt-3 text-muted-foreground">
-            Những câu chuyện thành công từ cộng đồng đã tăng tốc sự nghiệp với
-            NextStep.
-          </p>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-3">
-          {testimonials.map((t, i) => (
-            <Card
-              key={i}
-              className="rounded-3xl border bg-card/60 shadow-sm transition-transform duration-400 hover:-translate-y-2 hover:shadow-2xl"
-            >
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <UserAvatar
-                    className="size-10 shrink-0"
-                    user={{ imageUrl: t.avatar, name: t.name }}
-                  />
-                  <div className="min-w-0">
-                    <div className="truncate font-semibold">{t.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {t.role} • {t.company}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex items-center gap-1">
-                  {Array.from({ length: t.rating }).map((_, idx) => (
-                    <Star key={idx} className="h-4 w-4 text-primary" />
-                  ))}
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    Hired in {t.timeToOffer}
-                  </span>
-                </div>
-
-                <blockquote className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                  “{t.content}”
-                </blockquote>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="mt-10 text-center">
-          <Button
-            size="lg"
-            className="h-12 rounded-2xl px-8 transform transition-all duration-300 hover:scale-105"
-            asChild
-          >
-            <Link href="/app">
-              Viết câu chuyện của bạn <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-      </div>
-    </section>
-  );
-}
+// Testimonials section is now a client component: TestimonialsSection
+// imported from @/components/service-reviews/testimonials-section
 
 function getPricingIcon(key: string) {
   if (key === "premium") return Crown;

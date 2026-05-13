@@ -223,3 +223,32 @@ export async function updateAdminServiceReviewStatus(
 
   return { ok: true as const, review: updated[0] }
 }
+
+export async function listPublishedReviews(limit = 12) {
+  const rows = await db
+    .select({
+      id: ServiceReviewTable.id,
+      userName: UserTable.name,
+      userImage: UserTable.imageUrl,
+      serviceKey: ServiceReviewTable.serviceKey,
+      rating: ServiceReviewTable.rating,
+      comment: ServiceReviewTable.comment,
+      createdAt: ServiceReviewTable.createdAt,
+    })
+    .from(ServiceReviewTable)
+    .leftJoin(UserTable, eq(ServiceReviewTable.userId, UserTable.id))
+    .where(eq(ServiceReviewTable.status, "published"))
+    .orderBy(desc(ServiceReviewTable.createdAt))
+    .limit(limit)
+
+  return rows.map(row => ({
+    id: row.id,
+    userName: row.userName ?? "Người dùng",
+    userImage: row.userImage ?? null,
+    serviceKey: row.serviceKey,
+    serviceLabel: getServiceReviewServiceLabel(row.serviceKey),
+    rating: row.rating,
+    comment: row.comment,
+    createdAt: row.createdAt.toISOString(),
+  }))
+}

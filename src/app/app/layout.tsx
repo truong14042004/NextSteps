@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ReactNode } from "react";
 import { Navbar } from "./_Navbar";
 import { Sidebar } from "./_Sidebar";
+import { ServiceReviewButton } from "@/components/service-reviews/service-review-button";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const { userId, user, redirectToSignIn } = await getCurrentUser({
@@ -42,6 +43,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         {/* Main is the only scrolling container. keep min-h-0 so children don't force extra height */}
         <main className="flex-1 overflow-auto min-h-0">{children}</main>
       </div>
+
+      {/* Floating review button — visible on all /app pages */}
+      <ServiceReviewButton />
     </div>
   );
 }
