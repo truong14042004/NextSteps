@@ -61,6 +61,13 @@ type ExplorePageProps = {
   myPosts: MyPost[]
 }
 
+const softPanelClass =
+  "rounded-[28px] border border-primary/10 bg-white/90 shadow-sm backdrop-blur dark:bg-card/80"
+const fieldClass =
+  "rounded-2xl border-primary/10 bg-background/80 shadow-none focus-visible:ring-primary/25"
+const ctaClass =
+  "rounded-2xl bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 text-white shadow-lg shadow-red-500/20 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-red-500/30"
+
 function statusBadgeClass(status: string) {
   if (status === "published") return "bg-emerald-50 text-emerald-700"
   if (status === "pending") return "bg-amber-50 text-amber-700"
@@ -114,7 +121,7 @@ function RecruiterPostForm({ enabled }: { enabled: boolean }) {
   if (!enabled) return null
 
   return (
-    <Card className="rounded-lg">
+    <Card className={softPanelClass}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <BriefcaseBusiness className="size-4 text-primary" />
@@ -125,28 +132,28 @@ function RecruiterPostForm({ enabled }: { enabled: boolean }) {
         <form action={handleSubmit} className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Tiêu đề">
-              <Input name="title" minLength={5} maxLength={180} required />
+              <Input name="title" minLength={5} maxLength={180} required className={fieldClass} />
             </Field>
             <Field label="Vị trí">
-              <Input name="positionTitle" maxLength={160} required />
+              <Input name="positionTitle" maxLength={160} required className={fieldClass} />
             </Field>
             <Field label="Công ty">
-              <Input name="companyName" maxLength={160} required />
+              <Input name="companyName" maxLength={160} required className={fieldClass} />
             </Field>
             <Field label="Địa điểm">
-              <Input name="location" maxLength={160} />
+              <Input name="location" maxLength={160} className={fieldClass} />
             </Field>
             <Field label="Mức lương">
-              <Input name="salaryRange" maxLength={120} />
+              <Input name="salaryRange" maxLength={120} className={fieldClass} />
             </Field>
             <Field label="Kỹ năng">
-              <Input name="skills" maxLength={1000} placeholder="React, SQL, English..." />
+              <Input name="skills" maxLength={1000} placeholder="React, SQL, English..." className={fieldClass} />
             </Field>
           </div>
           <Field label="Mô tả công việc">
-            <Textarea name="content" minLength={30} maxLength={6000} required className="min-h-36" />
+            <Textarea name="content" minLength={30} maxLength={6000} required className={`min-h-36 ${fieldClass}`} />
           </Field>
-          <Button type="submit" disabled={isPending}>
+          <Button type="submit" disabled={isPending} className={ctaClass}>
             <Send className="mr-2 size-4" />
             Gửi bài chờ duyệt
           </Button>
@@ -214,7 +221,7 @@ function CvShowcaseForm() {
   }
 
   return (
-    <Card className="rounded-lg">
+    <Card className={softPanelClass}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <FileText className="size-4 text-primary" />
@@ -224,15 +231,15 @@ function CvShowcaseForm() {
       <CardContent>
         <form action={handleSubmit} className="space-y-4">
           <Field label="Tiêu đề">
-            <Input name="title" minLength={5} maxLength={180} required placeholder="Frontend fresher đang tìm cơ hội thực tập" />
+            <Input name="title" minLength={5} maxLength={180} required placeholder="Frontend fresher đang tìm cơ hội thực tập" className={fieldClass} />
           </Field>
           <Field label="Giới thiệu hồ sơ">
-            <Textarea name="content" minLength={20} maxLength={4000} required className="min-h-28" />
+            <Textarea name="content" minLength={20} maxLength={4000} required className={`min-h-28 ${fieldClass}`} />
           </Field>
           <Field label="Kỹ năng nổi bật">
-            <Input name="skills" maxLength={1000} placeholder="JavaScript, React, teamwork..." />
+            <Input name="skills" maxLength={1000} placeholder="JavaScript, React, teamwork..." className={fieldClass} />
           </Field>
-          <div className="rounded-lg border border-dashed p-4">
+          <div className="rounded-[24px] border border-dashed border-primary/20 bg-gradient-to-br from-primary/5 via-background to-rose-50/60 p-4 dark:to-rose-950/10">
             <Label htmlFor="cv-upload" className="flex cursor-pointer items-center gap-2 text-sm font-medium">
               <UploadCloud className="size-4 text-primary" />
               {uploading ? "Đang tải CV..." : cvFile?.fileName ?? "Tải CV PDF/DOC/DOCX/TXT"}
@@ -241,12 +248,12 @@ function CvShowcaseForm() {
               id="cv-upload"
               type="file"
               accept=".pdf,.doc,.docx,.txt"
-              className="mt-3"
+              className={`mt-3 ${fieldClass}`}
               disabled={uploading}
               onChange={event => handleFileChange(event.target.files?.[0] ?? null)}
             />
           </div>
-          <label className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
+          <label className="flex items-start gap-3 rounded-[20px] border border-primary/10 bg-primary/5 p-3 text-sm">
             <input
               type="checkbox"
               checked={confirmed}
@@ -257,7 +264,7 @@ function CvShowcaseForm() {
               CV của bạn sẽ xuất hiện trong mục Khám phá cho người dùng đã đăng nhập xem.
             </span>
           </label>
-          <Button type="submit" disabled={isPending || uploading}>
+          <Button type="submit" disabled={isPending || uploading} className={ctaClass}>
             <Send className="mr-2 size-4" />
             Đăng CV
           </Button>
@@ -305,7 +312,7 @@ function RecruiterRequestForm({
 
   if (request) {
     return (
-      <Card className="rounded-lg">
+      <Card className={softPanelClass}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <ShieldCheck className="size-4 text-primary" />
@@ -329,7 +336,7 @@ function RecruiterRequestForm({
   }
 
   return (
-    <Card className="rounded-lg">
+    <Card className={softPanelClass}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <ShieldCheck className="size-4 text-primary" />
@@ -339,21 +346,21 @@ function RecruiterRequestForm({
       <CardContent>
         <form action={handleSubmit} className="space-y-4">
           <Field label="Công ty">
-            <Input name="companyName" maxLength={160} required />
+            <Input name="companyName" maxLength={160} required className={fieldClass} />
           </Field>
           <Field label="Website công ty">
-            <Input name="companyWebsite" type="url" maxLength={255} />
+            <Input name="companyWebsite" type="url" maxLength={255} className={fieldClass} />
           </Field>
           <Field label="Email công việc">
-            <Input name="businessEmail" type="email" maxLength={255} />
+            <Input name="businessEmail" type="email" maxLength={255} className={fieldClass} />
           </Field>
           <Field label="Chức vụ">
-            <Input name="position" maxLength={120} required />
+            <Input name="position" maxLength={120} required className={fieldClass} />
           </Field>
           <Field label="Lý do">
-            <Textarea name="reason" minLength={20} maxLength={2500} required className="min-h-24" />
+            <Textarea name="reason" minLength={20} maxLength={2500} required className={`min-h-24 ${fieldClass}`} />
           </Field>
-          <Button type="submit" disabled={isPending}>
+          <Button type="submit" disabled={isPending} className={ctaClass}>
             <Send className="mr-2 size-4" />
             Gửi yêu cầu
           </Button>
@@ -385,8 +392,9 @@ function CommentForm({ postId }: { postId: string }) {
         onChange={event => setContent(event.target.value)}
         placeholder="Viết bình luận..."
         maxLength={1200}
+        className={fieldClass}
       />
-      <Button type="button" size="icon" disabled={isPending || content.trim().length === 0} onClick={submit}>
+      <Button type="button" size="icon" disabled={isPending || content.trim().length === 0} onClick={submit} className="rounded-2xl">
         <Send className="size-4" />
       </Button>
     </div>
@@ -397,17 +405,24 @@ function ExplorePostCard({ post }: { post: PublishedPost }) {
   const isJob = post.type === "job_post"
 
   return (
-    <Card className="rounded-lg">
+    <Card className={softPanelClass}>
       <CardHeader className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={isJob ? "default" : "secondary"} className="rounded-full">
+          <Badge
+            variant={isJob ? "default" : "secondary"}
+            className={
+              isJob
+                ? "rounded-full bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 text-white"
+                : "rounded-full bg-gradient-to-r from-indigo-500 to-amber-400 text-white"
+            }
+          >
             {getExplorePostTypeLabel(post.type)}
           </Badge>
           {post.companyName && <Badge variant="outline">{post.companyName}</Badge>}
           {post.location && <Badge variant="outline">{post.location}</Badge>}
         </div>
         <div>
-          <CardTitle className="text-xl">
+          <CardTitle className="text-xl tracking-tight">
             <Link href={`/app/explore/${post.id}`} className="hover:text-primary">
               {post.title}
             </Link>
@@ -425,16 +440,16 @@ function ExplorePostCard({ post }: { post: PublishedPost }) {
           {post.skills && <Badge variant="outline">{post.skills}</Badge>}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" className="rounded-2xl border-primary/15 bg-white/80 hover:bg-primary/5 dark:bg-background/40">
             <Link href={`/app/explore/${post.id}`}>Xem chi tiết</Link>
           </Button>
           {isJob && (
-            <Button asChild>
+            <Button asChild className={ctaClass}>
               <Link href={`/app?source=explore&postId=${post.id}`}>Phân tích CV với bài này</Link>
             </Button>
           )}
           {!isJob && post.cvUrl && (
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" className="rounded-2xl border-primary/15 bg-white/80 hover:bg-primary/5 dark:bg-background/40">
               <Link href={post.cvUrl} target="_blank">Xem CV</Link>
             </Button>
           )}
@@ -446,7 +461,7 @@ function ExplorePostCard({ post }: { post: PublishedPost }) {
           </div>
           <div className="mb-3 space-y-2">
             {post.comments.map(comment => (
-              <div key={comment.id} className="rounded-lg bg-muted/40 px-3 py-2 text-sm">
+              <div key={comment.id} className="rounded-2xl border border-primary/5 bg-primary/5 px-3 py-2 text-sm">
                 <span className="font-medium">{comment.author?.name ?? "Người dùng"}: </span>
                 {comment.content}
               </div>
@@ -479,7 +494,7 @@ function MyPostsPanel({
   if (posts.length === 0) return null
 
   return (
-    <Card className="rounded-lg">
+    <Card className={softPanelClass}>
       <CardHeader>
         <CardTitle className="text-base">Bài của tôi</CardTitle>
       </CardHeader>
@@ -522,15 +537,16 @@ export function ExplorePage({
   )
 
   return (
-    <main className="container space-y-8 py-8">
-      <section className="rounded-lg border bg-background p-6 shadow-sm">
+    <div className="min-h-full bg-[radial-gradient(circle_at_top,rgba(179,0,0,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(99,102,241,0.08),transparent_24%),linear-gradient(to_bottom,var(--background),var(--background))]">
+      <main className="container space-y-8 py-8 md:py-10">
+      <section className="overflow-hidden rounded-[32px] border border-primary/10 bg-white/85 p-6 shadow-sm backdrop-blur dark:bg-card/80 md:p-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium text-primary">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
               <Compass className="size-3.5" />
               Cộng đồng nghề nghiệp
             </div>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">
+            <h1 className="mt-4 max-w-3xl bg-gradient-to-r from-indigo-600 via-rose-500 to-amber-400 bg-clip-text text-3xl font-semibold tracking-tight text-transparent md:text-5xl">
               Khám phá cơ hội & hồ sơ ứng viên
             </h1>
             <p className="mt-3 text-sm leading-6 text-muted-foreground md:text-base">
@@ -543,7 +559,7 @@ export function ExplorePage({
               {getRoleLabel(currentUser.role)}
             </Badge>
             {currentUser.role === "admin" && (
-              <Button asChild variant="outline">
+              <Button asChild variant="outline" className="rounded-2xl border-primary/15 bg-white/80 hover:bg-primary/5 dark:bg-background/40">
                 <Link href="/admin/post-management">Quản lý bài viết</Link>
               </Button>
             )}
@@ -563,6 +579,11 @@ export function ExplorePage({
                 key={value}
                 type="button"
                 variant={filter === value ? "default" : "outline"}
+                className={
+                  filter === value
+                    ? "rounded-2xl bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 text-white shadow-sm"
+                    : "rounded-2xl border-primary/15 bg-white/80 hover:bg-primary/5 dark:bg-background/40"
+                }
                 onClick={() => setFilter(value as typeof filter)}
               >
                 {label}
@@ -571,7 +592,7 @@ export function ExplorePage({
           </div>
 
           {visiblePosts.length === 0 ? (
-            <div className="rounded-lg border bg-muted/20 p-10 text-center text-muted-foreground">
+            <div className="rounded-[28px] border border-primary/10 bg-white/80 p-10 text-center text-muted-foreground shadow-sm dark:bg-card/70">
               Chưa có bài viết phù hợp.
             </div>
           ) : (
@@ -587,7 +608,7 @@ export function ExplorePage({
           />
           <RecruiterPostForm enabled={canCreateRecruiterPost(currentUser.role)} />
           <MyPostsPanel posts={myPosts} currentUserId={currentUser.id} />
-          <Card className="rounded-lg">
+          <Card className={softPanelClass}>
             <CardContent className="flex gap-3 p-4 text-sm text-muted-foreground">
               <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
               Tin tuyển dụng của recruiter cần admin duyệt trước khi xuất hiện trong feed.
@@ -596,5 +617,6 @@ export function ExplorePage({
         </aside>
       </section>
     </main>
+    </div>
   )
 }

@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Compass, FileSearch, MessageSquare } from "lucide-react";
+import { FileSearch, MessageSquare } from "lucide-react";
 import { AppLogo } from "@/components/ui/AppLogo";
 
 export function Sidebar() {
   const pathname = usePathname();
 
   const menuItems = [
-    { id: "explore", label: "Khám phá", icon: Compass, href: "/app/explore" },
     { id: "analyze", label: "Phân tích CV", icon: FileSearch, href: "/app" },
     {
       id: "interview",

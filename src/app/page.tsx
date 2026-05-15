@@ -14,6 +14,7 @@ import {
   Zap,
   Check,
   Crown,
+  Compass,
   Rocket,
 } from "lucide-react";
 import Link from "next/link";
@@ -91,6 +92,13 @@ function Navbar() {
 
           {/* Middle: nav */}
           <nav className="hidden items-center gap-6 md:flex">
+            <Link
+              href="/app/explore"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Compass className="size-4" />
+              Khám phá
+            </Link>
             <a
               href="#features"
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
