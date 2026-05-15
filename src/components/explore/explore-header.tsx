@@ -1,9 +1,9 @@
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
+import { Compass } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { ExploreAccountMenu } from "@/components/explore/explore-account-menu"
+import { HomeAccountMenu } from "@/components/home/home-account-menu"
 
 type ExploreHeaderProps = {
   user: {
@@ -11,9 +11,14 @@ type ExploreHeaderProps = {
     imageUrl: string
     role: string
   }
+  plan: {
+    planKey: string
+    planName: string
+    resetText: string
+  }
 }
 
-export function ExploreHeader({ user }: ExploreHeaderProps) {
+export function ExploreHeader({ user, plan }: ExploreHeaderProps) {
   const isRecruiter = user.role === "recruiter"
 
   return (
@@ -33,18 +38,11 @@ export function ExploreHeader({ user }: ExploreHeaderProps) {
           </Link>
 
           <nav className="hidden items-center gap-6 md:flex">
-            {!isRecruiter && (
-              <Link
-                href="/"
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Home
-              </Link>
-            )}
             <Link
               href="/explore"
-              className="text-sm font-semibold text-foreground"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground transition-colors hover:text-foreground"
             >
+              <Compass className="size-4" />
               Khám phá
             </Link>
             {!isRecruiter && (
@@ -56,10 +54,22 @@ export function ExploreHeader({ user }: ExploreHeaderProps) {
                   Tính năng
                 </Link>
                 <Link
+                  href="/#reviews"
+                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Đánh giá
+                </Link>
+                <Link
                   href="/#pricing"
                   className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Bảng giá
+                </Link>
+                <Link
+                  href="/#faq"
+                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  FAQ
                 </Link>
               </>
             )}
@@ -68,11 +78,7 @@ export function ExploreHeader({ user }: ExploreHeaderProps) {
           {isRecruiter ? (
             <ExploreAccountMenu user={{ name: user.name, imageUrl: user.imageUrl }} />
           ) : (
-            <Button asChild className="rounded-xl">
-              <Link href="/app">
-                Dashboard <ArrowRight className="ml-2 size-4" />
-              </Link>
-            </Button>
+            <HomeAccountMenu user={user} plan={plan} />
           )}
         </div>
       </div>

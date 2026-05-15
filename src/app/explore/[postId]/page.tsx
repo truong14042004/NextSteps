@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ExploreHeader } from "@/components/explore/explore-header"
 import { getExplorePostById } from "@/features/explore/db"
+import { getPlanSummaryForUser } from "@/features/plans/entitlements"
 import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
 import { getExplorePostTypeLabel, getRoleLabel } from "@/features/explore/exploreRules.mjs"
 import { ExplorePostDetailComments } from "./_ExplorePostDetailComments"
@@ -19,7 +20,10 @@ export default async function ExplorePostDetailPage({
   if (userId == null || user == null) redirect("/sign-in")
 
   const { postId } = await params
-  const post = await getExplorePostById(postId)
+  const [post, plan] = await Promise.all([
+    getExplorePostById(postId),
+    getPlanSummaryForUser(userId),
+  ])
 
   if (post == null) notFound()
 
@@ -34,6 +38,7 @@ export default async function ExplorePostDetailPage({
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(179,0,0,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(99,102,241,0.08),transparent_24%),linear-gradient(to_bottom,var(--background),var(--background))]">
       <ExploreHeader
         user={{ name: user.name, imageUrl: user.imageUrl, role: user.role }}
+        plan={plan}
       />
 
       <main className="container max-w-5xl space-y-6 py-8">

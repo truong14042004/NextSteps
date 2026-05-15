@@ -7,6 +7,7 @@ import {
   getMyRecruiterRequest,
   getPublishedExplorePosts,
 } from "@/features/explore/db"
+import { getPlanSummaryForUser } from "@/features/plans/entitlements"
 import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
 
 export const metadata = {
@@ -22,16 +23,18 @@ export default async function ExploreHomePage() {
     redirect("/sign-in")
   }
 
-  const [posts, myRequest, myPosts] = await Promise.all([
+  const [posts, myRequest, myPosts, plan] = await Promise.all([
     getPublishedExplorePosts(),
     getMyRecruiterRequest(userId),
     getMyExplorePosts(userId),
+    getPlanSummaryForUser(userId),
   ])
 
   return (
     <div className="min-h-screen bg-background">
       <ExploreHeader
         user={{ name: user.name, imageUrl: user.imageUrl, role: user.role }}
+        plan={plan}
       />
 
       <ExplorePage
