@@ -3,8 +3,7 @@ import { db } from "@/drizzle/db"
 import { UserTable } from "@/drizzle/schema"
 import { eq } from "drizzle-orm"
 import { getSessionUserId } from "@/services/auth/lib/session"
-import { revalidateTag } from "next/cache"
-import { getUserIdTag } from "@/features/users/dbCache"
+import { revalidateUserCache } from "@/features/users/dbCache"
 
 export async function PUT(request: Request) {
   try {
@@ -26,7 +25,6 @@ export async function PUT(request: Request) {
       )
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       return NextResponse.json(
@@ -50,7 +48,7 @@ export async function PUT(request: Request) {
         new URL(nextImageUrl)
       } catch {
         return NextResponse.json(
-          { message: "Avatar URL khĂ´ng há»£p lá»‡" },
+          { message: "Avatar URL không hợp lệ" },
           { status: 400 }
         )
       }
@@ -76,10 +74,18 @@ export async function PUT(request: Request) {
       })
       .where(eq(UserTable.id, userId))
 
-    // Invalidate cache để dashboard load lại dữ liệu mới
-    revalidateTag(getUserIdTag(userId), "default")
+    revalidateUserCache(userId)
 
-    return NextResponse.json({ ok: true })
+    const updatedUser = await db.query.UserTable.findFirst({
+      where: eq(UserTable.id, userId),
+      columns: {
+        name: true,
+        email: true,
+        imageUrl: true,
+      },
+    })
+
+    return NextResponse.json({ ok: true, user: updatedUser })
   } catch (error) {
     console.error("Update profile error:", error)
     return NextResponse.json(

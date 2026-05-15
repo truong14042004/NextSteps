@@ -1,10 +1,10 @@
-import Image from "next/image"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
-import { ArrowLeft, ArrowRight, BriefcaseBusiness, FileText, MessageCircle } from "lucide-react"
+import { ArrowLeft, BriefcaseBusiness, FileText, MessageCircle } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { ExploreHeader } from "@/components/explore/explore-header"
 import { getExplorePostById } from "@/features/explore/db"
 import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
 import { getExplorePostTypeLabel, getRoleLabel } from "@/features/explore/exploreRules.mjs"
@@ -28,57 +28,13 @@ export default async function ExplorePostDetailPage({
   if (!canView) notFound()
 
   const isJob = post.type === "job_post"
+  const isRecruiter = user.role === "recruiter"
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(179,0,0,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(99,102,241,0.08),transparent_24%),linear-gradient(to_bottom,var(--background),var(--background))]">
-      <header className="sticky top-0 z-50 border-b bg-background/70 backdrop-blur-md">
-        <div className="container mx-auto px-4">
-          <div className="flex h-16 items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <Image
-                src="/logo.png"
-                alt="NextStep logo"
-                width={36}
-                height={36}
-                className="rounded-md object-contain"
-                priority
-              />
-              <span className="text-lg font-semibold tracking-tight">NextStep</span>
-            </Link>
-            <nav className="hidden items-center gap-6 md:flex">
-              <Link
-                href="/"
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Home
-              </Link>
-              <Link
-                href="/explore"
-                className="text-sm font-semibold text-foreground"
-              >
-                Khám phá
-              </Link>
-              <Link
-                href="/#features"
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Tính năng
-              </Link>
-              <Link
-                href="/#pricing"
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Bảng giá
-              </Link>
-            </nav>
-            <Button asChild className="rounded-xl">
-              <Link href="/app">
-                Dashboard <ArrowRight className="ml-2 size-4" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <ExploreHeader
+        user={{ name: user.name, imageUrl: user.imageUrl, role: user.role }}
+      />
 
       <main className="container max-w-5xl space-y-6 py-8">
         <Button asChild variant="ghost" className="px-0">
@@ -120,7 +76,7 @@ export default async function ExplorePostDetailPage({
           </div>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            {isJob && post.status === "published" && (
+            {!isRecruiter && isJob && post.status === "published" && (
               <Button asChild className="rounded-2xl bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 text-white shadow-lg shadow-red-500/20">
                 <Link href={`/app?source=explore&postId=${post.id}`}>
                   Phân tích CV với bài này

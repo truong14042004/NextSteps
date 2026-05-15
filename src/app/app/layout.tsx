@@ -27,6 +27,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     userAccess.isAdmin === true;
 
   if (isAdmin) return redirect("/admin");
+  if (user.role === "recruiter") return redirect("/explore");
 
   const plan = await getPlanSummaryForUser(userId);
 

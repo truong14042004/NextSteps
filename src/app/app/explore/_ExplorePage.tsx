@@ -401,7 +401,13 @@ function CommentForm({ postId }: { postId: string }) {
   )
 }
 
-function ExplorePostCard({ post }: { post: PublishedPost }) {
+function ExplorePostCard({
+  post,
+  canAnalyzeWithJob,
+}: {
+  post: PublishedPost
+  canAnalyzeWithJob: boolean
+}) {
   const isJob = post.type === "job_post"
 
   return (
@@ -443,7 +449,7 @@ function ExplorePostCard({ post }: { post: PublishedPost }) {
           <Button asChild variant="outline" className="rounded-2xl border-primary/15 bg-white/80 hover:bg-primary/5 dark:bg-background/40">
             <Link href={`/explore/${post.id}`}>Xem chi tiết</Link>
           </Button>
-          {isJob && (
+          {canAnalyzeWithJob && isJob && (
             <Button asChild className={ctaClass}>
               <Link href={`/app?source=explore&postId=${post.id}`}>Phân tích CV với bài này</Link>
             </Button>
@@ -598,7 +604,13 @@ export function ExplorePage({
               Chưa có bài viết phù hợp.
             </div>
           ) : (
-            visiblePosts.map(post => <ExplorePostCard key={post.id} post={post} />)
+            visiblePosts.map(post => (
+              <ExplorePostCard
+                key={post.id}
+                post={post}
+                canAnalyzeWithJob={currentUser.role !== "recruiter"}
+              />
+            ))
           )}
         </div>
 

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import {
   formatCompactPlanPrice,
@@ -34,10 +35,15 @@ import { TestimonialsSection } from "@/components/service-reviews/testimonials-s
 export const dynamic = "force-dynamic";
 
 export default async function LandingPage() {
-  const [pricingPlans, publishedReviews, { userId }] = await Promise.all([
+  const { userId, user } = await getCurrentUser({ allData: true });
+
+  if (user?.role === "recruiter") {
+    redirect("/explore");
+  }
+
+  const [pricingPlans, publishedReviews] = await Promise.all([
     listPublicPlanConfigs(),
     listPublishedReviews(),
-    getCurrentUser(),
   ]);
 
   return (
