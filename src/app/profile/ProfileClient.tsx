@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { LogOut, User, Lock } from "lucide-react"
+import { LogOut, User, Lock, UploadCloud } from "lucide-react"
 import { toast } from "sonner"
 
 import { AppLogo } from "@/components/ui/AppLogo"
@@ -29,8 +29,10 @@ export default function ProfileClient({
   const router = useRouter()
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const [name, setName] = useState(user.name)
   const [email, setEmail] = useState(user.email)
+  const [imageUrl, setImageUrl] = useState(user.imageUrl)
 
   async function handleSignOut() {
     if (isSigningOut) return
@@ -66,7 +68,7 @@ export default function ProfileClient({
       const response = await fetch("/api/user/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email }),
+        body: JSON.stringify({ name, email, imageUrl }),
       })
 
       if (!response.ok) {
@@ -87,6 +89,47 @@ export default function ProfileClient({
   function handleCancel() {
     setName(user.name)
     setEmail(user.email)
+    setImageUrl(user.imageUrl)
+  }
+
+  async function handleAvatarUpload(file: File | null) {
+    if (!file || isUploadingAvatar) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("KĂ­ch thÆ°á»›c áº£nh pháº£i nhá» hÆ¡n 5MB")
+      return
+    }
+
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      toast.error("Vui lĂ²ng chá»n áº£nh JPEG, PNG, WebP hoáº·c GIF")
+      return
+    }
+
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("folder", "avatars")
+
+    setIsUploadingAvatar(true)
+    try {
+      const response = await fetch("/api/uploads/image", {
+        method: "POST",
+        body: formData,
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast.error(data.error ?? "KhĂ´ng thá»ƒ táº£i avatar")
+        return
+      }
+
+      setImageUrl(data.publicUrl)
+      toast.success("ÄĂ£ táº£i avatar. Báº¥m Cáº­p nháº­t Ä‘á»ƒ lÆ°u.")
+    } catch (error) {
+      console.error(error)
+      toast.error("Lá»—i khi táº£i avatar")
+    } finally {
+      setIsUploadingAvatar(false)
+    }
   }
 
   return (
@@ -101,7 +144,7 @@ export default function ProfileClient({
 
             <DropdownMenu>
               <DropdownMenuTrigger>
-                <UserAvatar user={user} />
+                <UserAvatar user={{ ...user, imageUrl }} />
               </DropdownMenuTrigger>
 
               <DropdownMenuContent align="end" className="w-56">
@@ -128,7 +171,7 @@ export default function ProfileClient({
         <Card className="rounded-2xl shadow-sm">
           <CardHeader className="flex flex-row items-center gap-4">
             <Avatar className="h-16 w-16">
-              <AvatarImage src={user.imageUrl} />
+              <AvatarImage src={imageUrl} />
               <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
             </Avatar>
 
@@ -154,6 +197,35 @@ export default function ProfileClient({
           </CardHeader>
 
           <CardContent className="space-y-6">
+            <div className="space-y-3 rounded-2xl border bg-muted/20 p-4">
+              <label className="text-sm font-medium">Avatar</label>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={imageUrl} />
+                  <AvatarFallback>{name.charAt(0)}</AvatarFallback>
+                </Avatar>
+
+                <div className="space-y-2">
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent">
+                    <UploadCloud className="h-4 w-4" />
+                    {isUploadingAvatar ? "Äang táº£i..." : "Táº£i avatar"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      disabled={isUploadingAvatar}
+                      onChange={(event) =>
+                        handleAvatarUpload(event.target.files?.[0] ?? null)
+                      }
+                    />
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Há»— trá»£ JPEG, PNG, WebP, GIF. Tá»‘i Ä‘a 5MB.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Tên</label>
               <Input 

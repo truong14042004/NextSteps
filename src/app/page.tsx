@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { HomeAccountMenu } from "@/components/home/home-account-menu";
 import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser";
+import { getPlanSummaryForUser } from "@/features/plans/entitlements";
 import {
   BookOpenCheckIcon,
   Brain,
@@ -20,8 +22,6 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
-import { UserAvatar } from "@/features/users/components/UserAvatar";
-import { PricingTable } from "@/services/clerk/components/PricingTable";
 import {
   formatCompactPlanPrice,
   formatUsageLimit,
@@ -145,9 +145,9 @@ function Navbar() {
 }
 
 async function NavButton() {
-  const { userId } = await getCurrentUser();
+  const { userId, user } = await getCurrentUser({ allData: true });
 
-  if (!userId) {
+  if (!userId || !user) {
     return (
       <div className="flex items-center gap-2">
         <Link href="/sign-in">
@@ -162,12 +162,13 @@ async function NavButton() {
     );
   }
 
+  const plan = await getPlanSummaryForUser(userId);
+
   return (
-    <Button asChild className="rounded-xl">
-      <Link href="/app">
-        Dashboard <ArrowRight className="ml-2 h-4 w-4" />
-      </Link>
-    </Button>
+    <HomeAccountMenu
+      user={{ name: user.name, imageUrl: user.imageUrl, role: user.role }}
+      plan={plan}
+    />
   );
 }
 

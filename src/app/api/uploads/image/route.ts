@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { uploadBufferToGoogleCloudStorage } from "@/lib/google-cloud-storage"
+import { getSessionUserId } from "@/services/auth/lib/session"
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
 
@@ -24,6 +25,12 @@ function createSafeFileName(originalName: string, extension: string) {
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getSessionUserId()
+
+    if (userId == null) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+    }
+
     const formData = await request.formData()
     const file = formData.get("file")
     const folder = formData.get("folder")
@@ -57,7 +64,10 @@ export async function POST(request: NextRequest) {
         : "images"
 
     const fileName = createSafeFileName(file.name, extension)
-    const destination = `uploads/${safeFolder}/${new Date().getFullYear()}/${fileName}`
+    const destination =
+      safeFolder === "avatars"
+        ? `uploads/avatars/${userId}/${new Date().getFullYear()}/${fileName}`
+        : `uploads/${safeFolder}/${new Date().getFullYear()}/${fileName}`
 
     const uploadedFile = await uploadBufferToGoogleCloudStorage({
       buffer: Buffer.from(await file.arrayBuffer()),

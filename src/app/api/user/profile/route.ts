@@ -17,7 +17,7 @@ export async function PUT(request: Request) {
       )
     }
 
-    const { name, email } = await request.json()
+    const { name, email, imageUrl } = await request.json()
 
     if (!name || !email) {
       return NextResponse.json(
@@ -42,6 +42,20 @@ export async function PUT(request: Request) {
       )
     }
 
+    const nextImageUrl =
+      typeof imageUrl === "string" ? imageUrl.trim() : undefined
+
+    if (nextImageUrl != null && nextImageUrl !== "") {
+      try {
+        new URL(nextImageUrl)
+      } catch {
+        return NextResponse.json(
+          { message: "Avatar URL khĂ´ng há»£p lá»‡" },
+          { status: 400 }
+        )
+      }
+    }
+
     const existingUser = await db.query.UserTable.findFirst({
       where: eq(UserTable.email, email),
     })
@@ -55,7 +69,11 @@ export async function PUT(request: Request) {
 
     await db
       .update(UserTable)
-      .set({ name, email })
+      .set({
+        name,
+        email,
+        ...(nextImageUrl != null ? { imageUrl: nextImageUrl } : {}),
+      })
       .where(eq(UserTable.id, userId))
 
     // Invalidate cache để dashboard load lại dữ liệu mới

@@ -535,6 +535,8 @@ export function ExplorePage({
     () => posts.filter(post => filter === "all" || post.type === filter),
     [filter, posts]
   )
+  const isRecruiterOrAdmin =
+    currentUser.role === "recruiter" || currentUser.role === "admin"
 
   return (
     <div className="min-h-full bg-[radial-gradient(circle_at_top,rgba(179,0,0,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(99,102,241,0.08),transparent_24%),linear-gradient(to_bottom,var(--background),var(--background))]">
@@ -601,11 +603,15 @@ export function ExplorePage({
         </div>
 
         <aside className="space-y-5">
-          <CvShowcaseForm />
-          <RecruiterRequestForm
-            request={myRequest}
-            enabled={canSubmitRecruiterRequest(currentUser.role)}
-          />
+          {!isRecruiterOrAdmin && (
+            <>
+              <CvShowcaseForm />
+              <RecruiterRequestForm
+                request={myRequest}
+                enabled={canSubmitRecruiterRequest(currentUser.role)}
+              />
+            </>
+          )}
           <RecruiterPostForm enabled={canCreateRecruiterPost(currentUser.role)} />
           <MyPostsPanel posts={myPosts} currentUserId={currentUser.id} />
           <Card className={softPanelClass}>
