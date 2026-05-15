@@ -4,8 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  BriefcaseBusiness,
   CreditCard,
   MessageSquareText,
+  Newspaper,
   Package,
   ReceiptText,
   Settings,
@@ -27,6 +29,18 @@ const menu = [
     label: "Quản lý người dùng",
     icon: Users,
     href: "/admin/user-management",
+  },
+  {
+    id: "recruiter-management",
+    label: "Quản lý nhà tuyển dụng",
+    icon: BriefcaseBusiness,
+    href: "/admin/recruiter-management",
+  },
+  {
+    id: "post-management",
+    label: "Quản lý bài viết",
+    icon: Newspaper,
+    href: "/admin/post-management",
   },
   {
     id: "revenue-management",

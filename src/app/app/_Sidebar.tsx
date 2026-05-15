@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { FileSearch, MessageSquare } from "lucide-react";
+import { Compass, FileSearch, MessageSquare } from "lucide-react";
 import { AppLogo } from "@/components/ui/AppLogo";
 
 export function Sidebar() {
   const pathname = usePathname();
 
   const menuItems = [
+    { id: "explore", label: "Khám phá", icon: Compass, href: "/app/explore" },
     { id: "analyze", label: "Phân tích CV", icon: FileSearch, href: "/app" },
     {
       id: "interview",
@@ -30,7 +31,10 @@ export function Sidebar() {
       <nav className="flex-1 overflow-auto p-3 space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive =
+            item.href === "/app"
+              ? pathname === item.href
+              : pathname === item.href || pathname.startsWith(item.href + "/");
 
           return (
             <Link

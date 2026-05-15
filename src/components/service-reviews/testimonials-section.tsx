@@ -1,6 +1,7 @@
 "use client"
 
 import { FormEvent, useState } from "react"
+import Link from "next/link"
 import { ArrowRight, MessageSquareText, Send, Star } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -383,10 +384,10 @@ export function TestimonialsSection({
               className="h-12 rounded-2xl px-8 transform transition-all duration-300 hover:scale-105"
               asChild
             >
-              <a href="/sign-in">
+              <Link href="/sign-in">
                 Viết câu chuyện của bạn
                 <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
+              </Link>
             </Button>
           )}
         </div>

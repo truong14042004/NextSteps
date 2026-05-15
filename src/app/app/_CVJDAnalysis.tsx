@@ -73,6 +73,12 @@ const analysisSchema = z.object({
 
 type AnalysisFormData = z.infer<typeof analysisSchema>;
 type JobInfoHistory = Awaited<ReturnType<typeof getUserJobInfos>>;
+type ExploreDraft = {
+  postId: string;
+  jobTitle: string;
+  companyName: string | null;
+  jobDescription: string;
+};
 
 type UsageInfo = {
   used: number;
@@ -191,7 +197,11 @@ function UploadCard({
   );
 }
 
-export default function CVJDAnalysisPage() {
+export default function CVJDAnalysisPage({
+  exploreDraft = null,
+}: {
+  exploreDraft?: ExploreDraft | null;
+}) {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [history, setHistory] = useState<JobInfoHistory | null>(null);
@@ -228,9 +238,18 @@ export default function CVJDAnalysisPage() {
     defaultValues: {
       candidateName: "",
       jobTitle: "",
+      experienceLevel: "fresh",
       jobDescription: "",
     },
   });
+
+  useEffect(() => {
+    if (!exploreDraft) return;
+
+    form.setValue("jobTitle", exploreDraft.jobTitle);
+    form.setValue("jobDescription", exploreDraft.jobDescription);
+    form.setValue("experienceLevel", "fresh");
+  }, [exploreDraft, form]);
 
   const {
     object: aiAnalysis,
@@ -567,6 +586,28 @@ export default function CVJDAnalysisPage() {
                     </div>
                   </div>
                 </div> */}
+
+                {exploreDraft && (
+                  <div className="mb-6 rounded-2xl border border-primary/15 bg-primary/5 p-4 text-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="font-medium text-foreground">
+                          Bạn đang phân tích CV với bài tuyển dụng từ Khám phá.
+                        </p>
+                        <p className="mt-1 text-muted-foreground">
+                          {exploreDraft.companyName
+                            ? `${exploreDraft.companyName} · ${exploreDraft.jobTitle}`
+                            : exploreDraft.jobTitle}
+                        </p>
+                      </div>
+                      <Button asChild variant="outline" size="sm" className="w-fit">
+                        <Link href={`/app/explore/${exploreDraft.postId}`}>
+                          Quay lại bài viết
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 <Form {...form}>
                   <form

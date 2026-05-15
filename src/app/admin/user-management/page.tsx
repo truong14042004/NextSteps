@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { getRoleLabel } from "@/features/explore/exploreRules.mjs";
 
 type UserRow = {
   id: string;
@@ -26,7 +27,7 @@ type UsersPagination = {
   total: number;
 };
 
-const userRoleOptions = ["user", "pro", "admin"] as const;
+const userRoleOptions = ["user", "pro", "recruiter", "admin"] as const;
 const pageSize = 20;
 
 export default function AdminUserManagementPage() {
@@ -229,7 +230,7 @@ export default function AdminUserManagementPage() {
                         <td className="px-6 py-4">{u.email ?? "—"}</td>
 
                         <td className="px-6 py-4">
-                          <Badge variant="secondary">{u.role ?? "User"}</Badge>
+                          <Badge variant="secondary">{getRoleLabel(u.role ?? "user")}</Badge>
                         </td>
 
                         <td className="px-6 py-4">{u.plan ?? "—"}</td>
@@ -454,7 +455,7 @@ function UserForm({
           >
             {userRoleOptions.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {getRoleLabel(option)}
               </option>
             ))}
           </select>
