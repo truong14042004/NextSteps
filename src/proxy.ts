@@ -1,6 +1,5 @@
 import arcjet, { detectBot, shield, slidingWindow } from "@arcjet/next";
 import { NextRequest, NextResponse } from "next/server";
-import { clerkMiddleware } from "@clerk/nextjs/server";
 
 const arcjetKey = process.env.ARCJET_KEY;
 const publicApiPaths = new Set([
@@ -32,7 +31,7 @@ const aj =
       })
     : null;
 
-export default clerkMiddleware(async (auth, req: NextRequest) => {
+export default async function proxy(req: NextRequest) {
   if (publicApiPaths.has(req.nextUrl.pathname)) {
     return NextResponse.next();
   }
@@ -50,7 +49,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: [
