@@ -45,6 +45,32 @@ export default async function ExplorePostDetailPage({
               />
               <span className="text-lg font-semibold tracking-tight">NextStep</span>
             </Link>
+            <nav className="hidden items-center gap-6 md:flex">
+              <Link
+                href="/"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Home
+              </Link>
+              <Link
+                href="/explore"
+                className="text-sm font-semibold text-foreground"
+              >
+                Khám phá
+              </Link>
+              <Link
+                href="/#features"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Tính năng
+              </Link>
+              <Link
+                href="/#pricing"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Bảng giá
+              </Link>
+            </nav>
             <Button asChild className="rounded-xl">
               <Link href="/app">
                 Dashboard <ArrowRight className="ml-2 size-4" />

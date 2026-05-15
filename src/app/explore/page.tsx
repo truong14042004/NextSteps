@@ -58,6 +58,12 @@ export default async function ExploreHomePage() {
                 Home
               </Link>
               <Link
+                href="/explore"
+                className="text-sm font-semibold text-foreground"
+              >
+                Khám phá
+              </Link>
+              <Link
                 href="/#features"
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
