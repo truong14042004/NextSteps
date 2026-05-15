@@ -4,6 +4,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "../../../components/ui/avatar"
+import { getAvatarImageSrc } from "@/lib/avatar-url"
 
 export function UserAvatar({
   user,
@@ -13,7 +14,7 @@ export function UserAvatar({
 } & ComponentProps<typeof Avatar>) {
   return (
     <Avatar {...props}>
-      <AvatarImage src={user.imageUrl} alt={user.name} />
+      <AvatarImage src={getAvatarImageSrc(user.imageUrl)} alt={user.name} />
       <AvatarFallback className="uppercase">
         {user.name
           .split(" ")

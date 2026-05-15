@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { redirect } from "next/navigation"
 import { ChevronLeft } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,13 +6,11 @@ import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
 import ChangePasswordClient from "./ChangePasswordClient"
 
 export default async function ChangePasswordPage() {
-  const { userId, user, redirectToSignIn } = await getCurrentUser({
+  const { userId, redirectToSignIn } = await getCurrentUser({
     allData: true,
   })
 
   if (userId == null) redirectToSignIn()
-  if (user?.role === "recruiter") redirect("/explore")
-
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-md py-10">

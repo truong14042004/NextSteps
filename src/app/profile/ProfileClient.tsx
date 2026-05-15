@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { ThemeToggle } from "@/components/ThemeToggle"
+import { getAvatarImageSrc } from "@/lib/avatar-url"
 
 import {
   DropdownMenu,
@@ -25,6 +26,7 @@ type ProfileUser = {
   name: string
   email: string
   imageUrl: string
+  role: string
 }
 
 export default function ProfileClient({ user }: { user: ProfileUser }) {
@@ -41,6 +43,7 @@ export default function ProfileClient({ user }: { user: ProfileUser }) {
     name,
     imageUrl,
   }
+  const avatarSrc = getAvatarImageSrc(imageUrl)
 
   async function handleSignOut() {
     if (isSigningOut) return
@@ -89,6 +92,7 @@ export default function ProfileClient({ user }: { user: ProfileUser }) {
           name: data.user.name,
           email: data.user.email,
           imageUrl: data.user.imageUrl,
+          role: savedUser.role,
         }
         setSavedUser(updatedUser)
         setName(updatedUser.name)
@@ -156,7 +160,7 @@ export default function ProfileClient({ user }: { user: ProfileUser }) {
     <>
       <nav className="h-header border-b">
         <div className="container flex h-full items-center justify-between">
-          <AppLogo href="/app" />
+          <AppLogo href={savedUser.role === "recruiter" ? "/explore" : "/app"} />
 
           <div className="flex items-center gap-4">
             <ThemeToggle />
@@ -189,7 +193,7 @@ export default function ProfileClient({ user }: { user: ProfileUser }) {
         <Card className="rounded-2xl shadow-sm">
           <CardHeader className="flex flex-row items-center gap-4">
             <Avatar className="h-16 w-16">
-              <AvatarImage key={imageUrl} src={imageUrl} alt={name} />
+              <AvatarImage key={avatarSrc} src={avatarSrc} alt={name} />
               <AvatarFallback>{name.charAt(0)}</AvatarFallback>
             </Avatar>
 
@@ -219,7 +223,7 @@ export default function ProfileClient({ user }: { user: ProfileUser }) {
               <label className="text-sm font-medium">Avatar</label>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage key={imageUrl} src={imageUrl} alt={name} />
+                  <AvatarImage key={avatarSrc} src={avatarSrc} alt={name} />
                   <AvatarFallback>{name.charAt(0)}</AvatarFallback>
                 </Avatar>
 

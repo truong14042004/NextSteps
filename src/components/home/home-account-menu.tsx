@@ -108,7 +108,7 @@ export function HomeAccountMenu({ user, plan }: HomeAccountMenuProps) {
         <DropdownMenuItem asChild>
           <Link href="/profile">
             <User className="mr-2 size-4" />
-            {user.name}
+            Hồ sơ
           </Link>
         </DropdownMenuItem>
 

@@ -2,6 +2,7 @@ import { randomUUID } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { uploadBufferToGoogleCloudStorage } from "@/lib/google-cloud-storage"
 import { getSessionUserId } from "@/services/auth/lib/session"
+import { getAvatarImageSrc } from "@/lib/avatar-url"
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
 
@@ -75,7 +76,13 @@ export async function POST(request: NextRequest) {
       destination,
     })
 
-    return NextResponse.json(uploadedFile)
+    return NextResponse.json({
+      ...uploadedFile,
+      displayUrl:
+        safeFolder === "avatars"
+          ? getAvatarImageSrc(uploadedFile.publicUrl)
+          : uploadedFile.publicUrl,
+    })
   } catch (error) {
     console.error("Google Cloud Storage image upload failed:", error)
 

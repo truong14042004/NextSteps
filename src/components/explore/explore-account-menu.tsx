@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { LogOut, User } from "lucide-react"
@@ -49,9 +50,11 @@ export function ExploreAccountMenu({ user }: ExploreAccountMenuProps) {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem disabled>
-          <User className="mr-2 size-4" />
-          {user.name}
+        <DropdownMenuItem asChild>
+          <Link href="/profile">
+            <User className="mr-2 size-4" />
+            Hồ sơ
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleSignOut} disabled={isSigningOut}>
           <LogOut className="mr-2 size-4" />
