@@ -6,7 +6,9 @@ export default async function SignUpPage() {
   const { userId, user } = await getCurrentUser({ allData: true })
 
   if (userId != null) {
-    redirect(user?.role === "recruiter" ? "/explore" : "/app")
+    if (user?.role === "recruiter") redirect("/explore")
+    if (user?.role === "admin") redirect("/admin")
+    redirect("/")
   }
 
   return (

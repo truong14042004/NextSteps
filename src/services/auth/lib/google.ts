@@ -55,21 +55,21 @@ function getGoogleRedirectUri(request: Request) {
 
 function getSafeRedirectPath(value: string | null) {
   if (value == null || !value.startsWith("/") || value.startsWith("//")) {
-    return "/app"
+    return "/"
   }
 
   try {
     const url = new URL(value, "https://nextsteps.local")
     return `${url.pathname}${url.search}${url.hash}`
   } catch {
-    return "/app"
+    return "/"
   }
 }
 
 function getErrorPath(mode: AuthPageMode, errorCode: string, redirectPath?: string) {
   const basePath = mode === "sign_up" ? "/sign-up" : "/sign-in"
   const params = new URLSearchParams({ error: errorCode })
-  if (redirectPath != null && redirectPath !== "/app") {
+  if (redirectPath != null && redirectPath !== "/") {
     params.set("redirect_url", redirectPath)
   }
   return `${basePath}?${params.toString()}`

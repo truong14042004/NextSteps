@@ -82,14 +82,14 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
 
 function getSafeRedirectPath(value: string | null) {
   if (value == null || !value.startsWith("/") || value.startsWith("//")) {
-    return "/app"
+    return "/"
   }
 
   try {
     const url = new URL(value, "https://nextsteps.local")
     return `${url.pathname}${url.search}${url.hash}`
   } catch {
-    return "/app"
+    return "/"
   }
 }
 
