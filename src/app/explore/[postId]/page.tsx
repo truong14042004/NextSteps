@@ -1,10 +1,21 @@
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
-import { ArrowLeft, BriefcaseBusiness, FileText, MessageCircle } from "lucide-react"
+import {
+  ArrowLeft,
+  BriefcaseBusiness,
+  EyeOff,
+  FileText,
+  MessageCircle,
+  Trash2,
+} from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ExploreHeader } from "@/components/explore/explore-header"
+import {
+  deleteExplorePostAsAdminAction,
+  hideExplorePostAsAdminAction,
+} from "@/features/admin/explore"
 import { getExplorePostById } from "@/features/explore/db"
 import { getPlanSummaryForUser } from "@/features/plans/entitlements"
 import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
@@ -33,6 +44,7 @@ export default async function ExplorePostDetailPage({
 
   const isJob = post.type === "job_post"
   const isRecruiter = user.role === "recruiter"
+  const isAdmin = user.role === "admin"
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(179,0,0,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(99,102,241,0.08),transparent_24%),linear-gradient(to_bottom,var(--background),var(--background))]">
@@ -81,6 +93,32 @@ export default async function ExplorePostDetailPage({
           </div>
 
           <div className="mt-8 flex flex-wrap gap-3">
+            {isAdmin && isJob && (
+              <>
+                <form
+                  action={async () => {
+                    "use server"
+                    await hideExplorePostAsAdminAction(post.id)
+                  }}
+                >
+                  <Button type="submit" variant="outline" className="rounded-2xl border-primary/15 bg-white/80">
+                    <EyeOff className="mr-2 size-4" />
+                    Ẩn bài
+                  </Button>
+                </form>
+                <form
+                  action={async () => {
+                    "use server"
+                    await deleteExplorePostAsAdminAction(post.id)
+                  }}
+                >
+                  <Button type="submit" variant="destructive" className="rounded-2xl">
+                    <Trash2 className="mr-2 size-4" />
+                    Xóa bài
+                  </Button>
+                </form>
+              </>
+            )}
             {!isRecruiter && isJob && post.status === "published" && (
               <Button asChild className="rounded-2xl bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 text-white shadow-lg shadow-red-500/20">
                 <Link href={`/app?source=explore&postId=${post.id}`}>
@@ -108,6 +146,7 @@ export default async function ExplorePostDetailPage({
             postId={post.id}
             comments={post.comments}
             canComment={post.status === "published"}
+            isAdmin={isAdmin}
           />
         </section>
       </main>

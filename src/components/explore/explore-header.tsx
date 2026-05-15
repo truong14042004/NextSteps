@@ -20,6 +20,11 @@ type ExploreHeaderProps = {
 
 export function ExploreHeader({ user, plan }: ExploreHeaderProps) {
   const isRecruiter = user.role === "recruiter"
+  const isAdmin = user.role === "admin"
+  const navLinkClass =
+    "inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-foreground/85 transition-colors hover:bg-primary/10 hover:text-primary"
+  const activeNavLinkClass =
+    "inline-flex h-9 items-center gap-1.5 rounded-full bg-primary/10 px-3 text-sm font-semibold text-primary"
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/70 backdrop-blur-md">
@@ -37,38 +42,25 @@ export function ExploreHeader({ user, plan }: ExploreHeaderProps) {
             <span className="text-lg font-semibold tracking-tight">NextStep</span>
           </Link>
 
-          <nav className="hidden items-center gap-6 md:flex">
-            <Link
-              href="/explore"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground transition-colors hover:text-foreground"
-            >
+          <nav className="hidden items-center gap-3 md:flex">
+            <Link href="/explore" className={activeNavLinkClass}>
               <Compass className="size-4" />
               Khám phá
             </Link>
             {!isRecruiter && (
               <>
-                <Link
-                  href="/#features"
-                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
+                <Link href="/#features" className={navLinkClass}>
                   Tính năng
                 </Link>
-                <Link
-                  href="/#reviews"
-                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
+                <Link href="/#reviews" className={navLinkClass}>
                   Đánh giá
                 </Link>
-                <Link
-                  href="/#pricing"
-                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Bảng giá
-                </Link>
-                <Link
-                  href="/#faq"
-                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
+                {!isAdmin && (
+                  <Link href="/#pricing" className={navLinkClass}>
+                    Bảng giá
+                  </Link>
+                )}
+                <Link href="/#faq" className={navLinkClass}>
                   FAQ
                 </Link>
               </>

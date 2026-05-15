@@ -7,10 +7,13 @@ import {
   BriefcaseBusiness,
   CheckCircle2,
   Compass,
+  EyeOff,
   FileText,
   MessageCircle,
+  MessageSquareOff,
   Send,
   ShieldCheck,
+  Trash2,
   UploadCloud,
   UserRound,
 } from "lucide-react"
@@ -35,6 +38,12 @@ import {
   hideOwnExplorePostAction,
   submitRecruiterRequestAction,
 } from "@/features/explore/actions"
+import {
+  deleteExploreCommentAsAdminAction,
+  deleteExplorePostAsAdminAction,
+  hideExploreCommentAsAdminAction,
+  hideExplorePostAsAdminAction,
+} from "@/features/admin/explore"
 import {
   canCreateRecruiterPost,
   canSubmitRecruiterRequest,
@@ -401,12 +410,106 @@ function CommentForm({ postId }: { postId: string }) {
   )
 }
 
+function AdminCommentActions({ commentId }: { commentId: string }) {
+  const [isPending, startTransition] = useTransition()
+
+  function hideComment() {
+    startTransition(async () => {
+      const result = await hideExploreCommentAsAdminAction(commentId)
+      if (result.error) toast.error(result.message)
+      else toast.success(result.message)
+    })
+  }
+
+  function deleteComment() {
+    startTransition(async () => {
+      const result = await deleteExploreCommentAsAdminAction(commentId)
+      if (result.error) toast.error(result.message)
+      else toast.success(result.message)
+    })
+  }
+
+  return (
+    <div className="flex shrink-0 gap-1">
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        disabled={isPending}
+        title="Ẩn bình luận"
+        onClick={hideComment}
+      >
+        <MessageSquareOff className="size-4" />
+      </Button>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        disabled={isPending}
+        title="Xóa bình luận"
+        onClick={deleteComment}
+      >
+        <Trash2 className="size-4 text-destructive" />
+      </Button>
+    </div>
+  )
+}
+
+function AdminPostActions({ postId }: { postId: string }) {
+  const [isPending, startTransition] = useTransition()
+
+  function hidePost() {
+    startTransition(async () => {
+      const result = await hideExplorePostAsAdminAction(postId)
+      if (result.error) toast.error(result.message)
+      else toast.success(result.message)
+    })
+  }
+
+  function deletePost() {
+    startTransition(async () => {
+      const result = await deleteExplorePostAsAdminAction(postId)
+      if (result.error) toast.error(result.message)
+      else toast.success(result.message)
+    })
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        disabled={isPending}
+        onClick={hidePost}
+        className="rounded-2xl"
+      >
+        <EyeOff className="mr-2 size-4" />
+        Ẩn bài
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="destructive"
+        disabled={isPending}
+        onClick={deletePost}
+        className="rounded-2xl"
+      >
+        <Trash2 className="mr-2 size-4" />
+        Xóa bài
+      </Button>
+    </div>
+  )
+}
+
 function ExplorePostCard({
   post,
   canAnalyzeWithJob,
+  isAdmin,
 }: {
   post: PublishedPost
   canAnalyzeWithJob: boolean
+  isAdmin: boolean
 }) {
   const isJob = post.type === "job_post"
 
@@ -460,6 +563,7 @@ function ExplorePostCard({
             </Button>
           )}
         </div>
+        {isAdmin && isJob && <AdminPostActions postId={post.id} />}
         <div className="border-t pt-4">
           <div className="mb-3 flex items-center gap-2 text-sm font-medium">
             <MessageCircle className="size-4 text-primary" />
@@ -467,9 +571,12 @@ function ExplorePostCard({
           </div>
           <div className="mb-3 space-y-2">
             {post.comments.map(comment => (
-              <div key={comment.id} className="rounded-2xl border border-primary/5 bg-primary/5 px-3 py-2 text-sm">
-                <span className="font-medium">{comment.author?.name ?? "Người dùng"}: </span>
-                {comment.content}
+              <div key={comment.id} className="flex items-start justify-between gap-3 rounded-2xl border border-primary/5 bg-primary/5 px-3 py-2 text-sm">
+                <div>
+                  <span className="font-medium">{comment.author?.name ?? "Người dùng"}: </span>
+                  {comment.content}
+                </div>
+                {isAdmin && <AdminCommentActions commentId={comment.id} />}
               </div>
             ))}
           </div>
@@ -609,6 +716,7 @@ export function ExplorePage({
                 key={post.id}
                 post={post}
                 canAnalyzeWithJob={currentUser.role !== "recruiter"}
+                isAdmin={currentUser.role === "admin"}
               />
             ))
           )}

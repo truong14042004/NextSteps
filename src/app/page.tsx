@@ -40,6 +40,7 @@ export default async function LandingPage() {
   if (user?.role === "recruiter") {
     redirect("/explore");
   }
+  const isAdmin = user?.role === "admin";
 
   const [pricingPlans, publishedReviews] = await Promise.all([
     listPublicPlanConfigs(),
@@ -56,7 +57,7 @@ export default async function LandingPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,hsl(var(--border))_1px,transparent_0)] [background-size:26px_26px] opacity-[0.25]" />
       </div>
 
-      <Navbar />
+      <Navbar isAdmin={isAdmin} />
 
       <main>
         <Hero />
@@ -67,7 +68,7 @@ export default async function LandingPage() {
           publishedReviews={publishedReviews}
           isLoggedIn={userId != null}
         />
-        <Pricing plans={pricingPlans} />
+        {!isAdmin && <Pricing plans={pricingPlans} />}
         <FAQ />
       </main>
 
@@ -76,7 +77,10 @@ export default async function LandingPage() {
   );
 }
 
-function Navbar() {
+function Navbar({ isAdmin = false }: { isAdmin?: boolean }) {
+  const navLinkClass =
+    "inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-foreground/85 transition-colors hover:bg-primary/10 hover:text-primary";
+
   return (
     <header className="sticky top-0 z-50 border-b bg-background/70 backdrop-blur-md">
       <div className="container mx-auto px-4">
@@ -100,32 +104,31 @@ function Navbar() {
           <nav className="hidden items-center gap-6 md:flex">
             <Link
               href="/explore"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className={navLinkClass}
             >
               <Compass className="size-4" />
               Khám phá
             </Link>
             <a
               href="#features"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className={navLinkClass}
             >
               Tính năng
             </a>
             <a
               href="#reviews"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className={navLinkClass}
             >
               Đánh giá
             </a>
-            <a
-              href="#pricing"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Bảng giá
-            </a>
+            {!isAdmin && (
+              <a href="#pricing" className={navLinkClass}>
+                Bảng giá
+              </a>
+            )}
             <a
               href="#faq"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className={navLinkClass}
             >
               FAQ
             </a>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Send, Trash2 } from "lucide-react"
+import { MessageSquareOff, Send, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,10 @@ import {
   createExploreCommentAction,
   deleteOwnCommentAction,
 } from "@/features/explore/actions"
+import {
+  deleteExploreCommentAsAdminAction,
+  hideExploreCommentAsAdminAction,
+} from "@/features/admin/explore"
 import type { getExplorePostById } from "@/features/explore/db"
 
 type Comment = NonNullable<Awaited<ReturnType<typeof getExplorePostById>>>["comments"][number]
@@ -19,11 +23,13 @@ export function ExplorePostDetailComments({
   postId,
   comments,
   canComment,
+  isAdmin,
 }: {
   currentUserId: string
   postId: string
   comments: Comment[]
   canComment: boolean
+  isAdmin: boolean
 }) {
   const [content, setContent] = useState("")
   const [isPending, startTransition] = useTransition()
@@ -47,6 +53,22 @@ export function ExplorePostDetailComments({
     })
   }
 
+  function hideCommentAsAdmin(commentId: string) {
+    startTransition(async () => {
+      const result = await hideExploreCommentAsAdminAction(commentId)
+      if (result.error) toast.error(result.message)
+      else toast.success(result.message)
+    })
+  }
+
+  function deleteCommentAsAdmin(commentId: string) {
+    startTransition(async () => {
+      const result = await deleteExploreCommentAsAdminAction(commentId)
+      if (result.error) toast.error(result.message)
+      else toast.success(result.message)
+    })
+  }
+
   return (
     <div className="space-y-4">
       {comments.length === 0 ? (
@@ -58,17 +80,36 @@ export function ExplorePostDetailComments({
               <div className="font-medium">{comment.author?.name ?? "Người dùng"}</div>
               <p className="mt-1 whitespace-pre-line leading-6">{comment.content}</p>
             </div>
-            {comment.authorId === currentUserId && (
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                disabled={isPending}
-                onClick={() => deleteComment(comment.id)}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            )}
+            <div className="flex shrink-0 gap-1">
+              {isAdmin && (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  disabled={isPending}
+                  title="Ẩn bình luận"
+                  onClick={() => hideCommentAsAdmin(comment.id)}
+                >
+                  <MessageSquareOff className="size-4" />
+                </Button>
+              )}
+              {(isAdmin || comment.authorId === currentUserId) && (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  disabled={isPending}
+                  title="Xóa bình luận"
+                  onClick={() =>
+                    isAdmin
+                      ? deleteCommentAsAdmin(comment.id)
+                      : deleteComment(comment.id)
+                  }
+                >
+                  <Trash2 className="size-4 text-destructive" />
+                </Button>
+              )}
+            </div>
           </div>
         ))
       )}

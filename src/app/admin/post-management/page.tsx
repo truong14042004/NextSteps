@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { CheckCircle2, EyeOff, MessageSquareOff, XCircle } from "lucide-react"
+import { CheckCircle2, EyeOff, MessageSquareOff, Trash2, XCircle } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
   approveExplorePostAction,
+  deleteExploreCommentAsAdminAction,
+  deleteExplorePostAsAdminAction,
   hideExploreCommentAsAdminAction,
   hideExplorePostAsAdminAction,
   rejectExplorePostAction,
@@ -129,17 +131,30 @@ export default async function AdminPostManagementPage({
                     </>
                   )}
                   {post.status === "published" && (
-                    <form
-                      action={async () => {
-                        "use server"
-                        await hideExplorePostAsAdminAction(post.id)
-                      }}
-                    >
-                      <Button type="submit" size="sm" variant="outline">
-                        <EyeOff className="mr-2 size-4" />
-                        Ẩn bài
-                      </Button>
-                    </form>
+                    <>
+                      <form
+                        action={async () => {
+                          "use server"
+                          await hideExplorePostAsAdminAction(post.id)
+                        }}
+                      >
+                        <Button type="submit" size="sm" variant="outline">
+                          <EyeOff className="mr-2 size-4" />
+                          Ẩn bài
+                        </Button>
+                      </form>
+                      <form
+                        action={async () => {
+                          "use server"
+                          await deleteExplorePostAsAdminAction(post.id)
+                        }}
+                      >
+                        <Button type="submit" size="sm" variant="destructive">
+                          <Trash2 className="mr-2 size-4" />
+                          Xóa bài
+                        </Button>
+                      </form>
+                    </>
                   )}
                 </div>
 
@@ -153,16 +168,28 @@ export default async function AdminPostManagementPage({
                           {comment.content}
                         </div>
                         {comment.status === "published" && (
-                          <form
-                            action={async () => {
-                              "use server"
-                              await hideExploreCommentAsAdminAction(comment.id)
-                            }}
-                          >
-                            <Button type="submit" size="icon" variant="ghost">
-                              <MessageSquareOff className="size-4" />
-                            </Button>
-                          </form>
+                          <div className="flex shrink-0 gap-1">
+                            <form
+                              action={async () => {
+                                "use server"
+                                await hideExploreCommentAsAdminAction(comment.id)
+                              }}
+                            >
+                              <Button type="submit" size="icon" variant="ghost" title="Ẩn bình luận">
+                                <MessageSquareOff className="size-4" />
+                              </Button>
+                            </form>
+                            <form
+                              action={async () => {
+                                "use server"
+                                await deleteExploreCommentAsAdminAction(comment.id)
+                              }}
+                            >
+                              <Button type="submit" size="icon" variant="ghost" title="Xóa bình luận">
+                                <Trash2 className="size-4 text-destructive" />
+                              </Button>
+                            </form>
+                          </div>
                         )}
                       </div>
                     ))}

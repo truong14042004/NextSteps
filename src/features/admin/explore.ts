@@ -121,12 +121,37 @@ export async function hideExplorePostAsAdminAction(postId: string) {
 
   revalidatePath("/admin/post-management")
   revalidatePath("/explore")
+  revalidatePath(`/explore/${postId}`)
   return { error: false as const, message: "Đã ẩn bài viết" }
+}
+
+export async function deleteExplorePostAsAdminAction(postId: string) {
+  const admin = await requireAdminAction()
+  if (admin.error) return admin
+
+  await db
+    .update(ExplorePostTable)
+    .set({
+      status: "deleted",
+      reviewedById: admin.userId,
+      reviewedAt: new Date(),
+    })
+    .where(eq(ExplorePostTable.id, postId))
+
+  revalidatePath("/admin/post-management")
+  revalidatePath("/explore")
+  revalidatePath(`/explore/${postId}`)
+  return { error: false as const, message: "Đã xóa bài viết" }
 }
 
 export async function hideExploreCommentAsAdminAction(commentId: string) {
   const admin = await requireAdminAction()
   if (admin.error) return admin
+
+  const comment = await db.query.ExploreCommentTable.findFirst({
+    where: eq(ExploreCommentTable.id, commentId),
+    columns: { postId: true },
+  })
 
   await db
     .update(ExploreCommentTable)
@@ -135,5 +160,26 @@ export async function hideExploreCommentAsAdminAction(commentId: string) {
 
   revalidatePath("/admin/post-management")
   revalidatePath("/explore")
+  if (comment?.postId != null) revalidatePath(`/explore/${comment.postId}`)
   return { error: false as const, message: "Đã ẩn bình luận" }
+}
+
+export async function deleteExploreCommentAsAdminAction(commentId: string) {
+  const admin = await requireAdminAction()
+  if (admin.error) return admin
+
+  const comment = await db.query.ExploreCommentTable.findFirst({
+    where: eq(ExploreCommentTable.id, commentId),
+    columns: { postId: true },
+  })
+
+  await db
+    .update(ExploreCommentTable)
+    .set({ status: "deleted" })
+    .where(eq(ExploreCommentTable.id, commentId))
+
+  revalidatePath("/admin/post-management")
+  revalidatePath("/explore")
+  if (comment?.postId != null) revalidatePath(`/explore/${comment.postId}`)
+  return { error: false as const, message: "Đã xóa bình luận" }
 }
