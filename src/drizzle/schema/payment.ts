@@ -31,7 +31,7 @@ export const PaymentTransactionTable = pgTable(
     id,
     userId: varchar()
       .notNull()
-      .references(() => UserTable.id, { onDelete: "cascade" }),
+      .references(() => UserTable.id, { onDelete: "restrict" }),
     planId: uuid().references(() => AdminPlanTable.id, { onDelete: "set null" }),
     planKey: varchar({ length: 32 }).notNull(),
     orderCode: bigint({ mode: "number" }).notNull(),

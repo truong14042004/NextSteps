@@ -11,7 +11,7 @@ import {
 import { createdAt, id, updatedAt } from "../schemaHelpers"
 import { UserTable } from "./user"
 
-export const otpPurposes = ["sign_in", "sign_up"] as const
+export const otpPurposes = ["sign_in", "sign_up", "password_reset"] as const
 export type OtpPurpose = (typeof otpPurposes)[number]
 export const otpPurposeEnum = pgEnum("auth_otp_purpose", otpPurposes)
 

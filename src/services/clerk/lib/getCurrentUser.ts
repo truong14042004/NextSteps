@@ -1,7 +1,7 @@
 import { db } from "@/drizzle/db"
 import { UserTable } from "@/drizzle/schema"
 import { getUserIdTag } from "@/features/users/dbCache"
-import { eq } from "drizzle-orm"
+import { and, eq, ne } from "drizzle-orm"
 import { cacheTag } from "next/dist/server/use-cache/cache-tag"
 import { redirect } from "next/navigation"
 import { getSessionUserId } from "@/services/auth/lib/session"
@@ -21,6 +21,6 @@ export async function getUser(id: string) {
   cacheTag(getUserIdTag(id))
 
   return db.query.UserTable.findFirst({
-    where: eq(UserTable.id, id),
+    where: and(eq(UserTable.id, id), ne(UserTable.status, "deleted")),
   })
 }

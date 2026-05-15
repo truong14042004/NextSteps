@@ -8,7 +8,7 @@ import {
   UserTable,
 } from "@/drizzle/schema"
 import { env } from "@/data/env/server"
-import { and, desc, eq, gt, isNull } from "drizzle-orm"
+import { and, desc, eq, gt, isNull, ne } from "drizzle-orm"
 import { createHash, randomInt, randomUUID } from "node:crypto"
 import nodemailer from "nodemailer"
 import { logAuthError, logAuthInfo, logAuthWarn } from "./logger"
@@ -29,6 +29,8 @@ type OtpVerificationResult =
   | { ok: true; isNewUser: boolean }
   | { ok: false; status: number; message: string }
 
+type AuthOtpRow = typeof AuthOtpTable.$inferSelect
+
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase()
 }
@@ -39,6 +41,34 @@ function normalizeUsername(username: string) {
 
 function buildFullName(firstName: string, lastName: string) {
   return `${firstName.trim()} ${lastName.trim()}`.trim()
+}
+
+function normalizeUsernameSeed(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\u0111/g, "d")
+    .replace(/\u0110/g, "d")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, "")
+    .replace(/[._-]{2,}/g, "-")
+    .replace(/^[._-]+|[._-]+$/g, "")
+    .slice(0, 32)
+}
+
+function buildSignupUsername(email: string, firstName: string, lastName: string) {
+  const localPart = email.split("@")[0] ?? ""
+  let username = normalizeUsernameSeed(localPart)
+
+  if (username.length < 4) {
+    username = normalizeUsernameSeed(`${firstName}${lastName}`)
+  }
+
+  if (username.length < 4) {
+    username = `user${randomInt(1000, 10000)}`
+  }
+
+  return username.slice(0, 32)
 }
 
 function hashOtpCode(email: string, code: string) {
@@ -81,6 +111,207 @@ async function sendOtpEmail(to: string, code: string) {
   })
 }
 
+async function getLatestUsableOtp(email: string, purpose: OtpPurpose) {
+  return db.query.AuthOtpTable.findFirst({
+    where: and(
+      eq(AuthOtpTable.email, normalizeEmail(email)),
+      eq(AuthOtpTable.purpose, purpose),
+      isNull(AuthOtpTable.consumedAt)
+    ),
+    orderBy: [desc(AuthOtpTable.createdAt)],
+  })
+}
+
+async function verifyOtpCode({
+  email,
+  code,
+  purpose,
+}: {
+  email: string
+  code: string
+  purpose: OtpPurpose
+}): Promise<
+  | { ok: true; otpRow: AuthOtpRow }
+  | { ok: false; status: number; message: string }
+> {
+  const normalizedEmail = normalizeEmail(email)
+  const safeEmail = normalizedEmail.replace(/(.{2}).+(@.+)/, "$1***$2")
+  const otpRow = await getLatestUsableOtp(normalizedEmail, purpose)
+
+  if (otpRow == null || otpRow.expiresAt <= new Date()) {
+    return {
+      ok: false,
+      status: 400,
+      message: "Mã OTP không hợp lệ hoặc đã hết hạn.",
+    }
+  }
+
+  if (otpRow.attempts >= OTP_MAX_ATTEMPTS) {
+    return {
+      ok: false,
+      status: 429,
+      message: "Bạn đã nhập sai quá nhiều lần. Vui lòng yêu cầu mã mới.",
+    }
+  }
+
+  const inputHash = hashOtpCode(normalizedEmail, code)
+  if (inputHash !== otpRow.codeHash) {
+    await db
+      .update(AuthOtpTable)
+      .set({ attempts: otpRow.attempts + 1 })
+      .where(eq(AuthOtpTable.id, otpRow.id))
+
+    logAuthWarn("otp_verify_invalid_code", {
+      purpose,
+      email: safeEmail,
+      attempts: otpRow.attempts + 1,
+    })
+
+    return {
+      ok: false,
+      status: 400,
+      message: "Mã OTP không hợp lệ hoặc đã hết hạn.",
+    }
+  }
+
+  return { ok: true, otpRow }
+}
+
+export async function requestPasswordResetOtp({
+  email,
+}: {
+  email: string
+}): Promise<OtpServiceResult> {
+  const normalizedEmail = normalizeEmail(email)
+  const safeEmail = normalizedEmail.replace(/(.{2}).+(@.+)/, "$1***$2")
+  const now = new Date()
+  const user = await db.query.UserTable.findFirst({
+    where: and(eq(UserTable.email, normalizedEmail), ne(UserTable.status, "deleted")),
+    columns: { id: true },
+  })
+
+  if (user == null) {
+    logAuthInfo("password_reset_request_ignored", { email: safeEmail })
+    return { ok: true }
+  }
+
+  const recentOtp = await db.query.AuthOtpTable.findFirst({
+    where: and(
+      eq(AuthOtpTable.email, normalizedEmail),
+      eq(AuthOtpTable.purpose, "password_reset"),
+      gt(AuthOtpTable.createdAt, new Date(now.getTime() - OTP_RESEND_SECONDS * 1000))
+    ),
+    orderBy: [desc(AuthOtpTable.createdAt)],
+  })
+
+  if (recentOtp != null) {
+    return {
+      ok: false,
+      status: 429,
+      message: "Bạn đã yêu cầu quá nhanh. Vui lòng đợi 60 giây rồi thử lại.",
+    }
+  }
+
+  const code = randomInt(100000, 1000000).toString()
+  await db.insert(AuthOtpTable).values({
+    email: normalizedEmail,
+    purpose: "password_reset",
+    codeHash: hashOtpCode(normalizedEmail, code),
+    expiresAt: new Date(now.getTime() + OTP_EXPIRY_MINUTES * 60 * 1000),
+  })
+
+  await sendOtpEmail(normalizedEmail, code)
+  logAuthInfo("password_reset_otp_sent", { email: safeEmail, userId: user.id })
+  return { ok: true }
+}
+
+export async function verifyPasswordResetOtp({
+  email,
+  code,
+}: {
+  email: string
+  code: string
+}): Promise<OtpServiceResult> {
+  const user = await db.query.UserTable.findFirst({
+    where: and(eq(UserTable.email, normalizeEmail(email)), ne(UserTable.status, "deleted")),
+    columns: { id: true },
+  })
+
+  if (user == null) {
+    return { ok: false, status: 400, message: "Mã OTP không hợp lệ hoặc đã hết hạn." }
+  }
+
+  const result = await verifyOtpCode({ email, code, purpose: "password_reset" })
+  return result.ok ? { ok: true } : result
+}
+
+export async function resetPasswordWithOtp({
+  email,
+  code,
+  newPassword,
+}: {
+  email: string
+  code: string
+  newPassword: string
+}): Promise<OtpServiceResult> {
+  const normalizedEmail = normalizeEmail(email)
+  const password = newPassword.trim()
+
+  if (password.length < PASSWORD_MIN_LENGTH) {
+    return {
+      ok: false,
+      status: 400,
+      message: `Mật khẩu phải có ít nhất ${PASSWORD_MIN_LENGTH} ký tự.`,
+    }
+  }
+
+  const result = await verifyOtpCode({
+    email: normalizedEmail,
+    code,
+    purpose: "password_reset",
+  })
+  if (!result.ok) return result
+
+  const user = await db.query.UserTable.findFirst({
+    where: and(eq(UserTable.email, normalizedEmail), ne(UserTable.status, "deleted")),
+    columns: { id: true },
+  })
+
+  if (user == null) {
+    return { ok: false, status: 400, message: "Mã OTP không hợp lệ hoặc đã hết hạn." }
+  }
+
+  const passwordHash = await hashPassword(password)
+  await db.transaction(async tx => {
+    await tx
+      .insert(AuthCredentialTable)
+      .values({
+        userId: user.id,
+        username: normalizedEmail,
+        passwordHash,
+      })
+      .onConflictDoUpdate({
+        target: [AuthCredentialTable.userId],
+        set: {
+          username: normalizedEmail,
+          passwordHash,
+          updatedAt: new Date(),
+        },
+      })
+
+    await tx
+      .update(AuthOtpTable)
+      .set({ consumedAt: new Date() })
+      .where(eq(AuthOtpTable.id, result.otpRow.id))
+  })
+
+  logAuthInfo("password_reset_success", {
+    email: normalizedEmail.replace(/(.{2}).+(@.+)/, "$1***$2"),
+    userId: user.id,
+  })
+  return { ok: true }
+}
+
 function isDuplicateConstraint(
   error: unknown,
   constraintNames: readonly string[]
@@ -106,17 +337,19 @@ export async function requestOtp({
   purpose,
   firstName,
   lastName,
-  username,
   password,
 }: {
   email: string
   purpose: OtpPurpose
   firstName?: string
   lastName?: string
-  username?: string
   password?: string
 }): Promise<OtpServiceResult> {
   const normalizedEmail = normalizeEmail(email)
+  if (purpose === "password_reset") {
+    return requestPasswordResetOtp({ email: normalizedEmail })
+  }
+
   const safeEmail = normalizedEmail.replace(/(.{2}).+(@.+)/, "$1***$2")
   const now = new Date()
   const resendCutoff = new Date(now.getTime() - OTP_RESEND_SECONDS * 1000)
@@ -144,14 +377,11 @@ export async function requestOtp({
       }
     }
 
-    // Auto-generate username from email (remove domain)
-    const emailLocalPart = normalizedEmail.split("@")[0]
-    signUpUsername = normalizeUsername(emailLocalPart)
-
-    if (signUpUsername.length < 4) {
-      // If email part is too short, use firstname+lastname
-      signUpUsername = normalizeUsername(`${signUpFirstName}${signUpLastName}`.replace(/\s+/g, ""))
-    }
+    signUpUsername = buildSignupUsername(
+      normalizedEmail,
+      signUpFirstName,
+      signUpLastName
+    )
 
     if (!USERNAME_REGEX.test(signUpUsername)) {
       return {
@@ -172,9 +402,9 @@ export async function requestOtp({
 
     const existingUser = await db.query.UserTable.findFirst({
       where: eq(UserTable.email, normalizedEmail),
-      columns: { id: true },
+      columns: { id: true, status: true },
     })
-    if (existingUser != null) {
+    if (existingUser != null && existingUser.status !== "deleted") {
       return {
         ok: false,
         status: 409,
@@ -186,7 +416,10 @@ export async function requestOtp({
       where: eq(AuthCredentialTable.username, signUpUsername),
       columns: { userId: true },
     })
-    if (existingCredential != null) {
+    if (
+      existingCredential != null &&
+      existingCredential.userId !== existingUser?.id
+    ) {
       return {
         ok: false,
         status: 409,
@@ -257,6 +490,11 @@ export async function verifyOtp({
   purpose: OtpPurpose
 }): Promise<OtpVerificationResult> {
   const normalizedEmail = normalizeEmail(email)
+  if (purpose === "password_reset") {
+    const result = await verifyPasswordResetOtp({ email: normalizedEmail, code })
+    return result.ok ? { ok: true, isNewUser: false } : result
+  }
+
   const safeEmail = normalizedEmail.replace(/(.{2}).+(@.+)/, "$1***$2")
   const otpRow = await db.query.AuthOtpTable.findFirst({
     where: and(
@@ -328,23 +566,54 @@ export async function verifyOtp({
       }
     }
 
-    const userId = randomUUID()
+    const existingDeletedUser = await db.query.UserTable.findFirst({
+      where: eq(UserTable.email, normalizedEmail),
+      columns: { id: true, status: true },
+    })
+    const userId =
+      existingDeletedUser?.status === "deleted"
+        ? existingDeletedUser.id
+        : randomUUID()
     const normalizedUsername = normalizeUsername(otpRow.username)
 
     try {
       await db.transaction(async tx => {
-        await tx.insert(UserTable).values({
-          id: userId,
-          email: normalizedEmail,
-          name: buildFullName(otpRow.firstName!, otpRow.lastName!),
-          imageUrl: "",
-        })
+        if (existingDeletedUser?.status === "deleted") {
+          await tx
+            .update(UserTable)
+            .set({
+              email: normalizedEmail,
+              name: buildFullName(otpRow.firstName!, otpRow.lastName!),
+              imageUrl: "",
+              role: "user",
+              status: "active",
+              updatedAt: new Date(),
+            })
+            .where(eq(UserTable.id, userId))
+        } else {
+          await tx.insert(UserTable).values({
+            id: userId,
+            email: normalizedEmail,
+            name: buildFullName(otpRow.firstName!, otpRow.lastName!),
+            imageUrl: "",
+          })
+        }
 
-        await tx.insert(AuthCredentialTable).values({
-          userId,
-          username: normalizedUsername,
-          passwordHash: otpRow.passwordHash!,
-        })
+        await tx
+          .insert(AuthCredentialTable)
+          .values({
+            userId,
+            username: normalizedUsername,
+            passwordHash: otpRow.passwordHash!,
+          })
+          .onConflictDoUpdate({
+            target: [AuthCredentialTable.userId],
+            set: {
+              username: normalizedUsername,
+              passwordHash: otpRow.passwordHash!,
+              updatedAt: new Date(),
+            },
+          })
 
         await tx
           .update(AuthOtpTable)
@@ -390,7 +659,10 @@ export async function verifyOtp({
   }
 
   const user = await db.query.UserTable.findFirst({
-    where: eq(UserTable.email, normalizedEmail),
+    where: and(
+      eq(UserTable.email, normalizedEmail),
+      ne(UserTable.status, "deleted")
+    ),
     columns: { id: true },
   })
 

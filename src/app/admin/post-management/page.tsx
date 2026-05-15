@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { CheckCircle2, EyeOff, MessageSquareOff, Trash2, XCircle } from "lucide-react"
+import { CheckCircle2, EyeOff, MessageSquareOff, RotateCcw, Trash2, XCircle } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,7 @@ import {
   hideExploreCommentAsAdminAction,
   hideExplorePostAsAdminAction,
   rejectExplorePostAction,
+  restoreExplorePostAsAdminAction,
 } from "@/features/admin/explore"
 import { getExplorePostsForAdmin } from "@/features/explore/db"
 import {
@@ -20,7 +21,7 @@ import {
   getRoleLabel,
 } from "@/features/explore/exploreRules.mjs"
 
-const statuses = ["all", "pending", "published", "rejected", "hidden"] as const
+const statuses = ["all", "pending", "published", "rejected", "hidden", "deleted"] as const
 
 function getStatus(searchStatus?: string) {
   return statuses.includes(searchStatus as (typeof statuses)[number])
@@ -155,6 +156,19 @@ export default async function AdminPostManagementPage({
                         </Button>
                       </form>
                     </>
+                  )}
+                  {(post.status === "hidden" || post.status === "rejected" || post.status === "deleted") && (
+                    <form
+                      action={async () => {
+                        "use server"
+                        await restoreExplorePostAsAdminAction(post.id)
+                      }}
+                    >
+                      <Button type="submit" size="sm">
+                        <RotateCcw className="mr-2 size-4" />
+                        Hiện lại
+                      </Button>
+                    </form>
                   )}
                 </div>
 

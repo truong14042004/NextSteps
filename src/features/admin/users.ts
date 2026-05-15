@@ -1,7 +1,7 @@
 import "server-only"
 
 import { randomUUID } from "node:crypto"
-import { and, count, desc, eq, gt, ilike, inArray, isNull, lte, or } from "drizzle-orm"
+import { and, count, desc, eq, gt, ilike, inArray, isNull, lte, ne, or } from "drizzle-orm"
 import { revalidateTag } from "next/cache"
 import { z } from "zod"
 
@@ -34,7 +34,7 @@ export type AdminUserRow = {
   email: string
   role: string
   plan: string
-  status: "Active" | "Inactive"
+  status: "Active" | "Inactive" | "Deleted"
   createdAt: Date
   updatedAt: Date
   lastActiveAt: Date
@@ -90,6 +90,8 @@ export async function listAdminUsers({
 }) {
   const filters = []
 
+  filters.push(ne(UserTable.status, "deleted"))
+
   if (q.length > 0) {
     const pattern = `%${q}%`
     filters.push(
@@ -115,6 +117,7 @@ export async function listAdminUsers({
         name: UserTable.name,
         email: UserTable.email,
         role: UserTable.role,
+        userStatus: UserTable.status,
         createdAt: UserTable.createdAt,
         updatedAt: UserTable.updatedAt,
         lastActiveAt: UserTable.updatedAt,
@@ -178,11 +181,20 @@ export async function listAdminUsers({
   }
 
   return {
-    users: rows.map(user => ({
-      ...user,
-      plan: getPlanLabel(activePlanByUserId.get(user.id), user.role),
-      status: activeUserIds.has(user.id) ? "Active" : "Inactive",
-    })) satisfies AdminUserRow[],
+    users: rows.map(user => {
+      const { userStatus, ...row } = user
+
+      return {
+        ...row,
+        plan: getPlanLabel(activePlanByUserId.get(user.id), user.role),
+        status:
+          userStatus === "deleted"
+            ? "Deleted"
+            : activeUserIds.has(user.id)
+              ? "Active"
+              : "Inactive",
+      }
+    }) satisfies AdminUserRow[],
     pagination: {
       page,
       pageSize,
@@ -201,29 +213,54 @@ export async function createAdminUser(payload: unknown) {
   const email = normalizeEmail(data.email)
   const existing = await db.query.UserTable.findFirst({
     where: eq(UserTable.email, email),
-    columns: { id: true },
+    columns: { id: true, status: true },
   })
 
-  if (existing != null) {
+  if (existing != null && existing.status !== "deleted") {
     return { ok: false as const, status: 409, message: "Email already exists" }
   }
 
-  const id = randomUUID()
+  const id = existing?.id ?? randomUUID()
 
-  await db.insert(UserTable).values({
-    id,
-    name: data.name,
-    email,
-    imageUrl: "",
-    role: data.role ?? "user",
-  })
+  if (existing?.status === "deleted") {
+    await db
+      .update(UserTable)
+      .set({
+        name: data.name,
+        email,
+        role: data.role ?? "user",
+        status: "active",
+        updatedAt: new Date(),
+      })
+      .where(eq(UserTable.id, id))
+  } else {
+    await db.insert(UserTable).values({
+      id,
+      name: data.name,
+      email,
+      imageUrl: "",
+      role: data.role ?? "user",
+    })
+  }
 
   if (data.password != null) {
-    await db.insert(AuthCredentialTable).values({
-      userId: id,
-      username: email,
-      passwordHash: await hashPassword(data.password),
-    })
+    const passwordHash = await hashPassword(data.password)
+
+    await db
+      .insert(AuthCredentialTable)
+      .values({
+        userId: id,
+        username: email,
+        passwordHash,
+      })
+      .onConflictDoUpdate({
+        target: [AuthCredentialTable.userId],
+        set: {
+          username: email,
+          passwordHash,
+          updatedAt: new Date(),
+        },
+      })
   }
 
   return { ok: true as const, user: { id } }
@@ -252,6 +289,7 @@ export async function updateAdminUser(id: string, payload: unknown) {
       name: data.name,
       email,
       role: data.role,
+      status: "active",
     })
     .where(eq(UserTable.id, id))
     .returning({ id: UserTable.id })
@@ -294,13 +332,19 @@ export async function deleteAdminUser(id: string, currentAdminId: string) {
   }
 
   const deleted = await db
-    .delete(UserTable)
-    .where(eq(UserTable.id, id))
+    .update(UserTable)
+    .set({ status: "deleted", updatedAt: new Date() })
+    .where(and(eq(UserTable.id, id), ne(UserTable.status, "deleted")))
     .returning({ id: UserTable.id })
 
   if (deleted.length === 0) {
     return { ok: false as const, status: 404, message: "User not found" }
   }
+
+  await db
+    .update(AuthSessionTable)
+    .set({ revokedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(AuthSessionTable.userId, id), isNull(AuthSessionTable.revokedAt)))
 
   revalidateTag(getUserIdTag(id), "default")
   return { ok: true as const }

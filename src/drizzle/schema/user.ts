@@ -11,6 +11,8 @@ import {
 export const userRoles = ["user", "pro", "recruiter", "admin"] as const
 export type UserRole = (typeof userRoles)[number]
 export const userRoleEnum = pgEnum("users_role", userRoles)
+export const userStatuses = ["active", "deleted"] as const
+export type UserStatus = (typeof userStatuses)[number]
 
 export const UserTable = pgTable("users", {
   id: varchar().primaryKey(),
@@ -18,6 +20,7 @@ export const UserTable = pgTable("users", {
   email: varchar().notNull().unique(),
   imageUrl: varchar().notNull(),
   role: userRoleEnum().notNull().default("user"),
+  status: varchar({ length: 24 }).notNull().default("active"),
   createdAt,
   updatedAt,
 })

@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { type FormEvent, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff } from "lucide-react"
+import { toast } from "sonner"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { toast } from "sonner"
 
 type Step = "request" | "verify" | "reset"
 
@@ -21,28 +22,20 @@ export default function ForgotPasswordClient() {
   const router = useRouter()
 
   function validatePassword(password: string): string | null {
-    if (password.length < 8) {
-      return "Mật khẩu phải có ít nhất 8 ký tự"
-    }
-    if (!/[a-z]/.test(password)) {
-      return "Mật khẩu phải chứa chữ cái thường"
-    }
-    if (!/[A-Z]/.test(password)) {
-      return "Mật khẩu phải chứa chữ cái hoa"
-    }
-    if (!/[0-9]/.test(password)) {
-      return "Mật khẩu phải chứa ít nhất một số"
-    }
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-      return "Mật khẩu phải chứa ký tự đặc biệt (!@#$%^&* v.v.)"
+    if (password.length < 8) return "Mật khẩu phải có ít nhất 8 ký tự"
+    if (!/[a-z]/.test(password)) return "Mật khẩu phải chứa chữ cái thường"
+    if (!/[A-Z]/.test(password)) return "Mật khẩu phải chứa chữ cái hoa"
+    if (!/[0-9]/.test(password)) return "Mật khẩu phải chứa ít nhất một số"
+    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
+      return "Mật khẩu phải chứa ký tự đặc biệt"
     }
     return null
   }
 
-  async function handleRequestOtp(e: React.FormEvent) {
+  async function handleRequestOtp(e: FormEvent) {
     e.preventDefault()
 
-    if (!email) {
+    if (!email.trim()) {
       toast.error("Vui lòng nhập email")
       return
     }
@@ -54,7 +47,6 @@ export default function ForgotPasswordClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       })
-
       const data = await response.json()
 
       if (!response.ok) {
@@ -63,7 +55,7 @@ export default function ForgotPasswordClient() {
       }
 
       setStep("verify")
-      toast.success("Mã OTP đã được gửi về email")
+      toast.success("Mã OTP đã được gửi về email nếu tài khoản tồn tại")
     } catch (error) {
       toast.error("Lỗi khi gửi OTP")
       console.error(error)
@@ -72,11 +64,11 @@ export default function ForgotPasswordClient() {
     }
   }
 
-  async function handleVerifyOtp(e: React.FormEvent) {
+  async function handleVerifyOtp(e: FormEvent) {
     e.preventDefault()
 
-    if (!otp || otp.length !== 6) {
-      toast.error("Vui lòng nhập đúng mã OTP (6 ký tự)")
+    if (!/^\d{6}$/.test(otp)) {
+      toast.error("Vui lòng nhập đúng mã OTP gồm 6 số")
       return
     }
 
@@ -87,7 +79,6 @@ export default function ForgotPasswordClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp }),
       })
-
       const data = await response.json()
 
       if (!response.ok) {
@@ -105,13 +96,8 @@ export default function ForgotPasswordClient() {
     }
   }
 
-  async function handleResetPassword(e: React.FormEvent) {
+  async function handleResetPassword(e: FormEvent) {
     e.preventDefault()
-
-    if (!newPassword || !confirmPassword) {
-      toast.error("Vui lòng điền đầy đủ mật khẩu")
-      return
-    }
 
     if (newPassword !== confirmPassword) {
       toast.error("Mật khẩu xác nhận không khớp")
@@ -131,21 +117,17 @@ export default function ForgotPasswordClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp, newPassword }),
       })
-
       const data = await response.json()
 
       if (!response.ok) {
-        toast.error(data.message || "Reset mật khẩu thất bại")
+        toast.error(data.message || "Đặt lại mật khẩu thất bại")
         return
       }
 
-      toast.success("Mật khẩu đã được reset thành công")
-
-      setTimeout(() => {
-        router.push("/sign-in")
-      }, 1500)
+      toast.success("Mật khẩu đã được cập nhật")
+      router.push("/sign-in")
     } catch (error) {
-      toast.error("Lỗi khi reset mật khẩu")
+      toast.error("Lỗi khi đặt lại mật khẩu")
       console.error(error)
     } finally {
       setIsLoading(false)
@@ -159,17 +141,16 @@ export default function ForgotPasswordClient() {
           Mã OTP đã được gửi về email: <span className="font-medium">{email}</span>
         </p>
 
-        <div className="space-y-2">
-          <Input
-            type="text"
-            placeholder="Nhập mã OTP (6 ký tự)"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            disabled={isLoading}
-            maxLength={6}
-            className="text-center text-2xl tracking-widest"
-          />
-        </div>
+        <Input
+          type="text"
+          inputMode="numeric"
+          placeholder="Nhập mã OTP"
+          value={otp}
+          onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          disabled={isLoading}
+          maxLength={6}
+          className="text-center text-2xl tracking-widest"
+        />
 
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? "Đang xác nhận..." : "Xác nhận OTP"}
@@ -198,21 +179,22 @@ export default function ForgotPasswordClient() {
               type={showPassword ? "text" : "password"}
               placeholder="Nhập mật khẩu mới"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              onChange={e => setNewPassword(e.target.value)}
               disabled={isLoading}
               className="pr-10"
             />
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
+              onClick={() => setShowPassword(value => !value)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               disabled={isLoading}
+              aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Mật khẩu phải có ít nhất 8 ký tự, chứa chữ cái (hoa và thường), số và ký tự đặc biệt
+            Tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.
           </p>
         </div>
 
@@ -223,15 +205,16 @@ export default function ForgotPasswordClient() {
               type={showConfirmPassword ? "text" : "password"}
               placeholder="Nhập lại mật khẩu mới"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={e => setConfirmPassword(e.target.value)}
               disabled={isLoading}
               className="pr-10"
             />
             <button
               type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              onClick={() => setShowConfirmPassword(value => !value)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               disabled={isLoading}
+              aria-label={showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
             >
               {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -239,7 +222,7 @@ export default function ForgotPasswordClient() {
         </div>
 
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Đang reset..." : "Reset mật khẩu"}
+          {isLoading ? "Đang cập nhật..." : "Cập nhật mật khẩu"}
         </Button>
       </form>
     )
@@ -253,7 +236,7 @@ export default function ForgotPasswordClient() {
           type="email"
           placeholder="Nhập email của bạn"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
           disabled={isLoading}
           required
         />

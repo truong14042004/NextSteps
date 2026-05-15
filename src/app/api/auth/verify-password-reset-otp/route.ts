@@ -1,31 +1,31 @@
+import { verifyPasswordResetOtp } from "@/services/auth/lib/otp"
 import { NextResponse } from "next/server"
-import { isOtpValid } from "@/services/auth/lib/otp-storage"
+import z from "zod"
+
+const schema = z.object({
+  email: z.string().trim().email().max(254),
+  otp: z.string().trim().regex(/^\d{6}$/),
+})
 
 export async function POST(request: Request) {
-  try {
-    const { email, otp } = await request.json()
+  const json = await request.json().catch(() => null)
+  const parsed = schema.safeParse(json)
 
-    if (!email || !otp) {
-      return NextResponse.json(
-        { message: "Dữ liệu không hợp lệ" },
-        { status: 400 }
-      )
-    }
-
-    // Verify OTP
-    if (!isOtpValid(email, otp)) {
-      return NextResponse.json(
-        { message: "OTP không đúng hoặc đã hết hạn" },
-        { status: 400 }
-      )
-    }
-
-    return NextResponse.json({ ok: true })
-  } catch (error) {
-    console.error("Verify password reset OTP error:", error)
+  if (!parsed.success) {
     return NextResponse.json(
-      { message: "Lỗi khi xác nhận OTP" },
-      { status: 500 }
+      { message: "Dữ liệu không hợp lệ." },
+      { status: 400 }
     )
   }
+
+  const result = await verifyPasswordResetOtp({
+    email: parsed.data.email,
+    code: parsed.data.otp,
+  })
+
+  if (!result.ok) {
+    return NextResponse.json({ message: result.message }, { status: result.status })
+  }
+
+  return NextResponse.json({ ok: true })
 }

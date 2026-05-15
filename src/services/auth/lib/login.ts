@@ -2,7 +2,7 @@ import "server-only"
 
 import { db } from "@/drizzle/db"
 import { AuthCredentialTable, UserTable } from "@/drizzle/schema"
-import { eq } from "drizzle-orm"
+import { and, eq, ne } from "drizzle-orm"
 import { logAuthInfo, logAuthWarn } from "./logger"
 import { verifyPassword } from "./password"
 import { createSession } from "./session"
@@ -33,7 +33,10 @@ export async function loginWithPassword({
   }
 
   const user = await db.query.UserTable.findFirst({
-    where: eq(UserTable.email, normalizedEmail),
+    where: and(
+      eq(UserTable.email, normalizedEmail),
+      ne(UserTable.status, "deleted")
+    ),
     columns: {
       id: true,
     },

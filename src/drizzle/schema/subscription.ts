@@ -29,7 +29,7 @@ export const UserSubscriptionTable = pgTable(
     id,
     userId: varchar()
       .notNull()
-      .references(() => UserTable.id, { onDelete: "cascade" }),
+      .references(() => UserTable.id, { onDelete: "restrict" }),
     planId: uuid().references(() => AdminPlanTable.id, { onDelete: "set null" }),
     planKey: varchar({ length: 32 }).notNull(),
     status: varchar({ length: 24 }).notNull().default("active"),
@@ -56,7 +56,7 @@ export const UserUsageEventTable = pgTable(
     id,
     userId: varchar()
       .notNull()
-      .references(() => UserTable.id, { onDelete: "cascade" }),
+      .references(() => UserTable.id, { onDelete: "restrict" }),
     subscriptionId: uuid().references(() => UserSubscriptionTable.id, {
       onDelete: "set null",
     }),

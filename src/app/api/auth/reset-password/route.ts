@@ -1,58 +1,39 @@
+import { resetPasswordWithOtp } from "@/services/auth/lib/otp"
 import { NextResponse } from "next/server"
-import { db } from "@/drizzle/db"
-import { UserTable, AuthCredentialTable } from "@/drizzle/schema"
-import { eq } from "drizzle-orm"
-import { isOtpValid, deleteOtp } from "@/services/auth/lib/otp-storage"
-import { hashPassword } from "@/services/auth/lib/password"
+import z from "zod"
+
+const schema = z.object({
+  email: z.string().trim().email().max(254),
+  otp: z.string().trim().regex(/^\d{6}$/),
+  newPassword: z.string().min(8).max(200),
+})
 
 export async function POST(request: Request) {
+  const json = await request.json().catch(() => null)
+  const parsed = schema.safeParse(json)
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { message: "Dữ liệu không hợp lệ." },
+      { status: 400 }
+    )
+  }
+
   try {
-    const { email, otp, newPassword } = await request.json()
-
-    if (!email || !otp || !newPassword) {
-      return NextResponse.json(
-        { message: "Dữ liệu không hợp lệ" },
-        { status: 400 }
-      )
-    }
-
-    // Verify OTP
-    if (!isOtpValid(email, otp)) {
-      return NextResponse.json(
-        { message: "OTP không đúng hoặc đã hết hạn" },
-        { status: 400 }
-      )
-    }
-
-    // tìm user
-    const user = await db.query.UserTable.findFirst({
-      where: eq(UserTable.email, email),
+    const result = await resetPasswordWithOtp({
+      email: parsed.data.email,
+      code: parsed.data.otp,
+      newPassword: parsed.data.newPassword,
     })
 
-    if (!user) {
-      return NextResponse.json(
-        { message: "Không tìm thấy người dùng" },
-        { status: 404 }
-      )
+    if (!result.ok) {
+      return NextResponse.json({ message: result.message }, { status: result.status })
     }
 
-    const newPasswordHash = await hashPassword(newPassword)
-
-    // update credential table
-    await db
-      .update(AuthCredentialTable)
-      .set({ passwordHash: newPasswordHash })
-      .where(eq(AuthCredentialTable.userId, user.id))
-
-    // xóa OTP
-    deleteOtp(email)
-
     return NextResponse.json({ ok: true })
-  } catch (error) {
-    console.error("Reset password error:", error)
-
+  } catch {
     return NextResponse.json(
-      { message: "Lỗi khi reset mật khẩu" },
+      { message: "Lỗi khi đặt lại mật khẩu." },
       { status: 500 }
     )
   }

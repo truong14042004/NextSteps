@@ -16,7 +16,7 @@ type UserRow = {
   email: string | null;
   role: string | null;
   plan?: string | null;
-  status?: "Active" | "Pending" | "Banned" | "Inactive";
+  status?: "Active" | "Pending" | "Banned" | "Inactive" | "Deleted";
   createdAt?: string | null;
   lastActiveAt?: string | null;
 };
@@ -96,7 +96,7 @@ export default function AdminUserManagementPage() {
   const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
 
   async function handleDelete(id: string) {
-    if (!confirm("Xác nhận xóa người dùng này?")) return;
+    if (!confirm("Xác nhận xóa người dùng này? Giao dịch và doanh thu vẫn được giữ lại.")) return;
 
     try {
       const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
@@ -359,7 +359,7 @@ function StatusBadge({ status }: { status?: string | null }) {
       ? "bg-green-100 text-green-700"
       : k === "Pending"
         ? "bg-yellow-100 text-yellow-700"
-        : k === "Banned"
+        : k === "Banned" || k === "Deleted"
           ? "bg-red-100 text-red-700"
           : "bg-gray-100 text-muted-foreground";
 

@@ -125,6 +125,26 @@ export async function hideExplorePostAsAdminAction(postId: string) {
   return { error: false as const, message: "Đã ẩn bài viết" }
 }
 
+export async function restoreExplorePostAsAdminAction(postId: string) {
+  const admin = await requireAdminAction()
+  if (admin.error) return admin
+
+  await db
+    .update(ExplorePostTable)
+    .set({
+      status: "published",
+      rejectionReason: null,
+      reviewedById: admin.userId,
+      reviewedAt: new Date(),
+    })
+    .where(eq(ExplorePostTable.id, postId))
+
+  revalidatePath("/admin/post-management")
+  revalidatePath("/explore")
+  revalidatePath(`/explore/${postId}`)
+  return { error: false as const, message: "Đã hiện lại bài viết" }
+}
+
 export async function deleteExplorePostAsAdminAction(postId: string) {
   const admin = await requireAdminAction()
   if (admin.error) return admin
