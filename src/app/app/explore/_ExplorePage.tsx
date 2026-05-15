@@ -423,7 +423,7 @@ function ExplorePostCard({ post }: { post: PublishedPost }) {
         </div>
         <div>
           <CardTitle className="text-xl tracking-tight">
-            <Link href={`/app/explore/${post.id}`} className="hover:text-primary">
+            <Link href={`/explore/${post.id}`} className="hover:text-primary">
               {post.title}
             </Link>
           </CardTitle>
@@ -441,7 +441,7 @@ function ExplorePostCard({ post }: { post: PublishedPost }) {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline" className="rounded-2xl border-primary/15 bg-white/80 hover:bg-primary/5 dark:bg-background/40">
-            <Link href={`/app/explore/${post.id}`}>Xem chi tiết</Link>
+            <Link href={`/explore/${post.id}`}>Xem chi tiết</Link>
           </Button>
           {isJob && (
             <Button asChild className={ctaClass}>

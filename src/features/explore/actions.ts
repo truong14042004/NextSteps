@@ -66,7 +66,7 @@ export async function createRecruiterPostAction(
     skills: normalizeOptional(parsed.data.skills),
   })
 
-  revalidatePath("/app/explore")
+  revalidatePath("/explore")
   revalidatePath("/admin/post-management")
 
   return {
@@ -128,8 +128,8 @@ export async function updateOwnPendingRecruiterPostAction(
     })
     .where(eq(ExplorePostTable.id, postId))
 
-  revalidatePath("/app/explore")
-  revalidatePath(`/app/explore/${postId}`)
+  revalidatePath("/explore")
+  revalidatePath(`/explore/${postId}`)
   revalidatePath("/admin/post-management")
   return { error: false as const, message: "Đã cập nhật bài tuyển dụng" }
 }
@@ -156,7 +156,7 @@ export async function createCvShowcasePostAction(
     cvFileName: parsed.data.cvFileName,
   })
 
-  revalidatePath("/app/explore")
+  revalidatePath("/explore")
   return { error: false as const, message: "CV đã được đăng lên Khám phá" }
 }
 
@@ -193,8 +193,8 @@ export async function createExploreCommentAction(
     content: parsed.data.content,
   })
 
-  revalidatePath("/app/explore")
-  revalidatePath(`/app/explore/${postId}`)
+  revalidatePath("/explore")
+  revalidatePath(`/explore/${postId}`)
   return { error: false as const, message: "Đã gửi bình luận" }
 }
 
@@ -222,8 +222,8 @@ export async function deleteOwnCommentAction(commentId: string) {
     .set({ status: "deleted" })
     .where(eq(ExploreCommentTable.id, commentId))
 
-  revalidatePath("/app/explore")
-  revalidatePath(`/app/explore/${comment.postId}`)
+  revalidatePath("/explore")
+  revalidatePath(`/explore/${comment.postId}`)
   return { error: false as const, message: "Đã xóa bình luận" }
 }
 
@@ -266,7 +266,7 @@ export async function submitRecruiterRequestAction(
     reason: parsed.data.reason,
   })
 
-  revalidatePath("/app/explore")
+  revalidatePath("/explore")
   revalidatePath("/admin/recruiter-management")
   return { error: false as const, message: "Yêu cầu đã được gửi tới admin" }
 }
@@ -293,7 +293,7 @@ export async function cancelRecruiterRequestAction(requestId: string) {
     .set({ status: "cancelled" })
     .where(eq(RecruiterRequestTable.id, requestId))
 
-  revalidatePath("/app/explore")
+  revalidatePath("/explore")
   revalidatePath("/admin/recruiter-management")
   return { error: false as const, message: "Đã hủy yêu cầu" }
 }
@@ -319,7 +319,7 @@ export async function hideOwnExplorePostAction(postId: string) {
     .set({ status: "hidden" })
     .where(eq(ExplorePostTable.id, postId))
 
-  revalidatePath("/app/explore")
-  revalidatePath(`/app/explore/${postId}`)
+  revalidatePath("/explore")
+  revalidatePath(`/explore/${postId}`)
   return { error: false as const, message: "Đã ẩn bài viết" }
 }

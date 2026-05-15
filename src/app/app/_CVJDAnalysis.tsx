@@ -601,7 +601,7 @@ export default function CVJDAnalysisPage({
                         </p>
                       </div>
                       <Button asChild variant="outline" size="sm" className="w-fit">
-                        <Link href={`/app/explore/${exploreDraft.postId}`}>
+                        <Link href={`/explore/${exploreDraft.postId}`}>
                           Quay lại bài viết
                         </Link>
                       </Button>

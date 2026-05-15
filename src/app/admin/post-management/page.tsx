@@ -81,7 +81,7 @@ export default async function AdminPostManagementPage({
                     </p>
                   </div>
                   <Button asChild variant="outline" size="sm">
-                    <Link href={`/app/explore/${post.id}`}>Xem chi tiết</Link>
+                    <Link href={`/explore/${post.id}`}>Xem chi tiết</Link>
                   </Button>
                 </div>
               </CardHeader>

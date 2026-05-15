@@ -88,7 +88,7 @@ export async function approveExplorePostAction(postId: string) {
     .where(eq(ExplorePostTable.id, postId))
 
   revalidatePath("/admin/post-management")
-  revalidatePath("/app/explore")
+  revalidatePath("/explore")
   return { error: false as const, message: "Đã duyệt bài viết" }
 }
 
@@ -120,7 +120,7 @@ export async function hideExplorePostAsAdminAction(postId: string) {
     .where(eq(ExplorePostTable.id, postId))
 
   revalidatePath("/admin/post-management")
-  revalidatePath("/app/explore")
+  revalidatePath("/explore")
   return { error: false as const, message: "Đã ẩn bài viết" }
 }
 
@@ -134,6 +134,6 @@ export async function hideExploreCommentAsAdminAction(commentId: string) {
     .where(eq(ExploreCommentTable.id, commentId))
 
   revalidatePath("/admin/post-management")
-  revalidatePath("/app/explore")
+  revalidatePath("/explore")
   return { error: false as const, message: "Đã ẩn bình luận" }
 }
