@@ -1,0 +1,50 @@
+# ─── Build Stage ──────────────────────────────────────────────────────────────
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install Python dependencies
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+
+# ─── Runtime Stage ────────────────────────────────────────────────────────────
+FROM python:3.11-slim AS runtime
+
+WORKDIR /app
+
+# Copy installed packages from builder
+COPY --from=builder /install /usr/local
+
+# Copy application source
+COPY chatbot/ ./chatbot/
+COPY ingest.py .
+
+# Create directories for documents and vector store persistence
+RUN mkdir -p \
+    ./chatbot/documents/faq \
+    ./chatbot/documents/services \
+    ./chatbot/documents/pricing \
+    ./chatbot/documents/policies \
+    ./chatbot/vectorstore/chroma_db
+
+# Non-root user for security
+RUN adduser --disabled-password --gecos "" chatbot && \
+    chown -R chatbot:chatbot /app
+USER chatbot
+
+# Expose the chatbot port
+EXPOSE 8001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD python -c "import httpx; httpx.get('http://localhost:8001/api/chat/health').raise_for_status()"
+
+# Default entrypoint: start the API server
+CMD ["uvicorn", "chatbot.main:app", "--host", "0.0.0.0", "--port", "8001"]

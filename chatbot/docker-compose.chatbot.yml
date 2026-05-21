@@ -1,0 +1,53 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Docker Compose for CV Screening Chatbot (sidecar deployment)
+#
+# The chatbot runs as a separate service alongside your existing app.
+# Your existing app is NOT modified — only the chatbot service is added.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Chatbot Service ──────────────────────────────────────────────────────────
+  chatbot:
+    build:
+      context: .
+      dockerfile: Dockerfile.chatbot
+    container_name: cv_chatbot
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    volumes:
+      # Persist ChromaDB data across container restarts
+      - chroma_data:/app/chatbot/vectorstore/chroma_db
+      # Mount your .docx documents (read-only)
+      - ./chatbot/documents:/app/chatbot/documents:ro
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import httpx; httpx.get('http://localhost:8001/api/chat/health').raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ── (Optional) Your existing CV screening app ─────────────────────────────
+  # Uncomment and adjust if you want to run both services together.
+  #
+  # cv_app:
+  #   build: .
+  #   container_name: cv_screening_app
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8000:8000"
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     chatbot:
+  #       condition: service_healthy
+
+volumes:
+  chroma_data:
+    driver: local
