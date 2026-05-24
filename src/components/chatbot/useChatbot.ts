@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { Message } from "./types";
+import { Message } from "./Types";
  
 function generateId() {
   return Math.random().toString(36).slice(2, 9);

@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, KeyboardEvent } from "react";
 import Image from "next/image";
 import { useChatbot } from "./useChatbot";
-import { Message, ChatWidgetConfig } from "./types";
+import { Message, ChatWidgetConfig } from "./Types";
  
 // ─── Typing indicator ────────────────────────────────────────────────────────
 function TypingIndicator({ color }: { color: string }) {
