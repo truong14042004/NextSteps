@@ -32,45 +32,63 @@ export type JobSummary = {
 }
 
 export async function getJobSummaries(userId: string): Promise<JobSummary[]> {
-  const jobs = await db
-    .select({
-      id: JobInfoTable.id,
-      name: JobInfoTable.name,
-      title: JobInfoTable.title,
-      updatedAt: JobInfoTable.updatedAt,
-      quizCount: sql<number>`(
-        select count(*)::int from ${QuizTable}
-        where ${QuizTable.jobInfoId} = ${JobInfoTable.id}
-      )`,
-      interviewCount: sql<number>`(
-        select count(*)::int from ${InterviewTable}
-        where ${InterviewTable.jobInfoId} = ${JobInfoTable.id}
-      )`,
-      bestQuizScore: sql<number | null>`(
-        select max(${QuizAttemptTable.score})::int from ${QuizAttemptTable}
-        inner join ${QuizTable} on ${QuizTable.id} = ${QuizAttemptTable.quizId}
-        where ${QuizTable.jobInfoId} = ${JobInfoTable.id}
-          and ${QuizAttemptTable.status} = 'submitted'
-      )`,
-      bestQuizTotal: sql<number | null>`(
-        select max(${QuizTable.totalQuestions})::int from ${QuizTable}
-        where ${QuizTable.jobInfoId} = ${JobInfoTable.id}
-      )`,
-    })
-    .from(JobInfoTable)
-    .where(eq(JobInfoTable.userId, userId))
-    .orderBy(desc(JobInfoTable.updatedAt))
+  // Three small queries instead of correlated subqueries — avoids the
+  // "column reference 'id' is ambiguous" issue that Drizzle's bare
+  // ${Table.col} interpolation triggers inside raw sql subqueries.
+  const [jobs, quizRows, interviewRows] = await Promise.all([
+    db
+      .select({
+        id: JobInfoTable.id,
+        name: JobInfoTable.name,
+        title: JobInfoTable.title,
+        updatedAt: JobInfoTable.updatedAt,
+      })
+      .from(JobInfoTable)
+      .where(eq(JobInfoTable.userId, userId))
+      .orderBy(desc(JobInfoTable.updatedAt)),
+    db
+      .select({
+        jobInfoId: QuizTable.jobInfoId,
+        quizCount: sql<number>`count(distinct ${QuizTable.id})::int`,
+        bestScore: sql<
+          number | null
+        >`max(case when ${QuizAttemptTable.status} = 'submitted' then ${QuizAttemptTable.score} else null end)::int`,
+        bestTotal: sql<number | null>`max(${QuizTable.totalQuestions})::int`,
+      })
+      .from(QuizTable)
+      .leftJoin(QuizAttemptTable, eq(QuizAttemptTable.quizId, QuizTable.id))
+      .innerJoin(JobInfoTable, eq(JobInfoTable.id, QuizTable.jobInfoId))
+      .where(eq(JobInfoTable.userId, userId))
+      .groupBy(QuizTable.jobInfoId),
+    db
+      .select({
+        jobInfoId: InterviewTable.jobInfoId,
+        total: sql<number>`count(*)::int`,
+      })
+      .from(InterviewTable)
+      .innerJoin(JobInfoTable, eq(JobInfoTable.id, InterviewTable.jobInfoId))
+      .where(eq(JobInfoTable.userId, userId))
+      .groupBy(InterviewTable.jobInfoId),
+  ])
 
-  return jobs.map(j => ({
-    id: j.id,
-    name: j.name,
-    title: j.title,
-    quizCount: j.quizCount,
-    interviewCount: j.interviewCount,
-    bestQuizScore: j.bestQuizScore,
-    bestQuizTotal: j.bestQuizTotal,
-    lastActivityAt: j.updatedAt,
-  }))
+  const quizByJob = new Map(quizRows.map(r => [r.jobInfoId, r]))
+  const interviewByJob = new Map(
+    interviewRows.map(r => [r.jobInfoId, r.total])
+  )
+
+  return jobs.map(j => {
+    const q = quizByJob.get(j.id)
+    return {
+      id: j.id,
+      name: j.name,
+      title: j.title,
+      quizCount: q?.quizCount ?? 0,
+      interviewCount: interviewByJob.get(j.id) ?? 0,
+      bestQuizScore: q?.bestScore ?? null,
+      bestQuizTotal: q?.bestTotal ?? null,
+      lastActivityAt: j.updatedAt,
+    }
+  })
 }
 
 export async function getRecentActivities(

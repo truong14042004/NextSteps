@@ -41,6 +41,28 @@ import {
   StaggerItem,
 } from "./_DashboardMotion"
 
+import type { DashboardStats } from "@/features/dashboard/data"
+
+const DEFAULT_STATS: DashboardStats = {
+  totalQuizAttempts: 0,
+  totalInterviews: 0,
+  totalAnalyses: 0,
+  averageQuizPercent: null,
+  bestQuizPercent: null,
+  perfectScoreCount: 0,
+  streakDays: 0,
+  activeDaysLast30: 0,
+}
+
+async function safe<T>(label: string, p: Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await p
+  } catch (e) {
+    console.error(`[dashboard] ${label} failed`, e)
+    return fallback
+  }
+}
+
 export default async function DashboardPage() {
   const { userId, user, redirectToSignIn } = await getCurrentUser({
     allData: true,
@@ -59,14 +81,14 @@ export default async function DashboardPage() {
     scoreHistory,
   ] = await Promise.all([
     getPlanSummaryForUser(userId),
-    getFeatureUsageSummary("resume_analysis"),
-    getFeatureUsageSummary("ai_question"),
-    getFeatureUsageSummary("mock_interview"),
-    getFeatureUsageSummary("ai_quiz"),
-    getJobSummaries(userId),
-    getRecentActivities(userId, 8),
-    getDashboardStats(userId),
-    getQuizScoreHistory(userId, 30),
+    safe("quotaResume", getFeatureUsageSummary("resume_analysis"), null),
+    safe("quotaQuestion", getFeatureUsageSummary("ai_question"), null),
+    safe("quotaInterview", getFeatureUsageSummary("mock_interview"), null),
+    safe("quotaQuiz", getFeatureUsageSummary("ai_quiz"), null),
+    safe("jobs", getJobSummaries(userId), []),
+    safe("activities", getRecentActivities(userId, 8), []),
+    safe("stats", getDashboardStats(userId), DEFAULT_STATS),
+    safe("scoreHistory", getQuizScoreHistory(userId, 30), []),
   ])
 
   const greetingName = user?.name?.split(" ").slice(-1)[0] ?? "bạn"
