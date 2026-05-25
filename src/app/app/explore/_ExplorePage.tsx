@@ -554,7 +554,7 @@ function ExplorePostCard({
           </Button>
           {canAnalyzeWithJob && isJob && (
             <Button asChild className={ctaClass}>
-              <Link href={`/app?source=explore&postId=${post.id}`}>Phân tích CV với bài này</Link>
+              <Link href={`/app/analyze?source=explore&postId=${post.id}`}>Phân tích CV với bài này</Link>
             </Button>
           )}
           {!isJob && post.cvUrl && (

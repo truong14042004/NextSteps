@@ -3,14 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { FileSearch, ListChecks, MessageSquare } from "lucide-react";
+import { FileSearch, LayoutDashboard, ListChecks, MessageSquare } from "lucide-react";
 import { AppLogo } from "@/components/ui/AppLogo";
 
 export function Sidebar() {
   const pathname = usePathname();
 
   const menuItems = [
-    { id: "analyze", label: "Phân tích CV", icon: FileSearch, href: "/app" },
+    { id: "overview", label: "Tổng quan", icon: LayoutDashboard, href: "/app" },
+    {
+      id: "analyze",
+      label: "Phân tích CV",
+      icon: FileSearch,
+      href: "/app/analyze",
+    },
     {
       id: "interview",
       label: "Phỏng vấn với AI",

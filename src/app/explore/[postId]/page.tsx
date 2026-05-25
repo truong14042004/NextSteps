@@ -121,7 +121,7 @@ export default async function ExplorePostDetailPage({
             )}
             {!isRecruiter && isJob && post.status === "published" && (
               <Button asChild className="rounded-2xl bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 text-white shadow-lg shadow-red-500/20">
-                <Link href={`/app?source=explore&postId=${post.id}`}>
+                <Link href={`/app/analyze?source=explore&postId=${post.id}`}>
                   Phân tích CV với bài này
                 </Link>
               </Button>
