@@ -24,6 +24,7 @@ export const AdminPlanTable = pgTable(
     resumeAnalysisLimit: integer(),
     aiQuestionLimit: integer(),
     mockInterviewLimit: integer(),
+    aiQuizLimit: integer(),
     isActive: boolean().notNull().default(true),
     sortOrder: integer().notNull().default(0),
     createdAt,

@@ -28,6 +28,12 @@ const options = [
     href: "questions",
   },
   {
+    label: "Take a Quiz (30 câu / 45 phút)",
+    description:
+      "AI sinh bộ trắc nghiệm 30 câu, làm bài và xem điểm + giải thích.",
+    href: "quizzes",
+  },
+  {
     label: "Practice Interviewing",
     description: "Simulate a real interview with AI-powered mock interviews.",
     href: "interviews",

@@ -17,6 +17,7 @@ export type AdminPlanConfig = {
   resumeAnalysisLimit: number | null
   aiQuestionLimit: number | null
   mockInterviewLimit: number | null
+  aiQuizLimit: number | null
   isActive: boolean
   sortOrder: number
   features: AdminPlanFeature[]
@@ -47,6 +48,7 @@ const planSchema = z.object({
   resumeAnalysisLimit: usageLimitSchema,
   aiQuestionLimit: usageLimitSchema,
   mockInterviewLimit: usageLimitSchema,
+  aiQuizLimit: usageLimitSchema,
   isActive: z.boolean(),
 })
 

@@ -92,6 +92,13 @@
       "when": 1778845200000,
       "tag": "0012_soft_delete_users",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1779000000000,
+      "tag": "0013_ai_quizzes",
+      "breakpoints": true
     }
   ]
 }

@@ -16,6 +16,7 @@ type PlanLimitKey =
   | "resumeAnalysisLimit"
   | "aiQuestionLimit"
   | "mockInterviewLimit"
+  | "aiQuizLimit"
 
 type ActivePlan = {
   subscriptionId: string | null
@@ -29,12 +30,14 @@ const FEATURE_LIMIT_KEYS: Record<UsageFeature, PlanLimitKey> = {
   resume_analysis: "resumeAnalysisLimit",
   ai_question: "aiQuestionLimit",
   mock_interview: "mockInterviewLimit",
+  ai_quiz: "aiQuizLimit",
 }
 
 const FEATURE_LABELS: Record<UsageFeature, string> = {
   resume_analysis: "lượt phân tích",
   ai_question: "lượt câu hỏi",
   mock_interview: "lượt phỏng vấn",
+  ai_quiz: "lượt làm quiz",
 }
 
 function formatPlanName(planKey: string) {
@@ -78,6 +81,7 @@ async function getFreePlan(now: Date): Promise<ActivePlan> {
       resumeAnalysisLimit: true,
       aiQuestionLimit: true,
       mockInterviewLimit: true,
+      aiQuizLimit: true,
     },
   })
   const period = getMonthPeriod(now)
@@ -90,6 +94,7 @@ async function getFreePlan(now: Date): Promise<ActivePlan> {
       resumeAnalysisLimit: plan?.resumeAnalysisLimit ?? 0,
       aiQuestionLimit: plan?.aiQuestionLimit ?? 0,
       mockInterviewLimit: plan?.mockInterviewLimit ?? 0,
+      aiQuizLimit: plan?.aiQuizLimit ?? 0,
     },
   }
 }
@@ -110,6 +115,7 @@ export async function getActivePlanForUser(userId: string, now = new Date()) {
         resumeAnalysisLimit: null,
         aiQuestionLimit: null,
         mockInterviewLimit: null,
+        aiQuizLimit: null,
       },
     } satisfies ActivePlan
   }
@@ -129,6 +135,7 @@ export async function getActivePlanForUser(userId: string, now = new Date()) {
           resumeAnalysisLimit: true,
           aiQuestionLimit: true,
           mockInterviewLimit: true,
+          aiQuizLimit: true,
         },
       },
     },
@@ -144,6 +151,7 @@ export async function getActivePlanForUser(userId: string, now = new Date()) {
         resumeAnalysisLimit: subscription.plan.resumeAnalysisLimit,
         aiQuestionLimit: subscription.plan.aiQuestionLimit,
         mockInterviewLimit: subscription.plan.mockInterviewLimit,
+        aiQuizLimit: subscription.plan.aiQuizLimit,
       },
     } satisfies ActivePlan
   }

@@ -39,6 +39,7 @@ type AdminPlanConfig = {
   resumeAnalysisLimit: number | null;
   aiQuestionLimit: number | null;
   mockInterviewLimit: number | null;
+  aiQuizLimit: number | null;
   isActive: boolean;
   sortOrder: number;
   features: AdminPlanFeature[];
@@ -56,6 +57,8 @@ type PlanFormState = {
   aiQuestionUnlimited: boolean;
   mockInterviewLimit: string;
   mockInterviewUnlimited: boolean;
+  aiQuizLimit: string;
+  aiQuizUnlimited: boolean;
   isActive: boolean;
 };
 
@@ -71,6 +74,8 @@ const toPlanForm = (plan: AdminPlanConfig): PlanFormState => ({
   aiQuestionUnlimited: plan.aiQuestionLimit == null,
   mockInterviewLimit: String(plan.mockInterviewLimit ?? ""),
   mockInterviewUnlimited: plan.mockInterviewLimit == null,
+  aiQuizLimit: String(plan.aiQuizLimit ?? ""),
+  aiQuizUnlimited: plan.aiQuizLimit == null,
   isActive: plan.isActive,
 });
 
@@ -138,6 +143,9 @@ export function AdminPlanManager({
           mockInterviewLimit: planForm.mockInterviewUnlimited
             ? null
             : Number(planForm.mockInterviewLimit),
+          aiQuizLimit: planForm.aiQuizUnlimited
+            ? null
+            : Number(planForm.aiQuizLimit),
           isActive: planForm.isActive,
         }),
       });
@@ -564,6 +572,28 @@ export function AdminPlanManager({
                             mockInterviewLimit: checked
                               ? ""
                               : prev.mockInterviewLimit,
+                          }
+                        : prev,
+                    )
+                  }
+                />
+
+                <UsageLimitInput
+                  label="Lượt làm quiz/tháng"
+                  value={planForm.aiQuizLimit}
+                  unlimited={planForm.aiQuizUnlimited}
+                  onValueChange={value =>
+                    setPlanForm(prev =>
+                      prev ? { ...prev, aiQuizLimit: value } : prev,
+                    )
+                  }
+                  onUnlimitedChange={checked =>
+                    setPlanForm(prev =>
+                      prev
+                        ? {
+                            ...prev,
+                            aiQuizUnlimited: checked,
+                            aiQuizLimit: checked ? "" : prev.aiQuizLimit,
                           }
                         : prev,
                     )

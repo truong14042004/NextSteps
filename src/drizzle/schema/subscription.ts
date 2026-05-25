@@ -20,6 +20,7 @@ export const usageFeatures = [
   "resume_analysis",
   "ai_question",
   "mock_interview",
+  "ai_quiz",
 ] as const
 export type UsageFeature = (typeof usageFeatures)[number]
 
