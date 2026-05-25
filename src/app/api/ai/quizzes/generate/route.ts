@@ -15,6 +15,8 @@ import { and, eq } from "drizzle-orm"
 import { cacheTag } from "next/dist/server/use-cache/cache-tag"
 import z from "zod"
 
+export const maxDuration = 60
+
 const schema = z.object({
   jobInfoId: z.string().min(1),
 })
@@ -48,8 +50,10 @@ export async function POST(req: Request) {
     generated = await generateAiQuiz({ jobInfo })
   } catch (error) {
     console.error("[quiz.generate] AI failed", error)
+    const message =
+      error instanceof Error ? error.message : "Unknown AI error"
     return Response.json(
-      { error: "Không thể tạo quiz. Vui lòng thử lại." },
+      { error: `Không thể tạo quiz: ${message}` },
       { status: 502 }
     )
   }
