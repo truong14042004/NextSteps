@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Crown, LogOut, User } from "lucide-react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -29,9 +29,11 @@ export function Navbar({
   plan: PlanSummary;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const isPaidPlan = plan.planKey !== "free";
+  const title = useMemo(() => resolveTitle(pathname), [pathname]);
 
   useEffect(() => setMounted(true), []);
 
@@ -52,7 +54,7 @@ export function Navbar({
     <nav className="h-16 border-b bg-background/70">
       <div className="container flex h-full items-center justify-between">
         <Link href="/app" className="flex items-center gap-2">
-          <span className="text-xl font-bold">Phân tích CV/JD</span>
+          <span className="text-xl font-bold">{title}</span>
         </Link>
 
         <div className="flex items-center gap-4">
@@ -124,4 +126,33 @@ export function Navbar({
       </div>
     </nav>
   );
+}
+
+function resolveTitle(pathname: string | null): string {
+  if (!pathname) return "NextStep";
+
+  // Top-level sections
+  if (pathname === "/app") return "Tổng quan";
+  if (pathname.startsWith("/app/analyze")) return "Phân tích CV / JD";
+  if (pathname.startsWith("/app/interview")) return "Phỏng vấn với AI";
+  if (pathname.startsWith("/app/upgrade")) return "Nâng cấp gói";
+  if (pathname.startsWith("/app/explore")) return "Khám phá";
+
+  // Quiz hub (cross-job)
+  if (pathname === "/app/quizzes") return "Trắc nghiệm";
+
+  // Job-info nested
+  if (pathname.startsWith("/app/job-infos/")) {
+    if (/\/quizzes\/[^/]+\/attempts\//.test(pathname)) return "Làm bài quiz";
+    if (pathname.endsWith("/quizzes") || /\/quizzes\/[^/]+$/.test(pathname))
+      return "Trắc nghiệm";
+    if (pathname.endsWith("/quizzes/new")) return "Tạo bộ đề";
+    if (pathname.includes("/interviews")) return "Phỏng vấn thử";
+    if (pathname.includes("/questions")) return "Câu hỏi luyện tập";
+    if (pathname.includes("/resume")) return "Đánh giá CV";
+    if (pathname.endsWith("/edit")) return "Sửa thông tin vị trí";
+    return "Vị trí công việc";
+  }
+
+  return "NextStep";
 }
