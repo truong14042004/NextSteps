@@ -1,5 +1,6 @@
 import { otpPurposeEnum } from "@/drizzle/schema"
 import { verifyOtp } from "@/services/auth/lib/otp"
+import { logAuthError } from "@/services/auth/lib/logger"
 import { NextResponse } from "next/server"
 import z from "zod"
 
@@ -27,7 +28,11 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ ok: true, isNewUser: result.isNewUser })
-  } catch {
+  } catch (error) {
+    logAuthError("otp_verify_failed", {
+      purpose: parsed.data.purpose,
+      message: error instanceof Error ? error.message : String(error),
+    })
     return NextResponse.json(
       { message: "Xác thực OTP thất bại. Vui lòng thử lại." },
       { status: 500 }
