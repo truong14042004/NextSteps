@@ -44,7 +44,7 @@ export async function generateAiQuiz({
   >
 }): Promise<GeneratedQuiz> {
   const result = await generateObject({
-    model: google("gemini-2.5-flash"),
+    model: google("gemini-3.1-flash-lite"),
     schema: quizSchema,
     system: `You generate technical multiple-choice quizzes tailored to a candidate's target role.
 
