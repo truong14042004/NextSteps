@@ -1,14 +1,16 @@
 import type { Metadata } from "next"
-import { Outfit } from "next/font/google"
+import { Be_Vietnam_Pro } from "next/font/google"
 import "./globals.css"
- 
+
 import { ThemeProvider } from "next-themes"
 import { Toaster } from "@/components/ui/sonner"
 import { ChatWidget } from "@/components/chatbot/ChatWidget"
- 
-const outfitSans = Outfit({
+
+const appSans = Be_Vietnam_Pro({
   variable: "--font-outfit-sans",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext", "vietnamese"],
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
 })
  
 export const metadata: Metadata = {
@@ -36,7 +38,7 @@ export default function RootLayout({
  
   return (
     <html lang="vi" suppressHydrationWarning>
-      <body className={`${outfitSans.variable} antialiased font-sans`}>
+      <body className={`${appSans.variable} antialiased font-sans`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

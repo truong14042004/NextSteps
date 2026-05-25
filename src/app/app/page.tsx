@@ -31,6 +31,15 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { ScoreChart } from "./_ScoreChart"
+import {
+  AnimatedNumber,
+  FadeIn,
+  HoverCard,
+  PulseRing,
+  ShimmerCard,
+  StaggerGrid,
+  StaggerItem,
+} from "./_DashboardMotion"
 
 export default async function DashboardPage() {
   const { userId, user, redirectToSignIn } = await getCurrentUser({
@@ -63,230 +72,290 @@ export default async function DashboardPage() {
   const greetingName = user?.name?.split(" ").slice(-1)[0] ?? "bạn"
   const suggestion = pickNextStep({ jobs, stats })
 
+  const milestones = computeMilestones(stats)
+
   return (
     <div className="container my-6 space-y-6 max-w-6xl">
       {/* Hero */}
-      <section className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-3xl md:text-4xl">Xin chào, {greetingName} 👋</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {summarize(stats)} •{" "}
-            <span className="text-foreground font-medium">{plan.planName}</span>{" "}
-            ({plan.resetText.toLowerCase()})
-          </p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button asChild>
-            <Link href="/app/analyze">
-              <Plus className="size-4 mr-1" /> Phân tích CV
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/app/quizzes">
-              <BrainCircuit className="size-4 mr-1" /> Làm quiz
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/app/interview">
-              <MessageSquare className="size-4 mr-1" /> Phỏng vấn
-            </Link>
-          </Button>
-        </div>
-      </section>
+      <FadeIn>
+        <section className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl md:text-4xl bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text">
+              Xin chào, {greetingName} 👋
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              {summarize(stats)} •{" "}
+              <span className="text-foreground font-medium">{plan.planName}</span>{" "}
+              ({plan.resetText.toLowerCase()})
+            </p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Button asChild>
+              <Link href="/app/analyze">
+                <Plus className="size-4 mr-1" /> Phân tích CV
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/app/quizzes">
+                <BrainCircuit className="size-4 mr-1" /> Làm quiz
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/app/interview">
+                <MessageSquare className="size-4 mr-1" /> Phỏng vấn
+              </Link>
+            </Button>
+          </div>
+        </section>
+      </FadeIn>
 
       {/* Next step suggestion */}
       {suggestion && (
-        <Card className="border-primary/40 bg-primary/5">
-          <CardContent className="p-4 flex items-start gap-3">
-            <Sparkles className="size-5 text-primary mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <div className="font-medium">Gợi ý bước tiếp theo</div>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                {suggestion.text}
-              </p>
-            </div>
-            <Button asChild size="sm">
-              <Link href={suggestion.href}>{suggestion.cta}</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <FadeIn delay={0.08}>
+          <ShimmerCard className="rounded-lg">
+            <Card className="border-primary/40 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
+              <CardContent className="p-4 flex items-start gap-3">
+                <Sparkles className="size-5 text-primary mt-0.5 flex-shrink-0 animate-pulse" />
+                <div className="flex-1">
+                  <div className="font-medium">Gợi ý bước tiếp theo</div>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {suggestion.text}
+                  </p>
+                </div>
+                <Button asChild size="sm">
+                  <Link href={suggestion.href}>{suggestion.cta}</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </ShimmerCard>
+        </FadeIn>
       )}
 
       {/* Quota usage */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <QuotaCard summary={quotaResume} label="Phân tích CV" />
-        <QuotaCard summary={quotaQuestion} label="Câu hỏi AI" />
-        <QuotaCard summary={quotaInterview} label="Mock interview" />
-        <QuotaCard summary={quotaQuiz} label="Quiz" />
-      </section>
+      <StaggerGrid
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+        delay={0.1}
+      >
+        <StaggerItem>
+          <QuotaCard summary={quotaResume} label="Phân tích CV" />
+        </StaggerItem>
+        <StaggerItem>
+          <QuotaCard summary={quotaQuestion} label="Câu hỏi AI" />
+        </StaggerItem>
+        <StaggerItem>
+          <QuotaCard summary={quotaInterview} label="Mock interview" />
+        </StaggerItem>
+        <StaggerItem>
+          <QuotaCard summary={quotaQuiz} label="Quiz" />
+        </StaggerItem>
+      </StaggerGrid>
 
-      {/* Stats + Chart + Milestones (Tier 3) */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Chuỗi ngày hoạt động</CardDescription>
-            <CardTitle className="text-3xl flex items-center gap-2">
-              <Flame
-                className={
-                  stats.streakDays > 0 ? "text-orange-500" : "text-muted-foreground"
-                }
-              />
-              {stats.streakDays}
-              <span className="text-base font-normal text-muted-foreground">
-                ngày
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">
-            Hoạt động {stats.activeDaysLast30}/30 ngày gần nhất
-          </CardContent>
-        </Card>
+      {/* Stats + Milestones (Tier 3) */}
+      <StaggerGrid
+        className="grid grid-cols-1 lg:grid-cols-3 gap-4"
+        delay={0.2}
+      >
+        <StaggerItem>
+          <HoverCard>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Chuỗi ngày hoạt động</CardDescription>
+                <CardTitle className="text-3xl flex items-center gap-2">
+                  <PulseRing active={stats.streakDays > 0}>
+                    <Flame
+                      className={
+                        stats.streakDays > 0
+                          ? "text-orange-500"
+                          : "text-muted-foreground"
+                      }
+                    />
+                  </PulseRing>
+                  <AnimatedNumber value={stats.streakDays} />
+                  <span className="text-base font-normal text-muted-foreground">
+                    ngày
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-xs text-muted-foreground">
+                Hoạt động {stats.activeDaysLast30}/30 ngày gần nhất
+              </CardContent>
+            </Card>
+          </HoverCard>
+        </StaggerItem>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Điểm quiz trung bình</CardDescription>
-            <CardTitle className="text-3xl">
-              {stats.averageQuizPercent != null
-                ? `${stats.averageQuizPercent}%`
-                : "—"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">
-            {stats.totalQuizAttempts} lượt đã chấm •{" "}
-            {stats.bestQuizPercent != null
-              ? `cao nhất ${stats.bestQuizPercent}%`
-              : "chưa có"}
-          </CardContent>
-        </Card>
+        <StaggerItem>
+          <HoverCard>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Điểm quiz trung bình</CardDescription>
+                <CardTitle className="text-3xl">
+                  {stats.averageQuizPercent != null ? (
+                    <>
+                      <AnimatedNumber value={stats.averageQuizPercent} />%
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-xs text-muted-foreground">
+                {stats.totalQuizAttempts} lượt đã chấm •{" "}
+                {stats.bestQuizPercent != null
+                  ? `cao nhất ${stats.bestQuizPercent}%`
+                  : "chưa có"}
+              </CardContent>
+            </Card>
+          </HoverCard>
+        </StaggerItem>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Thành tích</CardDescription>
-            <CardTitle className="text-base flex flex-wrap gap-1 mt-1">
-              {computeMilestones(stats).map(m => (
-                <Badge key={m} variant="secondary" className="font-normal">
-                  {m}
-                </Badge>
-              ))}
-              {computeMilestones(stats).length === 0 && (
-                <span className="text-sm font-normal text-muted-foreground">
-                  Làm bài để mở khoá huy hiệu
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-      </section>
+        <StaggerItem>
+          <HoverCard>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Thành tích</CardDescription>
+                <CardTitle className="text-base flex flex-wrap gap-1 mt-1">
+                  {milestones.map((m, idx) => (
+                    <FadeIn key={m} delay={0.3 + idx * 0.05} y={6}>
+                      <Badge variant="secondary" className="font-normal">
+                        {m}
+                      </Badge>
+                    </FadeIn>
+                  ))}
+                  {milestones.length === 0 && (
+                    <span className="text-sm font-normal text-muted-foreground">
+                      Làm bài để mở khoá huy hiệu
+                    </span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </HoverCard>
+        </StaggerItem>
+      </StaggerGrid>
 
       {/* Score chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Trophy className="size-4" /> Điểm quiz 30 ngày gần nhất
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScoreChart points={scoreHistory} />
-        </CardContent>
-      </Card>
+      <FadeIn delay={0.3}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Trophy className="size-4 text-amber-500" /> Điểm quiz 30 ngày gần
+              nhất
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScoreChart points={scoreHistory} />
+          </CardContent>
+        </Card>
+      </FadeIn>
 
       {/* Two-col: jobs + activity */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Jobs */}
         <div className="lg:col-span-2 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Vị trí của bạn</h2>
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/app/analyze">
-                <Plus className="size-4 mr-1" /> Thêm
-              </Link>
-            </Button>
-          </div>
-          {jobs.length === 0 ? (
-            <Card>
-              <CardContent className="p-6 text-center">
-                <FileSearch className="size-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  Chưa có vị trí nào. Bắt đầu bằng cách phân tích CV theo JD.
-                </p>
-                <Button asChild className="mt-3" size="sm">
-                  <Link href="/app/analyze">Phân tích CV đầu tiên</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {jobs.map(j => (
-                <Link
-                  key={j.id}
-                  href={`/app/job-infos/${j.id}`}
-                  className="block"
-                >
-                  <Card className="hover:scale-[1.01] transition-transform h-full">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">{j.name}</CardTitle>
-                      {j.title && (
-                        <CardDescription className="line-clamp-1">
-                          {j.title}
-                        </CardDescription>
-                      )}
-                    </CardHeader>
-                    <CardContent className="flex flex-wrap gap-2 text-xs">
-                      <Badge variant="secondary">{j.quizCount} quiz</Badge>
-                      <Badge variant="secondary">
-                        {j.interviewCount} interview
-                      </Badge>
-                      {j.bestQuizScore != null && j.bestQuizTotal != null && (
-                        <Badge>
-                          Best: {j.bestQuizScore}/{j.bestQuizTotal}
-                        </Badge>
-                      )}
-                    </CardContent>
-                  </Card>
+          <FadeIn delay={0.35}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Vị trí của bạn</h2>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/app/analyze">
+                  <Plus className="size-4 mr-1" /> Thêm
                 </Link>
-              ))}
+              </Button>
             </div>
+          </FadeIn>
+          {jobs.length === 0 ? (
+            <FadeIn delay={0.4}>
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <FileSearch className="size-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    Chưa có vị trí nào. Bắt đầu bằng cách phân tích CV theo JD.
+                  </p>
+                  <Button asChild className="mt-3" size="sm">
+                    <Link href="/app/analyze">Phân tích CV đầu tiên</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            </FadeIn>
+          ) : (
+            <StaggerGrid
+              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+              delay={0.4}
+            >
+              {jobs.map(j => (
+                <StaggerItem key={j.id}>
+                  <HoverCard>
+                    <Link href={`/app/job-infos/${j.id}`} className="block">
+                      <Card className="h-full">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base">{j.name}</CardTitle>
+                          {j.title && (
+                            <CardDescription className="line-clamp-1">
+                              {j.title}
+                            </CardDescription>
+                          )}
+                        </CardHeader>
+                        <CardContent className="flex flex-wrap gap-2 text-xs">
+                          <Badge variant="secondary">{j.quizCount} quiz</Badge>
+                          <Badge variant="secondary">
+                            {j.interviewCount} interview
+                          </Badge>
+                          {j.bestQuizScore != null && j.bestQuizTotal != null && (
+                            <Badge>
+                              Best: {j.bestQuizScore}/{j.bestQuizTotal}
+                            </Badge>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  </HoverCard>
+                </StaggerItem>
+              ))}
+            </StaggerGrid>
           )}
         </div>
 
         {/* Activity */}
         <div className="space-y-3">
-          <h2 className="text-xl font-semibold">Hoạt động gần đây</h2>
-          <Card>
-            <CardContent className="p-0">
-              {activities.length === 0 ? (
-                <div className="p-6 text-center text-sm text-muted-foreground">
-                  Chưa có hoạt động
-                </div>
-              ) : (
-                <ul className="divide-y">
-                  {activities.map(a => (
-                    <li key={`${a.kind}-${a.refId}`} className="p-3 text-sm">
-                      <Link
-                        href={activityHref(a)}
-                        className="flex items-start gap-2 hover:bg-muted/40 -m-3 p-3 rounded"
-                      >
-                        <span className="mt-0.5">{activityIcon(a.kind)}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">
-                            {activityLabel(a.kind)} · {a.jobName}
-                          </div>
-                          {a.detail && (
-                            <div className="text-xs text-muted-foreground">
-                              {a.detail}
+          <FadeIn delay={0.4}>
+            <h2 className="text-xl font-semibold">Hoạt động gần đây</h2>
+          </FadeIn>
+          <FadeIn delay={0.45}>
+            <Card>
+              <CardContent className="p-0">
+                {activities.length === 0 ? (
+                  <div className="p-6 text-center text-sm text-muted-foreground">
+                    Chưa có hoạt động
+                  </div>
+                ) : (
+                  <StaggerGrid className="divide-y" stagger={0.04}>
+                    {activities.map(a => (
+                      <StaggerItem key={`${a.kind}-${a.refId}`}>
+                        <Link
+                          href={activityHref(a)}
+                          className="flex items-start gap-2 hover:bg-muted/40 p-3 text-sm transition-colors"
+                        >
+                          <span className="mt-0.5">{activityIcon(a.kind)}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">
+                              {activityLabel(a.kind)} · {a.jobName}
                             </div>
-                          )}
-                          <div className="text-xs text-muted-foreground">
-                            {timeAgo(a.occurredAt)}
+                            {a.detail && (
+                              <div className="text-xs text-muted-foreground">
+                                {a.detail}
+                              </div>
+                            )}
+                            <div className="text-xs text-muted-foreground">
+                              {timeAgo(a.occurredAt)}
+                            </div>
                           </div>
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+                        </Link>
+                      </StaggerItem>
+                    ))}
+                  </StaggerGrid>
+                )}
+              </CardContent>
+            </Card>
+          </FadeIn>
         </div>
       </section>
     </div>

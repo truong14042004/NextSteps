@@ -230,17 +230,25 @@ export type DashboardStats = {
 export async function getDashboardStats(
   userId: string
 ): Promise<DashboardStats> {
+  const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+
   const [
     quizAggRow,
     interviewRow,
     analysisRow,
-    activityDaysRow,
+    quizDatesRows,
+    interviewDatesRows,
+    analysisDatesRows,
   ] = await Promise.all([
     db
       .select({
         attempts: sql<number>`count(*)::int`,
-        avgPercent: sql<number | null>`avg(${QuizAttemptTable.score}::float / nullif(${QuizTable.totalQuestions}, 0) * 100)`,
-        maxPercent: sql<number | null>`max(${QuizAttemptTable.score}::float / nullif(${QuizTable.totalQuestions}, 0) * 100)`,
+        avgPercent: sql<
+          number | null
+        >`avg(${QuizAttemptTable.score}::float / nullif(${QuizTable.totalQuestions}, 0) * 100)`,
+        maxPercent: sql<
+          number | null
+        >`max(${QuizAttemptTable.score}::float / nullif(${QuizTable.totalQuestions}, 0) * 100)`,
         perfects: sql<number>`sum(case when ${QuizAttemptTable.score} = ${QuizTable.totalQuestions} then 1 else 0 end)::int`,
       })
       .from(QuizAttemptTable)
@@ -266,29 +274,34 @@ export async function getDashboardStats(
         )
       ),
     db
-      .select({
-        days: sql<string[]>`array_agg(distinct date_trunc('day', occurred_at) order by date_trunc('day', occurred_at) desc)`,
-      })
-      .from(
-        sql`(
-          select ${QuizAttemptTable.submittedAt} as occurred_at
-          from ${QuizAttemptTable}
-          where ${QuizAttemptTable.userId} = ${userId}
-            and ${QuizAttemptTable.submittedAt} is not null
-            and ${QuizAttemptTable.submittedAt} >= now() - interval '30 days'
-          union all
-          select ${InterviewTable.createdAt}
-          from ${InterviewTable}
-          inner join ${JobInfoTable} on ${JobInfoTable.id} = ${InterviewTable.jobInfoId}
-          where ${JobInfoTable.userId} = ${userId}
-            and ${InterviewTable.createdAt} >= now() - interval '30 days'
-          union all
-          select ${JobInfoTable.updatedAt}
-          from ${JobInfoTable}
-          where ${JobInfoTable.userId} = ${userId}
-            and ${JobInfoTable.analysisResult} is not null
-            and ${JobInfoTable.updatedAt} >= now() - interval '30 days'
-        ) as activity`
+      .select({ d: QuizAttemptTable.submittedAt })
+      .from(QuizAttemptTable)
+      .where(
+        and(
+          eq(QuizAttemptTable.userId, userId),
+          sql`${QuizAttemptTable.submittedAt} is not null`,
+          gte(QuizAttemptTable.submittedAt, since30)
+        )
+      ),
+    db
+      .select({ d: InterviewTable.createdAt })
+      .from(InterviewTable)
+      .innerJoin(JobInfoTable, eq(JobInfoTable.id, InterviewTable.jobInfoId))
+      .where(
+        and(
+          eq(JobInfoTable.userId, userId),
+          gte(InterviewTable.createdAt, since30)
+        )
+      ),
+    db
+      .select({ d: JobInfoTable.updatedAt })
+      .from(JobInfoTable)
+      .where(
+        and(
+          eq(JobInfoTable.userId, userId),
+          sql`${JobInfoTable.analysisResult} is not null`,
+          gte(JobInfoTable.updatedAt, since30)
+        )
       ),
   ])
 
@@ -296,42 +309,43 @@ export async function getDashboardStats(
   const totalInterviews = interviewRow[0]?.total ?? 0
   const totalAnalyses = analysisRow[0]?.total ?? 0
 
-  const activeDates: Date[] = (activityDaysRow[0]?.days ?? [])
-    .filter(Boolean)
-    .map(d => new Date(d))
+  const activeDates: Date[] = [
+    ...quizDatesRows.map(r => r.d).filter((d): d is Date => d != null),
+    ...interviewDatesRows.map(r => r.d),
+    ...analysisDatesRows.map(r => r.d),
+  ]
 
-  const streakDays = computeStreak(activeDates)
-
-  return {
-    totalQuizAttempts: quizAgg?.attempts ?? 0,
-    totalInterviews,
-    totalAnalyses,
-    averageQuizPercent:
-      quizAgg?.avgPercent != null ? Math.round(quizAgg.avgPercent) : null,
-    bestQuizPercent:
-      quizAgg?.maxPercent != null ? Math.round(quizAgg.maxPercent) : null,
-    perfectScoreCount: quizAgg?.perfects ?? 0,
-    streakDays,
-    activeDaysLast30: activeDates.length,
-  }
-}
-
-function computeStreak(activeDatesDesc: Date[]): number {
-  if (activeDatesDesc.length === 0) return 0
-
-  const dayKeys = new Set(
-    activeDatesDesc.map(d => {
+  const uniqueDayKeys = new Set(
+    activeDates.map(d => {
       const day = new Date(d)
       day.setHours(0, 0, 0, 0)
       return day.getTime()
     })
   )
 
+  const streakDays = computeStreak(uniqueDayKeys)
+
+  return {
+    totalQuizAttempts: quizAgg?.attempts ?? 0,
+    totalInterviews,
+    totalAnalyses,
+    averageQuizPercent:
+      quizAgg?.avgPercent != null ? Math.round(Number(quizAgg.avgPercent)) : null,
+    bestQuizPercent:
+      quizAgg?.maxPercent != null ? Math.round(Number(quizAgg.maxPercent)) : null,
+    perfectScoreCount: quizAgg?.perfects ?? 0,
+    streakDays,
+    activeDaysLast30: uniqueDayKeys.size,
+  }
+}
+
+function computeStreak(dayKeys: Set<number>): number {
+  if (dayKeys.size === 0) return 0
+
   let streak = 0
   const cursor = new Date()
   cursor.setHours(0, 0, 0, 0)
 
-  // grace: if today has no activity yet, allow streak to start from yesterday
   if (!dayKeys.has(cursor.getTime())) {
     cursor.setDate(cursor.getDate() - 1)
     if (!dayKeys.has(cursor.getTime())) return 0
