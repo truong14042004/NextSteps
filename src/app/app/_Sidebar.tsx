@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { FileSearch, MessageSquare } from "lucide-react";
+import { FileSearch, ListChecks, MessageSquare } from "lucide-react";
 import { AppLogo } from "@/components/ui/AppLogo";
 
 export function Sidebar() {
@@ -16,6 +16,12 @@ export function Sidebar() {
       label: "Phỏng vấn với AI",
       icon: MessageSquare,
       href: "/app/interview",
+    },
+    {
+      id: "quizzes",
+      label: "Trắc nghiệm",
+      icon: ListChecks,
+      href: "/app/quizzes",
     },
   ];
 
