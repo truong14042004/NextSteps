@@ -9,18 +9,15 @@ import {
   Check,
   CreditCard,
   Loader2,
+  Lock,
   QrCode,
   ShieldCheck,
+  Zap,
+  Star,
 } from "lucide-react"
+import { motion } from "framer-motion"
 
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 
 type CheckoutProduct = {
@@ -32,10 +29,55 @@ type CheckoutProduct = {
   priceLabel: string
   billingLabel: string
   features: string[]
+  badge: string
 }
 
 function formatVnd(value: number) {
-  return `${value.toLocaleString("vi-VN")} VND`
+  return `${value.toLocaleString("vi-VN")} ₫`
+}
+
+const steps = [
+  { label: "Chọn gói", step: 1 },
+  { label: "Thanh toán", step: 2 },
+  { label: "Kích hoạt", step: 3 },
+]
+
+function StepProgress({ current }: { current: number }) {
+  return (
+    <div className="flex items-center justify-center gap-0 mb-8">
+      {steps.map((s, i) => (
+        <div key={s.step} className="flex items-center">
+          <div className="flex flex-col items-center gap-1.5">
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold transition-all ${
+                s.step < current
+                  ? "border-rose-500 bg-rose-500 text-white"
+                  : s.step === current
+                  ? "border-rose-500 bg-rose-500/10 text-rose-400"
+                  : "border-white/20 bg-white/5 text-slate-500"
+              }`}
+            >
+              {s.step < current ? <Check className="h-4 w-4" /> : s.step}
+            </div>
+            <span
+              className={`text-xs font-medium ${
+                s.step === current ? "text-rose-400" : s.step < current ? "text-rose-500" : "text-slate-500"
+              }`}
+            >
+              {s.label}
+            </span>
+          </div>
+          {i < steps.length - 1 && (
+            <div
+              className={`h-px w-16 mx-2 mb-5 transition-all ${
+                s.step < current ? "bg-rose-500" : "bg-white/10"
+              }`}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function CheckoutPageContent() {
@@ -55,24 +97,27 @@ function CheckoutPageContent() {
 
     return {
       planKey,
-      name: isStart ? "NextSteps Start" : "NextSteps Premium",
-      subtitle: isStart ? "Goi tra phi co ban" : "Goi day du tinh nang",
+      name: isStart ? "NextStep Start" : "NextStep Premium",
+      subtitle: isStart ? "Gói trả phí cơ bản" : "Gói đầy đủ tính năng",
       description: isStart
-        ? "Phu hop de luyen phong van va phan tich CV voi gioi han su dung ro rang."
-        : "Danh cho nguoi can luyen tap chuyen sau voi nhieu tinh nang AI hon.",
+        ? "Phù hợp để luyện phỏng vấn và phân tích CV với giới hạn sử dụng rõ ràng."
+        : "Dành cho người cần luyện tập chuyên sâu với nhiều tính năng AI hơn.",
       price: resolvedPrice,
       priceLabel: formatVnd(resolvedPrice),
-      billingLabel: billing === "annual" ? "Thanh toan nam" : "Thanh toan thang",
+      billingLabel: billing === "annual" ? "Thanh toán năm" : "Thanh toán tháng",
+      badge: isStart ? "Phổ biến nhất" : "Nổi bật",
       features: isStart
         ? [
-            "Phan tich CV nang cao",
-            "Luyen phong van AI theo vi tri ung tuyen",
-            "Luu lich su ket qua",
+            "Phân tích CV nâng cao",
+            "Luyện phỏng vấn AI theo vị trí ứng tuyển",
+            "Lưu lịch sử kết quả",
+            "100 lượt sử dụng/tháng",
           ]
         : [
-            "Mo day du tinh nang tra phi",
-            "Nhieu luot luyen phong van va tao cau hoi hon",
-            "Uu tien trai nghiem tinh nang moi",
+            "Mở đầy đủ tính năng trả phí",
+            "Nhiều lượt luyện phỏng vấn và tạo câu hỏi hơn",
+            "Ưu tiên trải nghiệm tính năng mới",
+            "Mock Interview không giới hạn",
           ],
     }
   }, [billing, planKey, price])
@@ -100,207 +145,242 @@ function CheckoutPageContent() {
       }
 
       if (!response.ok || typeof data?.checkoutUrl !== "string") {
-        throw new Error(data?.message ?? "Khong tao duoc link thanh toan.")
+        throw new Error(data?.message ?? "Không tạo được link thanh toán.")
       }
 
       window.location.href = data.checkoutUrl
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Thanh toan that bai.")
+      setError(err instanceof Error ? err.message : "Thanh toán thất bại.")
       setProcessing(false)
     }
   }
 
+  const activationDate = new Date()
+  activationDate.setDate(activationDate.getDate() + 1)
+  const activationLabel = activationDate.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })
+
   return (
     <>
       <CheckoutNavbar />
-      <main className="min-h-screen bg-background py-10 md:py-14">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto mb-6 max-w-6xl">
+
+      {/* Background */}
+      <div className="fixed inset-0 -z-10 bg-slate-950">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-rose-600/8 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-600/6 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-rose-500/4 rounded-full blur-[100px]" />
+      </div>
+
+      <main className="min-h-screen py-10 md:py-14 text-slate-50">
+        <div className="container mx-auto px-4 max-w-6xl">
+          {/* Back link */}
+          <div className="mb-6">
             <Link
               href="/#pricing"
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white"
             >
               <ArrowLeft className="h-4 w-4" />
-              Quay lai bang gia
+              Quay lại bảng giá
             </Link>
           </div>
 
-          <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-            <Card className="rounded-3xl border bg-card/70 shadow-sm">
-              <CardHeader className="border-b bg-background/40 px-6 py-6 md:px-8">
-                <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+          {/* Step Progress */}
+          <StepProgress current={2} />
+
+          {/* Main grid */}
+          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] items-start">
+
+            {/* ── LEFT: Payment Details ─────────────────────── */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="space-y-5"
+            >
+              {/* Header card */}
+              <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md p-6 shadow-xl">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/15 text-rose-400">
+                    <Lock className="h-4 w-4" />
+                  </div>
+                  <span className="text-xs font-medium text-rose-400 tracking-wider uppercase">Kết nối bảo mật SSL</span>
+                </div>
+                <h1 className="text-2xl font-bold text-white mt-3">Hoàn tất thanh toán</h1>
+                <p className="mt-1 text-sm text-slate-400">
+                  Bạn sẽ được chuyển đến trang thanh toán bảo mật của payOS để hoàn tất giao dịch.
+                </p>
+              </div>
+
+              {/* Payment method */}
+              <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md p-6 shadow-xl">
+                <div className="mb-4 text-sm font-semibold text-slate-300">Phương thức thanh toán</div>
+                <button
+                  type="button"
+                  className="grid w-full gap-4 rounded-xl border border-rose-500/40 bg-rose-500/5 p-4 text-left ring-1 ring-rose-500/20 sm:grid-cols-[auto_1fr_auto] sm:items-center hover:bg-rose-500/10 transition-colors"
+                >
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-rose-400">
+                    <QrCode className="h-5 w-5" />
+                  </span>
+                  <span>
+                    <span className="block font-semibold text-white">payOS</span>
+                    <span className="mt-0.5 block text-xs text-slate-400">
+                      QR Napas 247, ứng dụng ngân hàng và ví điện tử
+                    </span>
+                  </span>
+                  <span className="rounded-full bg-rose-500/20 border border-rose-500/30 px-3 py-1 text-xs font-medium text-rose-300">
+                    Đang chọn
+                  </span>
+                </button>
+              </div>
+
+              {/* How it works */}
+              <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md p-6 shadow-xl">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-400">
+                    <CreditCard className="h-5 w-5" />
+                  </div>
                   <div>
-                    <div className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground shadow-sm">
-                      <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-                      Thanh toan qua payOS
-                    </div>
-                    <CardTitle className="mt-4 text-2xl md:text-3xl">
-                      Hoan tat thanh toan
-                    </CardTitle>
-                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
-                      He thong se tao link thanh toan payOS theo gia goi dang
-                      duoc cau hinh trong admin. Gia tren client chi dung de hien
-                      thi, server se kiem tra lai truoc khi tao don.
+                    <div className="font-semibold text-white">Quy trình thanh toán an toàn</div>
+                    <p className="mt-1.5 text-sm leading-relaxed text-slate-400">
+                      NextStep tạo mã đơn hàng trên server và chuyển bạn sang checkout của payOS. Sau khi thanh toán thành công, webhook đã xác minh chữ ký sẽ tự động kích hoạt gói cho tài khoản.
                     </p>
                   </div>
-
-                  <div className="rounded-2xl border bg-background px-4 py-3 text-left md:min-w-[220px] md:text-right">
-                    <div className="text-xs text-muted-foreground">Tong thanh toan</div>
-                    <div className="mt-1 text-2xl font-bold text-primary">
-                      {product.priceLabel}
-                    </div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {product.billingLabel}
-                    </div>
-                  </div>
                 </div>
-              </CardHeader>
+              </div>
 
-              <CardContent className="space-y-6 px-6 py-6 md:px-8">
-                <div>
-                  <div className="mb-3 text-sm font-medium">
-                    Phuong thuc thanh toan
-                  </div>
-                  <button
-                    type="button"
-                    className="grid w-full gap-4 rounded-3xl border border-primary bg-primary/5 p-5 text-left ring-2 ring-primary/20 sm:grid-cols-[auto_1fr_auto] sm:items-center"
-                  >
-                    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-background text-primary">
-                      <QrCode className="h-6 w-6" />
-                    </span>
-                    <span>
-                      <span className="block font-medium">payOS</span>
-                      <span className="mt-1 block text-sm text-muted-foreground">
-                        QR Napas 247, ung dung ngan hang va vi dien tu ho tro
-                        qua trang thanh toan payOS.
-                      </span>
-                    </span>
-                    <span className="rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
-                      Dang chon
-                    </span>
-                  </button>
-                </div>
+              {/* Email */}
+              <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md p-6 shadow-xl">
+                <div className="mb-3 text-sm font-semibold text-slate-300">Email nhận hóa đơn <span className="text-slate-500 font-normal">(tùy chọn)</span></div>
+                <Input
+                  value={buyerEmail}
+                  onChange={event => setBuyerEmail(event.target.value)}
+                  placeholder="you@email.com"
+                  className="h-11 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-rose-500/50 focus:ring-rose-500/20"
+                  type="email"
+                />
+              </div>
 
-                <div className="rounded-3xl border bg-background/70 p-5 md:p-6">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                      <CreditCard className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <div className="font-medium">Redirect sang payOS Checkout</div>
-                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                        Khi bam thanh toan, NextSteps se tao ma don hang tren
-                        server va chuyen ban sang trang checkout cua payOS. Sau
-                        khi thanh toan thanh cong, webhook da xac minh chu ky se
-                        kich hoat goi cho tai khoan.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-3xl border bg-background/70 p-5">
-                  <div className="mb-3 text-sm font-medium">Email nhan hoa don</div>
-                  <Input
-                    value={buyerEmail}
-                    onChange={event => setBuyerEmail(event.target.value)}
-                    placeholder="you@email.com"
-                    className="h-11 rounded-2xl"
-                    type="email"
-                  />
-                </div>
-
-                {error != null ? (
-                  <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-                    {error}
-                  </div>
-                ) : null}
-              </CardContent>
-
-              <CardFooter className="border-t bg-background/30 px-6 py-4 text-xs text-muted-foreground md:px-8">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-primary" />
-                  Khong luu thong tin the. Ket qua thanh toan duoc xac thuc bang
-                  webhook payOS tren server.
-                </div>
-              </CardFooter>
-            </Card>
-
-            <Card className="rounded-3xl border bg-card/70 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">Tom tat don hang</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="rounded-2xl border bg-background/70 p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="font-medium">{product.name}</div>
-                      <div className="mt-1 text-sm text-muted-foreground">
-                        {product.subtitle}
-                      </div>
-                    </div>
-                    <div className="text-right font-semibold text-primary">
-                      {product.priceLabel}
-                    </div>
-                  </div>
-
-                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                    {product.description}
-                  </p>
-
-                  <ul className="mt-4 space-y-2">
-                    {product.features.map(item => (
-                      <li
-                        key={item}
-                        className="flex items-start gap-2 text-sm text-muted-foreground"
-                      >
-                        <span className="mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <Check className="h-3.5 w-3.5" />
-                        </span>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="rounded-2xl border bg-background/70 p-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Goi da chon</span>
-                      <span className="font-medium">{product.subtitle}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Cong thanh toan</span>
-                      <span className="font-medium">payOS</span>
-                    </div>
-                    <div className="h-px bg-border" />
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">Tong thanh toan</span>
-                      <span className="text-lg font-bold text-primary">
-                        {formatVnd(product.price)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={onPay}
-                  disabled={processing}
-                  className="h-12 w-full rounded-2xl bg-gradient-to-r from-red-600 via-red-500 to-rose-500 text-white shadow-lg shadow-red-500/25"
+              {/* Error */}
+              {error != null && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300"
                 >
-                  {processing ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Dang tao link payOS...
-                    </>
-                  ) : (
-                    <>
-                      Thanh toan voi payOS
-                      <Check className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
+                  {error}
+                </motion.div>
+              )}
+
+              {/* Trust badges */}
+              <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { icon: ShieldCheck, text: "Thanh toán qua payOS bảo mật" },
+                    { icon: Lock, text: "Mã hóa SSL 256-bit" },
+                    { icon: CreditCard, text: "Không lưu thông tin thẻ" },
+                    { icon: Zap, text: "Kích hoạt tự động" },
+                  ].map(({ icon: Icon, text }) => (
+                    <div key={text} className="flex items-center gap-2 text-xs text-slate-400">
+                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
+                        <Check className="h-3 w-3 text-emerald-400" />
+                      </div>
+                      {text}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+
+            {/* ── RIGHT: Order Summary (sticky) ──────────────── */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+              className="lg:sticky lg:top-24 space-y-5"
+            >
+              <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md p-6 shadow-xl">
+                <div className="mb-5 text-sm font-semibold text-slate-300 uppercase tracking-wider">Tóm tắt đơn hàng</div>
+
+                {/* Plan header */}
+                <div className="flex items-start gap-4 pb-5 border-b border-white/10">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-indigo-500 shadow-lg shadow-rose-500/20">
+                    <Star className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-white">{product.name}</span>
+                      <span className="rounded-full bg-rose-500/20 border border-rose-500/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-300">
+                        {product.badge}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-sm text-slate-400">{product.subtitle}</div>
+                  </div>
+                </div>
+
+                {/* Features */}
+                <ul className="mt-5 space-y-2.5">
+                  {product.features.map(item => (
+                    <li key={item} className="flex items-start gap-2.5 text-sm text-slate-300">
+                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
+                        <Check className="h-2.5 w-2.5 text-emerald-400" />
+                      </span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Meta */}
+                <div className="mt-5 space-y-3 rounded-xl bg-white/5 border border-white/8 p-4">
+                  {[
+                    { label: "Chu kỳ thanh toán", value: product.billingLabel },
+                    { label: "Cổng thanh toán", value: "payOS" },
+                    { label: "Kích hoạt dự kiến", value: activationLabel },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex items-center justify-between text-sm">
+                      <span className="text-slate-400">{label}</span>
+                      <span className="font-medium text-slate-200">{value}</span>
+                    </div>
+                  ))}
+                  <div className="h-px bg-white/10" />
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-white">Tổng thanh toán</span>
+                    <span className="text-xl font-bold bg-gradient-to-r from-rose-400 to-rose-300 bg-clip-text text-transparent">
+                      {product.priceLabel}
+                    </span>
+                  </div>
+                </div>
+
+                {/* CTA */}
+                <div className="mt-5 relative group">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-rose-600 to-rose-400 rounded-xl blur opacity-50 group-hover:opacity-75 transition duration-300" />
+                  <Button
+                    onClick={onPay}
+                    disabled={processing}
+                    className="relative w-full h-12 rounded-xl bg-gradient-to-r from-rose-600 via-rose-500 to-rose-400 text-white font-semibold shadow-none border-0 hover:opacity-90 transition-opacity"
+                  >
+                    {processing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Đang tạo link payOS...
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="mr-2 h-4 w-4" />
+                        Thanh toán với payOS
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <p className="mt-3 text-center text-xs text-slate-500">
+                  Bằng cách nhấn thanh toán, bạn đồng ý với{" "}
+                  <Link href="/" className="text-rose-400 hover:underline">Điều khoản dịch vụ</Link>
+                </p>
+              </div>
+            </motion.div>
           </div>
         </div>
       </main>
@@ -312,13 +392,12 @@ export default function CheckoutPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-background py-10 md:py-14">
-          <div className="container mx-auto px-4">
-            <div className="mx-auto max-w-3xl rounded-3xl border bg-card/70 p-8 text-center shadow-sm">
-              <p className="text-sm text-muted-foreground">Dang tai trang thanh toan...</p>
-            </div>
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-rose-500 mx-auto" />
+            <p className="text-sm text-slate-400">Đang tải trang thanh toán...</p>
           </div>
-        </main>
+        </div>
       }
     >
       <CheckoutPageContent />
@@ -328,20 +407,24 @@ export default function CheckoutPage() {
 
 function CheckoutNavbar() {
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/70 backdrop-blur-md">
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center">
-          <Link href="/" className="flex items-center gap-3">
+    <header className="sticky top-0 z-50 border-b border-white/8 bg-slate-950/70 backdrop-blur-md">
+      <div className="container mx-auto px-4 max-w-6xl">
+        <div className="flex h-16 items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5">
             <Image
               src="/logo.png"
               alt="NextStep logo"
-              width={36}
-              height={36}
+              width={32}
+              height={32}
               className="rounded-md object-contain"
               priority
             />
-            <span className="text-lg font-semibold tracking-tight">NextStep</span>
+            <span className="text-lg font-bold tracking-tight text-white">NextStep</span>
           </Link>
+          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-400">
+            <Lock className="h-3 w-3 text-emerald-400" />
+            Kết nối bảo mật
+          </div>
         </div>
       </div>
     </header>
