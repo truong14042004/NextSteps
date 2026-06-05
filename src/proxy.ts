@@ -53,7 +53,7 @@ export default async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api/auth/google/start|api/auth/google/callback|api/payments/payos/webhook|_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/((?!api/auth/google/start|api/auth/google/callback|api/payments/payos/webhook|_next|robots\\.txt|sitemap\\.xml|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
     "/((?!api/auth/google/start|api/auth/google/callback|api/payments/payos/webhook)(?:api|trpc)(?:.*))",
   ],
 };
