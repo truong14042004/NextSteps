@@ -20,25 +20,6 @@ import { cacheTag } from "next/dist/server/use-cache/cache-tag"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
-const options = [
-  {
-    label: "Phân tích CV",
-    description:
-      "Nhận nhận xét chuyên gia về CV của bạn để cải thiện cơ hội lọt vào vòng phỏng vấn.",
-    href: "resume",
-  },
-  {
-    label: "Phỏng vấn với AI",
-    description: "Mô phỏng phỏng vấn thực tế với AI (Mock Interview).",
-    href: "interviews",
-  },
-  {
-    label: "Trắc nghiệm",
-    description:
-      "AI sinh bộ trắc nghiệm 30 câu, làm bài và xem điểm + giải thích.",
-    href: "quizzes",
-  },
-]
 
 export default async function JobInfoPage({
   params,
@@ -57,6 +38,26 @@ export default async function JobInfoPage({
       return jobInfo
     }
   )
+
+  const options = [
+    {
+      label: "Phân tích CV",
+      description:
+        "Nhận nhận xét chuyên gia về CV của bạn để cải thiện cơ hội lọt vào vòng phỏng vấn.",
+      href: "/app/analyze",
+    },
+    {
+      label: "Phỏng vấn với AI",
+      description: "Mô phỏng phỏng vấn thực tế với AI (Mock Interview).",
+      href: "/app/interviews",
+    },
+    {
+      label: "Trắc nghiệm",
+      description:
+        "AI sinh bộ trắc nghiệm 30 câu, làm bài và xem điểm + giải thích.",
+      href: `/app/job-infos/${jobInfoId}/quizzes`,
+    },
+  ]
 
   return (
     <div className="container my-4 space-y-4">
@@ -104,7 +105,7 @@ export default async function JobInfoPage({
           {options.map(option => (
             <Link
               className="hover:scale-[1.02] transition-[transform_opacity]"
-              href={`/app/job-infos/${jobInfoId}/${option.href}`}
+              href={option.href}
               key={option.href}
             >
               <Card className="h-full flex items-start justify-between flex-row">
