@@ -5,9 +5,9 @@ import { redirect } from "next/navigation"
 export default async function SignInPage() {
   const { userId, user } = await getCurrentUser({ allData: true })
 
-  if (userId != null) {
-    if (user?.role === "recruiter") redirect("/explore")
-    if (user?.role === "admin") redirect("/admin")
+  if (userId != null && user != null) {
+    if (user.role === "recruiter") redirect("/explore")
+    if (user.role === "admin") redirect("/admin")
     redirect("/")
   }
 
