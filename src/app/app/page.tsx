@@ -122,6 +122,7 @@ function pickNextStep({
   if (jobNoInterview) {
     return { text: `Thử mock interview cho "${jobNoInterview.name}" để rèn phản xạ trả lời.`, href: `/app/job-infos/${jobNoInterview.id}/interviews/new`, cta: "Phỏng vấn thử" }
   }
+
   if (stats.averageQuizPercent != null && stats.averageQuizPercent < 70) {
     return { text: "Điểm trung bình quiz dưới 70%. Thử làm lại bộ đề khó nhất để cải thiện.", href: "/app/quizzes", cta: "Đi tới quiz" }
   }

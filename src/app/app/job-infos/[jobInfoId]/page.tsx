@@ -22,32 +22,21 @@ import { notFound } from "next/navigation"
 
 const options = [
   {
-    label: "Answer Technical Questions",
+    label: "Phân tích CV",
     description:
-      "Challenge yourself with practice questions tailored to your job description.",
-    href: "questions",
-  },
-  {
-    label: "Take a Quiz (30 câu / 45 phút)",
-    description:
-      "AI sinh bộ trắc nghiệm 30 câu, làm bài và xem điểm + giải thích.",
-    href: "quizzes",
-  },
-  {
-    label: "Practice Interviewing",
-    description: "Simulate a real interview with AI-powered mock interviews.",
-    href: "interviews",
-  },
-  {
-    label: "Refine Your Resume",
-    description:
-      "Get expert feedback on your resume and improve your chances of landing an interview.",
+      "Nhận nhận xét chuyên gia về CV của bạn để cải thiện cơ hội lọt vào vòng phỏng vấn.",
     href: "resume",
   },
   {
-    label: "Update Job Description",
-    description: "This should only be used for minor updates.",
-    href: "edit",
+    label: "Phỏng vấn với AI",
+    description: "Mô phỏng phỏng vấn thực tế với AI (Mock Interview).",
+    href: "interviews",
+  },
+  {
+    label: "Trắc nghiệm",
+    description:
+      "AI sinh bộ trắc nghiệm 30 câu, làm bài và xem điểm + giải thích.",
+    href: "quizzes",
   },
 ]
 
