@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { getJobInfoForClient } from "@/features/jobInfos/actions";
 import {
   SparklesIcon,
   HistoryIcon,
@@ -58,12 +60,30 @@ function formatUsageCount(value: number | null) {
   return value == null ? "Khong gioi han" : value.toLocaleString("vi-VN");
 }
 
-export default function InterviewPage() {
+function InterviewPageContent() {
   const [selectedJobInfo, setSelectedJobInfo] =
     useState<InterviewJobInfo | null>(null);
   const [sourceMode, setSourceMode] = useState<SourceMode>("previous");
 
   const [usage, setUsage] = useState<UsageInfo>(defaultUsage);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const jobId = searchParams.get("jobId");
+    if (jobId) {
+      getJobInfoForClient(jobId).then((job) => {
+        if (job) {
+          setSelectedJobInfo({
+            id: job.id,
+            title: job.title || "",
+            name: job.name,
+            experienceLevel: job.experienceLevel,
+            description: job.description,
+          });
+        }
+      });
+    }
+  }, [searchParams]);
 
   const percent = getUsagePercent(usage);
 
@@ -388,4 +408,12 @@ export default function InterviewPage() {
       </main>
     </div>
   );
+}
+
+export default function InterviewPage() {
+  return (
+    <Suspense fallback={<div>Đang tải...</div>}>
+      <InterviewPageContent />
+    </Suspense>
+  )
 }

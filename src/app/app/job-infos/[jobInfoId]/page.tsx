@@ -44,12 +44,12 @@ export default async function JobInfoPage({
       label: "Phân tích CV",
       description:
         "Nhận nhận xét chuyên gia về CV của bạn để cải thiện cơ hội lọt vào vòng phỏng vấn.",
-      href: "/app/analyze",
+      href: `/app/analyze?jobId=${jobInfoId}`,
     },
     {
       label: "Phỏng vấn với AI",
       description: "Mô phỏng phỏng vấn thực tế với AI (Mock Interview).",
-      href: "/app/interview",
+      href: `/app/interview?jobId=${jobInfoId}`,
     },
     {
       label: "Trắc nghiệm",

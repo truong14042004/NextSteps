@@ -199,8 +199,15 @@ function UploadCard({
 
 export default function CVJDAnalysisPage({
   exploreDraft = null,
+  jobDraft = null,
 }: {
   exploreDraft?: ExploreDraft | null;
+  jobDraft?: {
+    id: string;
+    jobTitle: string;
+    experienceLevel: ExperienceLevel;
+    jobDescription: string;
+  } | null;
 }) {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -244,12 +251,17 @@ export default function CVJDAnalysisPage({
   });
 
   useEffect(() => {
-    if (!exploreDraft) return;
-
-    form.setValue("jobTitle", exploreDraft.jobTitle);
-    form.setValue("jobDescription", exploreDraft.jobDescription);
-    form.setValue("experienceLevel", "fresh");
-  }, [exploreDraft, form]);
+    if (exploreDraft) {
+      form.setValue("jobTitle", exploreDraft.jobTitle);
+      form.setValue("jobDescription", exploreDraft.jobDescription);
+      form.setValue("experienceLevel", "fresh");
+    } else if (jobDraft) {
+      form.setValue("jobTitle", jobDraft.jobTitle);
+      form.setValue("jobDescription", jobDraft.jobDescription);
+      form.setValue("experienceLevel", jobDraft.experienceLevel);
+      jobInfoIdRef.current = jobDraft.id;
+    }
+  }, [exploreDraft, jobDraft, form]);
 
   const {
     object: aiAnalysis,
@@ -603,6 +615,26 @@ export default function CVJDAnalysisPage({
                       <Button asChild variant="outline" size="sm" className="w-fit">
                         <Link href={`/explore/${exploreDraft.postId}`}>
                           Quay lại bài viết
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                {jobDraft && (
+                  <div className="mb-6 rounded-2xl border border-primary/15 bg-primary/5 p-4 text-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="font-medium text-foreground">
+                          Bạn đang phân tích CV cho vị trí đã lưu.
+                        </p>
+                        <p className="mt-1 text-muted-foreground">
+                          {jobDraft.jobTitle}
+                        </p>
+                      </div>
+                      <Button asChild variant="outline" size="sm" className="w-fit">
+                        <Link href={`/app/job-infos/${jobDraft.id}`}>
+                          Quay lại chi tiết vị trí
                         </Link>
                       </Button>
                     </div>

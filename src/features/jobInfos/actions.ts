@@ -200,7 +200,7 @@ export async function saveAnalysisResult(
   await updateJobInfoDb(id, { analysisResult })
 }
 
-async function getJobInfo(id: string, userId: string) {
+export async function getJobInfo(id: string, userId: string) {
   "use cache"
   cacheTag(getJobInfoIdTag(id))
 
@@ -234,4 +234,10 @@ export async function updateJobInfoDirect(
   })
 
   return { error: false }
+}
+
+export async function getJobInfoForClient(id: string) {
+  const { userId } = await getCurrentUser()
+  if (userId == null) return null
+  return getJobInfo(id, userId)
 }
