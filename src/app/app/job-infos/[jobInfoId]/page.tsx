@@ -49,7 +49,7 @@ export default async function JobInfoPage({
     {
       label: "Phỏng vấn với AI",
       description: "Mô phỏng phỏng vấn thực tế với AI (Mock Interview).",
-      href: "/app/interviews",
+      href: "/app/interview",
     },
     {
       label: "Trắc nghiệm",
