@@ -11,7 +11,7 @@ function Counter({ from, to, suffix = "", duration = 2 }: { from: number; to: nu
 
   useEffect(() => {
     if (!isInView) return;
-    
+
     let startTime: number | null = null;
     const animate = (currentTime: number) => {
       if (!startTime) startTime = currentTime;
@@ -19,7 +19,7 @@ function Counter({ from, to, suffix = "", duration = 2 }: { from: number; to: nu
       // easeOutExpo
       const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
       setCount(Math.floor(easeProgress * (to - from) + from));
-      
+
       if (progress < 1) {
         requestAnimationFrame(animate);
       }
@@ -35,9 +35,9 @@ function Counter({ from, to, suffix = "", duration = 2 }: { from: number; to: nu
 }
 
 const stats = [
-  { value: 10000, suffix: "+", label: "Practice Interviews", color: "text-rose-400" },
-  { value: 5000, suffix: "+", label: "Students", color: "text-indigo-400" },
-  { value: 1000, suffix: "+", label: "Job Roles", color: "text-emerald-400" },
+  { value: 1000, suffix: "+", label: "Practice Interviews", color: "text-rose-400" },
+  { value: 100, suffix: "+", label: "Students", color: "text-indigo-400" },
+  { value: 50, suffix: "+", label: "Interview Templates", color: "text-emerald-400" },
   { value: 95, suffix: "%", label: "Success Satisfaction", color: "text-amber-400" },
 ];
 

@@ -84,9 +84,9 @@ function computeXP(stats: DashboardStats): number {
 /** Compute level (1-20) from XP */
 function computeLevel(xp: number): { level: number; label: string } {
   const levels = [
-    { threshold: 0,    label: "Career Starter" },
-    { threshold: 200,  label: "CV Builder" },
-    { threshold: 500,  label: "Quiz Apprentice" },
+    { threshold: 0, label: "Career Starter" },
+    { threshold: 200, label: "CV Builder" },
+    { threshold: 500, label: "Quiz Apprentice" },
     { threshold: 1000, label: "Interview Prep" },
     { threshold: 2000, label: "Career Builder" },
     { threshold: 3500, label: "Top Candidate" },

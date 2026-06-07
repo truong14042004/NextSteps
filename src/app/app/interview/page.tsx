@@ -11,14 +11,18 @@ import {
   MessageSquareTextIcon,
   BriefcaseIcon,
   AudioLinesIcon,
-  CreditCardIcon,
   CheckCircle2Icon,
   WandSparklesIcon,
   TargetIcon,
+  FlameIcon,
+  TrophyIcon,
+  ActivityIcon,
+  LightbulbIcon,
+  CheckIcon,
+  MicIcon,
+  CompassIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { PreviousAnalysisOption } from "./_PreviousAnalysisOption";
 import { QuickInterviewOption } from "./_QuickInterviewOption";
 import { VapiInterviewCall } from "./_VapiInterviewCall";
@@ -42,13 +46,22 @@ type UsageInfo = {
   resetText: string;
 };
 
+
 const defaultUsage: UsageInfo = {
   used: 0,
   total: 0,
   remaining: 0,
   planName: "Free",
-  resetText: "Dang tai...",
+  resetText: "Đang tải...",
 };
+
+
+type InterviewStats = {
+  latestScore: number | null;
+  pacingScore: number | null;
+  streakDays: number;
+};
+
 
 function getUsagePercent(usage: UsageInfo) {
   return usage.total != null && usage.total > 0
@@ -64,8 +77,8 @@ function InterviewPageContent() {
   const [selectedJobInfo, setSelectedJobInfo] =
     useState<InterviewJobInfo | null>(null);
   const [sourceMode, setSourceMode] = useState<SourceMode>("previous");
-
   const [usage, setUsage] = useState<UsageInfo>(defaultUsage);
+  const [stats, setStats] = useState<any>(null);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -100,7 +113,21 @@ function InterviewPageContent() {
       if (!ignore && data.usage != null) setUsage(data.usage);
     }
 
+    async function loadStats() {
+      try {
+        const response = await fetch("/api/user/interview-stats", {
+          cache: "no-store",
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!ignore) setStats(data);
+      } catch (err) {
+        console.error("Failed to load interview stats", err);
+      }
+    }
+
     loadUsage();
+    loadStats();
     return () => {
       ignore = true;
     };
@@ -115,297 +142,351 @@ function InterviewPageContent() {
     );
   }
 
+  // Derived pacing status
+  const getPacingText = () => {
+    if (!stats) return "Đang tải...";
+    if (stats.pacingScore === null) {
+      if (usage.used === 0) return "Chưa bắt đầu";
+      return "Đang đánh giá";
+    }
+    if (stats.pacingScore >= 85) return "Xuất sắc";
+    if (stats.pacingScore >= 70) return "Tốt";
+    if (stats.pacingScore >= 50) return "Tạm ổn";
+    return "Cần rèn luyện";
+  };
+
+  const getPacingSubtitle = () => {
+    if (!stats) return "Đang tải dữ liệu...";
+    if (stats.pacingScore === null) {
+      return "Luyện tập để đo phản xạ";
+    }
+    if (stats.pacingScore >= 85) return "Tốc độ trả lời rất tốt";
+    if (stats.pacingScore >= 70) return "Nhịp độ & phản xạ ổn định";
+    if (stats.pacingScore >= 50) return "Đang tiến bộ tốt";
+    return "Hãy tập trung luyện thêm";
+  };
+
   return (
-    <div className="bg-[radial-gradient(circle_at_top,rgba(179,0,0,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(124,58,237,0.05),transparent_24%),linear-gradient(to_bottom,var(--background),var(--background))]">
-      <main className="container py-8 md:py-10">
-        <section className="mb-8">
-          <div className="rounded-[32px] border border-primary/10 bg-white/85 p-6 shadow-sm backdrop-blur dark:bg-card/80 md:p-8">
-            <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-              <div className="max-w-3xl">
-                <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
-                  <SparklesIcon className="size-3.5" />
-                  AI Mock Interview
+    <div className="container my-6 space-y-8 max-w-6xl">
+
+      {/* Hero Section */}
+      <section className="relative overflow-hidden rounded-[32px] border border-primary/10 bg-gradient-to-br from-white via-red-50/20 to-violet-50/30 p-6 shadow-sm dark:from-card dark:via-primary/5 dark:to-secondary/5 md:p-8">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(179,0,0,0.05),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(124,58,237,0.05),transparent_40%)]" />
+
+        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-3xl space-y-4">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary">
+              <SparklesIcon className="size-3.5 animate-pulse" />
+              AI Mock Interview
+            </div>
+
+            <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-5xl">
+              Phỏng vấn với AI
+            </h1>
+
+            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
+              Luyện phỏng vấn thực tế với AI, nhận câu hỏi sát vị trí ứng tuyển và feedback chi tiết sau từng buổi luyện tập. Trải nghiệm mô phỏng phòng phỏng vấn sinh động ngay tại nhà.
+            </p>
+
+            <div className="flex flex-wrap gap-2 pt-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                <MicIcon className="size-3.5" />
+                Voice interview
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3.5 py-1.5 text-xs font-medium text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
+                <CheckCircle2Icon className="size-3.5" />
+                Feedback chi tiết
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-3.5 py-1.5 text-xs font-medium text-violet-700 dark:bg-violet-950/30 dark:text-violet-400">
+                <BriefcaseIcon className="size-3.5" />
+                Câu hỏi theo CV/JD
+              </span>
+            </div>
+          </div>
+
+          {/* Desktop Visual Element */}
+          <div className="hidden lg:flex items-center justify-center pr-4">
+            <div className="relative flex size-32 items-center justify-center rounded-[28px] bg-gradient-to-br from-primary/10 to-violet-500/20 p-1 shadow-inner ring-8 ring-white/50 dark:ring-card/50">
+              <div className="absolute inset-0 animate-ping rounded-[28px] bg-primary/5 opacity-50" />
+              <div className="flex size-full items-center justify-center rounded-[24px] bg-white shadow dark:bg-card">
+                <AudioLinesIcon className="size-12 text-primary animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Progress / Practice Summary Section */}
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Card 1: Buổi phỏng vấn */}
+        <div className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-border/60 dark:bg-card">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-muted-foreground">Buổi phỏng vấn</span>
+            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/5 text-primary">
+              <TrophyIcon className="size-4.5" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <span className="text-2xl font-bold text-foreground">{usage.used || 0}</span>
+            <span className="ml-1.5 text-xs text-muted-foreground">đã hoàn thành</span>
+          </div>
+          <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-500"
+              style={{ width: `${Math.min(((usage.used || 0) / 10) * 100, 100)}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Card 2: Điểm gần nhất */}
+        <div className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-border/60 dark:bg-card">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-muted-foreground">Điểm gần nhất</span>
+            <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400">
+              <TargetIcon className="size-4.5" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <span className="text-2xl font-bold text-foreground">
+              {stats?.latestScore != null ? `${stats.latestScore}/100` : "--"}
+            </span>
+            <span className="ml-1.5 text-xs text-muted-foreground">
+              {stats?.latestScore != null
+                ? stats.latestScore >= 90
+                  ? "Đạt mục tiêu 🎉"
+                  : "Mục tiêu: >90"
+                : "Chưa có đánh giá"}
+            </span>
+          </div>
+          <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+              style={{ width: `${stats?.latestScore ?? 0}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Card 3: Phản xạ trả lời */}
+        <div className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-border/60 dark:bg-card">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-muted-foreground">Phản xạ trả lời</span>
+            <div className="flex size-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400">
+              <ActivityIcon className="size-4.5" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <span className="text-2xl font-bold text-foreground">{getPacingText()}</span>
+            <span className="ml-1.5 text-xs text-muted-foreground">{getPacingSubtitle()}</span>
+          </div>
+          <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
+            <div
+              className="h-full rounded-full bg-blue-500 transition-all duration-500"
+              style={{ width: `${stats?.pacingScore ?? (stats?.latestScore ?? 0)}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Card 4: Streak luyện tập */}
+        <div className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-border/60 dark:bg-card">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-muted-foreground">Streak luyện tập</span>
+            <div className="flex size-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400">
+              <FlameIcon className="size-4.5 animate-pulse" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <span className="text-2xl font-bold text-foreground">
+              {stats?.streakDays != null ? `${stats.streakDays} ngày` : "--"}
+            </span>
+            <span className="ml-1.5 text-xs text-muted-foreground">
+              {stats && stats.streakDays > 0 ? "Duy trì đều đặn" : "Bắt đầu luyện tập ngay"}
+            </span>
+          </div>
+          <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
+            <div
+              className="h-full rounded-full bg-amber-500 transition-all duration-500"
+              style={{ width: `${stats?.streakDays ? Math.min((stats.streakDays / 7) * 100, 100) : 0}%` }}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Main Content & Sidebar Layout */}
+      <section className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
+
+        {/* Main Interview Setup Section */}
+        <div className="space-y-6 self-start min-w-0">
+          <div className="rounded-[28px] border border-slate-100 bg-white p-6 shadow-sm dark:border-border/60 dark:bg-card/80 md:p-8">
+            <div className="mb-8 text-center md:text-left">
+              <h2 className="text-2xl font-bold text-foreground">
+                Bạn muốn bắt đầu như thế nào?
+              </h2>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Chọn phương thức thiết lập câu hỏi phù hợp nhất cho buổi phỏng vấn giả định.
+              </p>
+            </div>
+
+            {/* Option Selector Cards */}
+            <div className="grid gap-4 md:grid-cols-2 mb-8">
+              {/* Option 1: Dữ liệu đã phân tích */}
+              <button
+                type="button"
+                onClick={() => setSourceMode("previous")}
+                className={cn(
+                  "group relative flex flex-col items-start rounded-2xl border p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:shadow-sm",
+                  sourceMode === "previous"
+                    ? "border-primary/30 bg-primary/5 dark:bg-primary/10"
+                    : "border-slate-100 bg-slate-50/50 hover:border-slate-200 dark:border-border dark:bg-background/40"
+                )}
+              >
+                <div
+                  className={cn(
+                    "mb-4 flex size-12 items-center justify-center rounded-xl border transition-colors",
+                    sourceMode === "previous"
+                      ? "border-primary/20 bg-white text-primary dark:bg-card"
+                      : "border-slate-200 bg-white text-slate-500 dark:border-border dark:bg-card dark:text-muted-foreground"
+                  )}
+                >
+                  <HistoryIcon className="size-5" />
                 </div>
 
-                <h1 className="mt-4 text-3xl font-bold tracking-tight text-foreground md:text-5xl">
-                  Phỏng vấn với AI
-                </h1>
+                <h3 className="text-lg font-bold text-foreground">
+                  Dùng CV/JD đã phân tích
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  AI sẽ tạo câu hỏi sát với CV, JD và vị trí bạn đã lưu.
+                </p>
 
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
-                  Luyện phỏng vấn thực tế với AI, nhận câu hỏi bám sát vị trí
-                  ứng tuyển và cải thiện phản xạ trả lời trước buổi phỏng vấn
-                  thật.
+                {sourceMode === "previous" && (
+                  <div className="absolute top-4 right-4 flex size-5 items-center justify-center rounded-full bg-primary text-white">
+                    <CheckIcon className="size-3" />
+                  </div>
+                )}
+              </button>
+
+              {/* Option 2: Tạo buổi phỏng vấn mới */}
+              <button
+                type="button"
+                onClick={() => setSourceMode("new")}
+                className={cn(
+                  "group relative flex flex-col items-start rounded-2xl border p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:shadow-sm",
+                  sourceMode === "new"
+                    ? "border-violet-500/30 bg-violet-50/30 dark:bg-violet-950/20"
+                    : "border-slate-100 bg-slate-50/50 hover:border-slate-200 dark:border-border dark:bg-background/40"
+                )}
+              >
+                <div
+                  className={cn(
+                    "mb-4 flex size-12 items-center justify-center rounded-xl border transition-colors",
+                    sourceMode === "new"
+                      ? "border-violet-500/20 bg-white text-violet-600 dark:bg-card"
+                      : "border-slate-200 bg-white text-slate-500 dark:border-border dark:bg-card dark:text-muted-foreground"
+                  )}
+                >
+                  <PlusCircleIcon className="size-5" />
+                </div>
+
+                <h3 className="text-lg font-bold text-foreground">
+                  Tạo buổi phỏng vấn mới
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  Nhập nhanh vị trí ứng tuyển để bắt đầu luyện tập ngay.
+                </p>
+
+                {sourceMode === "new" && (
+                  <div className="absolute top-4 right-4 flex size-5 items-center justify-center rounded-full bg-violet-600 text-white">
+                    <CheckIcon className="size-3" />
+                  </div>
+                )}
+              </button>
+            </div>
+
+            {/* Form Option Render */}
+            <div>
+              {sourceMode === "previous" ? (
+                <PreviousAnalysisOption onSelect={setSelectedJobInfo} />
+              ) : (
+                <QuickInterviewOption onSelect={setSelectedJobInfo} />
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Sidebar / Coach Panel */}
+        <aside className="flex flex-col gap-6 lg:sticky lg:top-8 self-start">
+          {/* AI Career Coach Panel */}
+          <div className="rounded-[28px] border border-slate-100 bg-white p-6 shadow-sm dark:border-border/60 dark:bg-card">
+            <div className="flex items-center gap-3">
+              <div className="flex size-11 items-center justify-center rounded-xl bg-violet-50 text-violet-600 dark:bg-violet-950/30 dark:text-violet-400">
+                <WandSparklesIcon className="size-5.5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-foreground">AI Interview Coach</h3>
+                <p className="text-xs text-muted-foreground">Người bạn đồng hành luyện tập</p>
+              </div>
+            </div>
+
+            {/* Coach Checklist */}
+            <div className="mt-6 space-y-3.5">
+              <div className="flex items-start gap-3 rounded-xl border border-slate-50 bg-slate-50/30 p-3.5 dark:border-border/30 dark:bg-background/20">
+                <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400">
+                  <CheckCircle2Icon className="size-3.5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Chuẩn bị câu trả lời theo STAR</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Situation (Tình huống) - Task (Nhiệm vụ) - Action (Hành động) - Result (Kết quả).</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-xl border border-slate-50 bg-slate-50/30 p-3.5 dark:border-border/30 dark:bg-background/20">
+                <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400">
+                  <CheckCircle2Icon className="size-3.5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Luyện phản xạ với tình huống</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Tập trung lắng nghe và trả lời trôi chảy, tránh các từ ậm ừ.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-xl border border-slate-50 bg-slate-50/30 p-3.5 dark:border-border/30 dark:bg-background/20">
+                <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400">
+                  <CheckCircle2Icon className="size-3.5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Nhận feedback chi tiết</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Đánh giá về cả nội dung chuyên môn lẫn sự tự tin trong giọng nói.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-xl border border-slate-50 bg-slate-50/30 p-3.5 dark:border-border/30 dark:bg-background/20">
+                <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400">
+                  <CheckCircle2Icon className="size-3.5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Gợi ý cải thiện rõ ràng</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Chỉ ra điểm cần khắc phục và phiên bản trả lời tốt hơn tham khảo.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Daily Suggestion Card */}
+          <div className="rounded-[28px] border border-amber-100 bg-gradient-to-br from-amber-50 to-orange-50 p-6 shadow-sm dark:border-amber-950/30 dark:from-amber-950/10 dark:to-orange-950/10">
+            <div className="flex items-start gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white shadow-xs">
+                <LightbulbIcon className="size-5" />
+              </div>
+              <div>
+                <h4 className="text-base font-bold text-amber-900 dark:text-amber-400">Gợi ý hôm nay</h4>
+                <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
+                  Hãy luyện 1 buổi phỏng vấn ngắn 5–10 phút cho vị trí bạn đang ứng tuyển gần nhất để duy trì phong độ và phản xạ tốt nhé!
                 </p>
               </div>
-
-              <div className="flex flex-wrap gap-3">
-                <div className="rounded-2xl border border-primary/10 bg-primary/5 px-4 py-3">
-                  <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                    <MessageSquareTextIcon className="size-4" />
-                    Câu hỏi sát vị trí
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-secondary/20 bg-secondary px-4 py-3">
-                  <div className="flex items-center gap-2 text-sm font-medium text-secondary-foreground">
-                    <AudioLinesIcon className="size-4" />
-                    Mô phỏng hội thoại thật
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <div className="relative overflow-hidden rounded-[28px] border border-primary/10 bg-gradient-to-r from-primary/5 via-white to-secondary/10 p-5 shadow-sm dark:from-primary/10 dark:via-card dark:to-secondary/10">
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(179,0,0,0.10),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(109,40,217,0.08),transparent_28%)]" />
-
-                <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="rounded-2xl bg-white/90 p-3 shadow-sm ring-1 ring-primary/10 dark:bg-background/80">
-                      <SparklesIcon className="size-5 text-primary" />
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-base font-semibold text-foreground">
-                          {formatUsageCount(usage.remaining)}/{formatUsageCount(usage.total)} lượt phỏng vấn còn lại
-                        </p>
-                        <Badge className="rounded-full bg-primary text-primary-foreground hover:bg-primary">
-                          {usage.planName}
-                        </Badge>
-                      </div>
-
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Đã dùng {usage.used}/{formatUsageCount(usage.total)} lượt •{" "}
-                        {usage.resetText}
-                      </p>
-
-                      <div className="mt-3 h-2.5 w-full max-w-md overflow-hidden rounded-full bg-primary/10">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-primary via-[#c83a3a] to-secondary transition-all"
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Button asChild className="btn-cta rounded-xl">
-                      <Link href="/#pricing">Mua thêm lượt</Link>
-                    </Button>
-                    <Button
-                      asChild
-                      variant="outline"
-                      className="rounded-xl border-primary/15 bg-white/80 hover:bg-primary/5 dark:bg-background/40"
-                    >
-                      <Link href="/#pricing">
-                        <CreditCardIcon className="mr-2 size-4" />
-                        Xem bảng giá
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
-        </section>
+        </aside>
 
-        <section className="grid items-start gap-8 xl:grid-cols-[1.18fr_0.82fr]">
-          <div className="min-w-0 space-y-6">
-            <div className="rounded-[32px] border border-primary/10 bg-white/90 p-6 shadow-sm dark:bg-card/80 md:p-7">
-              <div className="mb-6">
-                <div className="flex items-start gap-3">
-                  <div className="rounded-2xl bg-gradient-to-br from-primary to-[#d14b4b] p-2.5 text-white shadow-sm">
-                    {sourceMode === "previous" ? (
-                      <HistoryIcon className="size-5" />
-                    ) : (
-                      <PlusCircleIcon className="size-5" />
-                    )}
-                  </div>
-
-                  <div>
-                    <h2 className="text-xl font-semibold">
-                      {sourceMode === "previous"
-                        ? "Bắt đầu từ dữ liệu đã phân tích"
-                        : "Tạo buổi phỏng vấn mới"}
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {sourceMode === "previous"
-                        ? "Chọn CV/JD đã có để bắt đầu nhanh hơn với ngữ cảnh sát hơn."
-                        : "Nhập nhanh thông tin vị trí để AI bắt đầu một buổi phỏng vấn mới."}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-6 grid gap-4 md:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => setSourceMode("previous")}
-                  className={cn(
-                    "group min-h-[168px] rounded-[26px] border p-5 text-left transition-all",
-                    sourceMode === "previous"
-                      ? "border-primary/25 bg-primary/5 shadow-sm"
-                      : "border-border bg-background hover:border-primary/20 hover:bg-primary/5",
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "mb-5 flex size-12 items-center justify-center rounded-2xl border transition-colors",
-                      sourceMode === "previous"
-                        ? "border-primary/15 bg-primary/10 text-primary"
-                        : "border-border bg-muted text-muted-foreground",
-                    )}
-                  >
-                    <HistoryIcon className="size-5" />
-                  </div>
-
-                  <h3 className="text-lg font-semibold">Dữ liệu đã có</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Sử dụng CV/JD đã phân tích trước đó để AI hiểu rõ ngữ cảnh
-                    của bạn hơn.
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSourceMode("new")}
-                  className={cn(
-                    "group min-h-[168px] rounded-[26px] border p-5 text-left transition-all",
-                    sourceMode === "new"
-                      ? "border-primary/25 bg-primary/5 shadow-sm"
-                      : "border-border bg-background hover:border-primary/20 hover:bg-primary/5",
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "mb-5 flex size-12 items-center justify-center rounded-2xl border transition-colors",
-                      sourceMode === "new"
-                        ? "border-primary/15 bg-primary/10 text-primary"
-                        : "border-border bg-muted text-muted-foreground",
-                    )}
-                  >
-                    <PlusCircleIcon className="size-5" />
-                  </div>
-
-                  <h3 className="text-lg font-semibold">Phỏng vấn mới</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Tạo nhanh buổi phỏng vấn mới bằng cách nhập vị trí và thông
-                    tin cần thiết.
-                  </p>
-                </button>
-              </div>
-
-              <div className="min-w-0">
-                {sourceMode === "previous" ? (
-                  <PreviousAnalysisOption onSelect={setSelectedJobInfo} />
-                ) : (
-                  <QuickInterviewOption onSelect={setSelectedJobInfo} />
-                )}
-              </div>
-            </div>
-          </div>
-
-          <aside className="min-w-0 space-y-6 xl:self-start">
-            <div className="rounded-[32px] border border-secondary/20 bg-gradient-to-br from-secondary/10 via-white to-primary/5 p-6 shadow-sm dark:from-secondary/10 dark:via-card dark:to-primary/10">
-              <div className="flex items-start gap-3">
-                <div className="rounded-2xl bg-gradient-to-br from-fuchsia-500 to-amber-400 p-2.5 text-white shadow-sm">
-                  <WandSparklesIcon className="size-5" />
-                </div>
-
-                <div>
-                  <h3 className="text-xl font-semibold">
-                    Sau khi phân tích bạn nhận được gì?
-                  </h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Kết quả rõ ràng, gọn và hữu ích để tối ưu CV trước khi ứng
-                    tuyển.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-5 space-y-3">
-                <div className="rounded-2xl border border-border bg-white/80 p-4 dark:bg-background/50">
-                  <p className="font-medium">
-                    Câu hỏi sát với vị trí ứng tuyển
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    AI đặt câu hỏi dựa trên vị trí, kinh nghiệm và mô tả công
-                    việc của bạn.
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-border bg-white/80 p-4 dark:bg-background/50">
-                  <p className="font-medium">Luyện phản xạ trả lời phỏng vấn</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Tập trả lời mạch lạc và tự tin hơn trước buổi phỏng vấn
-                    thật.
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-border bg-white/80 p-4 dark:bg-background/50">
-                  <p className="font-medium">
-                    Nhận feedback sau mỗi câu trả lời
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    AI đánh giá câu trả lời và gợi ý cách cải thiện để bạn trả
-                    lời tốt hơn.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-[32px] border border-amber-200/60 bg-gradient-to-r from-amber-50 via-rose-50 to-violet-50 p-6 shadow-sm dark:border-amber-900/30 dark:from-amber-950/10 dark:via-rose-950/10 dark:to-violet-950/10">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-xl font-semibold">
-                    Cần thêm lượt phân tích?
-                  </h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Mua lẻ theo nhu cầu hoặc nâng cấp gói tháng để dùng nhiều
-                    hơn.
-                  </p>
-                </div>
-
-                <Badge className="rounded-full bg-gradient-to-r from-fuchsia-500 to-amber-400 text-white hover:from-fuchsia-500 hover:to-amber-400">
-                  15.000đ/lượt
-                </Badge>
-              </div>
-
-              <div className="mt-5 space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <CheckCircle2Icon className="size-4 text-primary" />
-                  Mua thêm lượt ngay khi cần
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <TargetIcon className="size-4 text-primary" />
-                  Phù hợp cho luyện tập theo từng đợt ứng tuyển
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <BriefcaseIcon className="size-4 text-primary" />
-                  Linh hoạt giữa mua lẻ và nâng cấp gói
-                </div>
-              </div>
-
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <Button
-                  asChild
-                  className="rounded-2xl bg-violet-600 hover:bg-violet-700"
-                >
-                  <Link href="/#pricing">Mua thêm lượt</Link>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="rounded-2xl bg-white/70 dark:bg-background/40"
-                >
-                  <Link href="/#pricing">Xem bảng giá</Link>
-                </Button>
-              </div>
-            </div>
-          </aside>
-        </section>
-      </main>
+      </section>
     </div>
   );
 }

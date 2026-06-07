@@ -22,7 +22,6 @@ import {
   HistoryIcon,
 } from "lucide-react";
 import { InterviewJobInfo } from "./page";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -96,7 +95,7 @@ export function PreviousAnalysisOption({
 
   return (
     <div className="space-y-4">
-      <ScrollArea className="h-[520px] pr-4">
+      <div className="max-h-[560px] overflow-y-auto pr-1 -mr-1">
         <div className="space-y-4">
           {jobInfos.map((jobInfo) => {
             const isExpanded = expandedJobId === jobInfo.id;
@@ -310,7 +309,7 @@ export function PreviousAnalysisOption({
             );
           })}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
