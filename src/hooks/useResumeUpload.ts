@@ -17,7 +17,7 @@ export function useResumeUpload() {
       }
       return;
     }
-
+    if (!file) return;
     setResumeFile(file);
     toast.success(`Đã chọn CV "${file.name}"`);
   }, []);
