@@ -73,7 +73,7 @@ export function QuotaBars({ quotaResume, quotaQuestion, quotaInterview, quotaQui
     <section>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Lượt sử dụng</h2>
-        <Link href="/app/upgrade" className="text-xs text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 transition-colors font-medium">
+        <Link href="/#pricing" className="text-xs text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 transition-colors font-medium">
           Nâng cấp →
         </Link>
       </div>

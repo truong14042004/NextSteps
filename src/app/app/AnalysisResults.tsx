@@ -13,20 +13,22 @@ import {
   AlertTriangleIcon,
   XCircleIcon,
   SparklesIcon,
-  BriefcaseIcon,
   BrainCircuitIcon,
   ArrowRightIcon,
-  FileTextIcon,
   AwardIcon,
   ZapIcon,
   BookOpenIcon,
   MicIcon,
-  HelpCircleIcon,
   SmileIcon,
   FrownIcon,
+  TrendingUpIcon,
+  CheckIcon,
+  XIcon,
+  AlertOctagonIcon,
+  HelpCircleIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import z from "zod";
 
 type Keys = Exclude<keyof z.infer<typeof aiAnalyzeSchema>, "overallScore">;
@@ -42,6 +44,8 @@ export function AnalysisResults({
   isLoading,
   jobInfoId,
 }: AnalysisResultsProps) {
+  const [activeTab, setActiveTab] = useState("overview");
+
   const sections: Record<Keys, string> = {
     ats: "Tương thích ATS",
     jobMatch: "Mức độ phù hợp công việc",
@@ -102,12 +106,34 @@ export function AnalysisResults({
   const overallScore = aiAnalysis?.overallScore ?? 0;
   const atsScore = aiAnalysis?.ats?.score ?? 0;
   const matchScore = aiAnalysis?.jobMatch?.score ?? 0;
+  const readinessScore = Math.min(Math.round(((overallScore + matchScore) / 2) * 10), 100);
+
+  // Derive dynamic details for AI Coach Summary
+  const strengthsList = useMemo(() => strengths.slice(0, 3).map((s) => s.name), [strengths]);
+  const weaknessesList = useMemo(
+    () => improvements.filter((i) => i.type === "major-improvement").slice(0, 3).map((i) => i.name),
+    [improvements]
+  );
+  const missingSkillsList = useMemo(() => {
+    // Collect feedbacks from keywordCoverage or jobMatch that are improvements
+    const keywordsFeedback = aiAnalysis?.keywordCoverage?.feedback ?? [];
+    const matchFeedback = aiAnalysis?.jobMatch?.feedback ?? [];
+    const merged = [...keywordsFeedback, ...matchFeedback];
+    return merged
+      .filter((item) => item?.type === "major-improvement" || item?.type === "minor-improvement")
+      .slice(0, 3)
+      .map((item) => item?.name ?? "");
+  }, [aiAnalysis]);
+
+  const proposedRecommendations = useMemo(() => {
+    return improvements.slice(0, 3).map((i) => i.message);
+  }, [improvements]);
 
   if (isLoading) {
     return (
       <div className="space-y-6 animate-pulse">
-        <div className="grid gap-6 md:grid-cols-3">
-          {[1, 2, 3].map((i) => (
+        <div className="grid gap-6 md:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
             <div key={i} className="rounded-[24px] border border-border bg-card p-6">
               <Skeleton className="h-4 w-32 mb-4" />
               <div className="flex items-center gap-4">
@@ -134,173 +160,241 @@ export function AnalysisResults({
 
   if (!aiAnalysis) return null;
 
+  // Color helper for progress bar
+  const getProgressBarColor = (score: number, max = 10) => {
+    const ratio = score / max;
+    if (ratio >= 0.8) return "bg-emerald-500";
+    if (ratio >= 0.6) return "bg-amber-500";
+    return "bg-primary"; // primary #b30500 red color for warnings/lows
+  };
+
   return (
     <div className="space-y-6">
-      {/* Overview Metric Widgets */}
-      <div className="grid gap-4 md:grid-cols-3 md:items-stretch">
-        {/* Overall Score */}
-        <div className="group relative flex flex-col overflow-hidden rounded-[24px] border border-border bg-gradient-to-br from-primary/5 via-card to-orange-500/[0.01] p-6 shadow-sm">
+      {/* 4 Summary Score Cards (same style as Interview KPI cards) */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Card 1: Overall Score */}
+        <div className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-border/60 dark:bg-card">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Điểm đánh giá tổng quát</h4>
-            <SparklesIcon className="size-4 text-primary" />
+            <span className="text-sm font-semibold text-muted-foreground">Overall Score</span>
+            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/5 text-primary">
+              <SparklesIcon className="size-4.5" />
+            </div>
           </div>
-          <div className="mt-4 flex items-center gap-4">
-            <div className="relative flex size-16 items-center justify-center">
-              <svg className="size-full -rotate-90" viewBox="0 0 36 36">
-                <path
-                  className="text-muted/60 dark:text-muted/30"
-                  strokeWidth="3.5"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                <path
-                  className="text-primary transition-all duration-1000 ease-out"
-                  strokeWidth="3.5"
-                  strokeDasharray={`${overallScore * 10}, 100`}
-                  strokeLinecap="round"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-              </svg>
-              <div className="absolute text-base font-black text-primary">
-                {overallScore}
-              </div>
-            </div>
-            <div>
-              <p className="text-2xl font-black text-foreground">{overallScore}/10</p>
-              <p className="text-[10px] text-muted-foreground font-medium">Chỉ số đánh giá tổng hợp AI</p>
-            </div>
+          <div className="mt-4">
+            <span className="text-2xl font-bold text-foreground">{overallScore}/10</span>
+            <span className="ml-1.5 text-xs text-muted-foreground">Chỉ số đánh giá tổng hợp</span>
+          </div>
+          <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
+            <div
+              className={cn("h-full rounded-full transition-all duration-500", getProgressBarColor(overallScore))}
+              style={{ width: `${overallScore * 10}%` }}
+            />
           </div>
         </div>
 
-        {/* ATS score */}
-        <div className="group relative flex flex-col overflow-hidden rounded-[24px] border border-border bg-gradient-to-br from-primary/5 via-card to-rose-500/[0.01] p-6 shadow-sm">
+        {/* Card 2: ATS Score */}
+        <div className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-border/60 dark:bg-card">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Tương thích ATS</h4>
-            <AwardIcon className="size-4 text-primary" />
+            <span className="text-sm font-semibold text-muted-foreground">ATS Score</span>
+            <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400">
+              <AwardIcon className="size-4.5" />
+            </div>
           </div>
-          <div className="mt-4 flex items-center gap-4">
-            <div className="relative flex size-16 items-center justify-center">
-              <svg className="size-full -rotate-90" viewBox="0 0 36 36">
-                <path
-                  className="text-muted/60 dark:text-muted/30"
-                  strokeWidth="3.5"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                <path
-                  className="text-primary transition-all duration-1000 ease-out"
-                  strokeWidth="3.5"
-                  strokeDasharray={`${atsScore * 10}, 100`}
-                  strokeLinecap="round"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-              </svg>
-              <div className="absolute text-base font-black text-primary">
-                {atsScore}
-              </div>
-            </div>
-            <div>
-              <p className="text-2xl font-black text-foreground">{atsScore}/10</p>
-              <p className="text-[10px] text-muted-foreground font-medium">Độ tối ưu cấu trúc bộ quét</p>
-            </div>
+          <div className="mt-4">
+            <span className="text-2xl font-bold text-foreground">{atsScore}/10</span>
+            <span className="ml-1.5 text-xs text-muted-foreground">Độ tối ưu cấu trúc bộ lọc</span>
+          </div>
+          <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
+            <div
+              className={cn("h-full rounded-full transition-all duration-500", getProgressBarColor(atsScore))}
+              style={{ width: `${atsScore * 10}%` }}
+            />
           </div>
         </div>
 
-        {/* Match Percentage */}
-        <div className="group relative flex flex-col overflow-hidden rounded-[24px] border border-border bg-gradient-to-br from-orange-500/[0.05] via-card to-yellow-500/[0.01] p-6 shadow-sm">
+        {/* Card 3: Job Match */}
+        <div className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-border/60 dark:bg-card">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Khớp yêu cầu công việc</h4>
-            <ZapIcon className="size-4 text-orange-500" />
+            <span className="text-sm font-semibold text-muted-foreground">Job Match</span>
+            <div className="flex size-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400">
+              <ZapIcon className="size-4.5" />
+            </div>
           </div>
-          <div className="mt-4 flex items-center gap-4">
-            <div className="relative flex size-16 items-center justify-center">
-              <svg className="size-full -rotate-90" viewBox="0 0 36 36">
-                <path
-                  className="text-muted/60 dark:text-muted/30"
-                  strokeWidth="3.5"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                <path
-                  className="text-orange-500 transition-all duration-1000 ease-out"
-                  strokeWidth="3.5"
-                  strokeDasharray={`${matchScore * 10}, 100`}
-                  strokeLinecap="round"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-              </svg>
-              <div className="absolute text-sm font-black text-orange-600">
-                {matchScore * 10}%
-              </div>
+          <div className="mt-4">
+            <span className="text-2xl font-bold text-foreground">{matchScore * 10}%</span>
+            <span className="ml-1.5 text-xs text-muted-foreground">So khớp kỹ năng với JD</span>
+          </div>
+          <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
+            <div
+              className={cn("h-full rounded-full transition-all duration-500", getProgressBarColor(matchScore * 10, 100))}
+              style={{ width: `${matchScore * 10}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Card 4: Interview Readiness */}
+        <div className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-border/60 dark:bg-card">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-muted-foreground">Interview Readiness</span>
+            <div className="flex size-9 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-950/20 dark:text-purple-400">
+              <SmileIcon className="size-4.5" />
             </div>
-            <div>
-              <p className="text-2xl font-black text-foreground">{matchScore * 10}%</p>
-              <p className="text-[10px] text-muted-foreground font-medium">So khớp kỹ năng với JD</p>
-            </div>
+          </div>
+          <div className="mt-4">
+            <span className="text-2xl font-bold text-foreground">{readinessScore}%</span>
+            <span className="ml-1.5 text-xs text-muted-foreground">Khả năng tự tin ứng tuyển</span>
+          </div>
+          <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
+            <div
+              className={cn("h-full rounded-full transition-all duration-500", getProgressBarColor(readinessScore, 100))}
+              style={{ width: `${readinessScore}%` }}
+            />
           </div>
         </div>
       </div>
 
+      {/* AI Career Coach Summary - Checklist Redesign */}
+      <Card className="rounded-[28px] border border-primary/10 bg-white dark:bg-card shadow-sm overflow-hidden">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-2 mb-6 border-b border-slate-100 dark:border-border/60 pb-4">
+            <div className="rounded-xl bg-primary/10 p-2 text-primary">
+              <SparklesIcon className="size-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-foreground">AI Career Coach Summary</h3>
+              <p className="text-xs text-muted-foreground">Nhận định & lộ trình tổng quát tối ưu chất lượng hồ sơ ứng tuyển</p>
+            </div>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            {/* Column 1: Điểm mạnh */}
+            <div className="space-y-3.5">
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 uppercase tracking-wide">
+                <CheckCircle2Icon className="size-4 text-emerald-500" /> Điểm mạnh
+              </span>
+              <ul className="space-y-2.5">
+                {strengthsList.length > 0 ? (
+                  strengthsList.map((str, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
+                      <CheckIcon className="size-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                      <span>{str}</span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-xs italic text-muted-foreground/60">Không phát hiện</li>
+                )}
+              </ul>
+            </div>
+
+            {/* Column 2: Điểm yếu */}
+            <div className="space-y-3.5">
+              <span className="text-xs font-bold text-red-650 dark:text-red-400 flex items-center gap-1.5 uppercase tracking-wide">
+                <XCircleIcon className="size-4 text-primary" /> Điểm yếu
+              </span>
+              <ul className="space-y-2.5">
+                {weaknessesList.length > 0 ? (
+                  weaknessesList.map((weak, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
+                      <XIcon className="size-3.5 text-primary shrink-0 mt-0.5" />
+                      <span>{weak}</span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                    <CheckIcon className="size-3.5" /> Không có lỗi lớn
+                  </li>
+                )}
+              </ul>
+            </div>
+
+            {/* Column 3: Kỹ năng còn thiếu */}
+            <div className="space-y-3.5">
+              <span className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 uppercase tracking-wide">
+                <AlertTriangleIcon className="size-4 text-amber-500" /> Kỹ năng còn thiếu
+              </span>
+              <ul className="space-y-2.5">
+                {missingSkillsList.length > 0 ? (
+                  missingSkillsList.map((skill, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
+                      <AlertOctagonIcon className="size-3.5 text-amber-500 shrink-0 mt-0.5" />
+                      <span>{skill}</span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                    <CheckIcon className="size-3.5" /> Đáp ứng đủ kỹ năng
+                  </li>
+                )}
+              </ul>
+            </div>
+
+            {/* Column 4: Đề xuất cải thiện */}
+            <div className="space-y-3.5">
+              <span className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 uppercase tracking-wide">
+                <HelpCircleIcon className="size-4 text-blue-500" /> Đề xuất cải thiện
+              </span>
+              <ul className="space-y-2.5">
+                {proposedRecommendations.length > 0 ? (
+                  proposedRecommendations.map((rec, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
+                      <ArrowRightIcon className="size-3.5 text-blue-500 shrink-0 mt-0.5" />
+                      <span>{rec}</span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-xs text-emerald-600 font-medium">Sẵn sàng ứng tuyển</li>
+                )}
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Tabs Menu */}
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="flex w-full flex-nowrap overflow-x-auto gap-1 rounded-2xl border border-border bg-muted p-1">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="flex w-full flex-nowrap overflow-x-auto gap-1 rounded-2xl border border-border/60 bg-muted/65 p-1">
           <TabsTrigger
             value="overview"
-            className="rounded-xl px-4 py-2.5 text-xs font-bold tracking-wide transition-all data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm cursor-pointer"
+            className="rounded-xl px-4 py-2.5 text-xs font-bold tracking-wide transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm cursor-pointer"
           >
-            Tổng quan
+            Tổng kết
           </TabsTrigger>
           <TabsTrigger
             value="strengths"
-            className="rounded-xl px-4 py-2.5 text-xs font-bold tracking-wide transition-all data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm cursor-pointer"
+            className="rounded-xl px-4 py-2.5 text-xs font-bold tracking-wide transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm cursor-pointer"
           >
             Điểm mạnh ({strengths.length})
           </TabsTrigger>
           <TabsTrigger
-            value="weaknesses"
-            className="rounded-xl px-4 py-2.5 text-xs font-bold tracking-wide transition-all data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm cursor-pointer"
+            value="improvements"
+            className="rounded-xl px-4 py-2.5 text-xs font-bold tracking-wide transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm cursor-pointer"
           >
-            Cần cải thiện ({improvements.length})
+            Cải thiện ({improvements.length})
           </TabsTrigger>
           <TabsTrigger
             value="recommendations"
-            className="rounded-xl px-4 py-2.5 text-xs font-bold tracking-wide transition-all data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm cursor-pointer"
+            className="rounded-xl px-4 py-2.5 text-xs font-bold tracking-wide transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm cursor-pointer"
           >
             Khuyến nghị
           </TabsTrigger>
           <TabsTrigger
-            value="interview"
-            className="rounded-xl px-4 py-2.5 text-xs font-bold tracking-wide transition-all data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm cursor-pointer"
+            value="actions"
+            className="rounded-xl px-4 py-2.5 text-xs font-bold tracking-wide transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm cursor-pointer"
           >
-            Luyện phỏng vấn
-          </TabsTrigger>
-          <TabsTrigger
-            value="quiz"
-            className="rounded-xl px-4 py-2.5 text-xs font-bold tracking-wide transition-all data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm cursor-pointer"
-          >
-            Trắc nghiệm
+            Hành động
           </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab Content */}
         <TabsContent value="overview" className="mt-4 space-y-4">
-          <Card className="rounded-[24px] border border-border bg-card shadow-sm">
+          <Card className="rounded-[24px] border border-border/60 bg-white dark:bg-card shadow-sm">
             <CardContent className="p-6">
-              <h3 className="text-base  font-bold text-foreground flex items-center gap-2">
+              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
                 <SparklesIcon className="size-4.5 text-primary fill-primary/10" />
                 Đánh giá toàn diện của AI Career Coach
               </h3>
 
-              <div className="mt-6 space-y-5 divide-y divide-border">
+              <div className="mt-6 space-y-5 divide-y divide-border/60">
                 {Object.entries(sections).map(([key, label]) => {
                   const category = aiAnalysis[key as Keys];
                   if (!category) return null;
@@ -335,9 +429,9 @@ export function AnalysisResults({
 
         {/* Strengths Tab Content */}
         <TabsContent value="strengths" className="mt-4">
-          <Card className="rounded-[24px] border border-border bg-card shadow-sm">
+          <Card className="rounded-[24px] border border-border/60 bg-white dark:bg-card shadow-sm">
             <CardContent className="p-6">
-              <h3 className="text-base  font-bold text-foreground flex items-center gap-2">
+              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
                 <CheckCircle2Icon className="size-5 text-emerald-500" />
                 Điểm mạnh & Sự phù hợp nổi bật
               </h3>
@@ -375,13 +469,13 @@ export function AnalysisResults({
           </Card>
         </TabsContent>
 
-        {/* Weaknesses Tab Content */}
-        <TabsContent value="weaknesses" className="mt-4">
-          <Card className="rounded-[24px] border border-border bg-card shadow-sm">
+        {/* Improvements Tab Content */}
+        <TabsContent value="improvements" className="mt-4 space-y-6">
+          <Card className="rounded-[24px] border border-border/60 bg-white dark:bg-card shadow-sm">
             <CardContent className="p-6">
-              <h3 className="text-base  font-bold text-foreground flex items-center gap-2">
+              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
                 <AlertTriangleIcon className="size-5 text-amber-500" />
-                Điểm thiếu sót & Từ khóa cần bổ sung
+                Điểm thiếu sót & Đề xuất cải thiện
               </h3>
 
               {improvements.length === 0 ? (
@@ -446,32 +540,32 @@ export function AnalysisResults({
               )}
             </CardContent>
           </Card>
+
         </TabsContent>
 
         {/* Recommendations Tab Content */}
         <TabsContent value="recommendations" className="mt-4">
-          <Card className="rounded-[24px] border border-border bg-card shadow-sm">
+          <Card className="rounded-[24px] border border-border/60 bg-white dark:bg-card shadow-sm">
             <CardContent className="p-6">
-              <h3 className="text-base font-bold text-foreground">Lộ trình hành động khắc phục lỗi</h3>
+              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                <ArrowRightIcon className="size-4.5 text-primary" />
+                Lộ trình hành động khắc phục lỗi
+              </h3>
               <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
                 Thực hiện tuần tự các gợi ý tối ưu hóa dưới đây để gia tăng tỷ lệ vượt qua hệ thống ATS tự động:
               </p>
-
               <div className="mt-6 space-y-4">
                 {improvements.map((item, index) => (
                   <div key={index} className="flex gap-4 items-start bg-muted/30 p-4 rounded-xl border border-border">
-                    <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary  font-bold text-xs">
+                    <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs">
                       {index + 1}
                     </div>
                     <div>
                       <h4 className="font-bold text-foreground text-sm">{item.name}</h4>
-                      <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                        {item.message}
-                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{item.message}</p>
                     </div>
                   </div>
                 ))}
-
                 {improvements.length === 0 && (
                   <p className="text-xs text-muted-foreground text-center py-8">
                     Không có đề xuất hành động nào! CV của bạn đã đạt độ tương thích ATS hoàn hảo.
@@ -482,116 +576,94 @@ export function AnalysisResults({
           </Card>
         </TabsContent>
 
-        {/* Interview Preparation Tab */}
-        <TabsContent value="interview" className="mt-4">
-          <Card className="rounded-[24px] border border-border bg-card shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        {/* Action Center Tab Content */}
+        <TabsContent value="actions" className="mt-4">
+          <div className="grid gap-6 sm:grid-cols-3">
+            {/* Card 1: Mock Interview */}
+            <Card className="rounded-[24px] border border-border/60 bg-white dark:bg-card shadow-sm flex flex-col justify-between p-5">
+              <div className="space-y-3">
+                <div className="rounded-2xl bg-primary/10 text-primary p-3 w-fit">
+                  <MicIcon className="size-6" />
+                </div>
                 <div>
-                  <h3 className="text-base  font-bold text-foreground flex items-center gap-2">
-                    <MicIcon className="size-5 text-primary" />
-                    Luyện phỏng vấn mô phỏng thoại tự nhiên
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-1 max-w-2xl leading-relaxed">
-                    Dựa trên thông tin CV của bạn và yêu cầu của JD, AI Career Coach đã thiết kế sẵn các tình huống phỏng vấn mô phỏng. Bắt đầu hội thoại ngay để nâng cao phản xạ trả lời.
+                  <h4 className="font-bold text-sm text-foreground">Mock Interview</h4>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    Luyện phỏng vấn thử giọng nói, trả lời tự nhiên theo CV và JD vị trí này.
                   </p>
                 </div>
+              </div>
 
+              <div className="mt-6">
                 {jobInfoId ? (
-                  <Button asChild className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold shrink-0 shadow-sm shadow-primary/10 cursor-pointer">
+                  <Button asChild className="w-full rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground font-bold shadow-sm shadow-primary/10 cursor-pointer text-xs h-9">
                     <Link href={`/app/job-infos/${jobInfoId}/interviews/new`}>
-                      Hội thoại với AI
-                      <ArrowRightIcon className="ml-2 size-4" />
+                      Bắt đầu phỏng vấn
+                      <ArrowRightIcon className="ml-1.5 size-3.5" />
                     </Link>
                   </Button>
                 ) : (
-                  <Button disabled className="rounded-xl font-bold shrink-0">
-                    Lưu phân tích trước khi phỏng vấn
+                  <Button disabled className="w-full rounded-xl font-bold text-xs h-9">
+                    Yêu cầu lưu phân tích
                   </Button>
                 )}
               </div>
+            </Card>
 
-              <div className="mt-8 grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-border bg-muted/10 p-5">
-                  <div className="flex items-center gap-2 font-bold text-foreground text-sm">
-                    <BrainCircuitIcon className="size-4 text-primary" />
-                    Câu hỏi kỹ thuật (Technical) dự tính
-                  </div>
-                  <ul className="mt-3.5 space-y-2 text-xs text-muted-foreground list-disc list-inside leading-relaxed">
-                    <li>Câu hỏi về các công nghệ cốt lõi yêu cầu trong JD.</li>
-                    <li>Giải quyết bài toán thực tế dựa trên kinh nghiệm ghi trong CV.</li>
-                    <li>Cách tối ưu hóa hiệu năng hệ thống hoặc giải quyết bug lớn.</li>
-                  </ul>
+            {/* Card 2: AI Quiz */}
+            <Card className="rounded-[24px] border border-border/60 bg-white dark:bg-card shadow-sm flex flex-col justify-between p-5">
+              <div className="space-y-3">
+                <div className="rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 p-3 w-fit">
+                  <BookOpenIcon className="size-6" />
                 </div>
-
-                <div className="rounded-2xl border border-border bg-muted/10 p-5">
-                  <div className="flex items-center gap-2 font-bold text-foreground text-sm">
-                    <HelpCircleIcon className="size-4 text-primary" />
-                    Câu hỏi hành vi (Behavioral) dự tính
-                  </div>
-                  <ul className="mt-3.5 space-y-2 text-xs text-muted-foreground list-disc list-inside leading-relaxed">
-                    <li>Cách làm việc nhóm và giải quyết mâu thuẫn trong dự án cũ.</li>
-                    <li>Cách tiếp nhận ý kiến đóng góp và cải thiện bản thân.</li>
-                    <li>Giải thích các cột mốc quan trọng trong quá trình làm việc của bạn.</li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Quiz Preparation Tab */}
-        <TabsContent value="quiz" className="mt-4">
-          <Card className="rounded-[24px] border border-border bg-card shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <h3 className="text-base  font-bold text-foreground flex items-center gap-2">
-                    <BookOpenIcon className="size-5 text-primary" />
-                    Tạo đề trắc nghiệm AI ôn luyện kỹ năng
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-1 max-w-2xl leading-relaxed">
-                    Kiểm tra ngay kiến thức chuyên môn cốt lõi thông qua bộ câu hỏi trắc nghiệm gồm 30 câu (45 phút) được AI tạo tự động dựa trên CV và JD của bạn.
+                  <h4 className="font-bold text-sm text-foreground">AI Quiz</h4>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    Tạo đề trắc nghiệm ôn luyện kỹ năng chuyên môn từ dữ liệu so khớp.
                   </p>
                 </div>
+              </div>
 
+              <div className="mt-6">
                 {jobInfoId ? (
-                  <Button asChild className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold shrink-0 shadow-sm shadow-primary/10 cursor-pointer">
+                  <Button asChild className="w-full rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground font-bold shadow-sm shadow-primary/10 cursor-pointer text-xs h-9">
                     <Link href={`/app/job-infos/${jobInfoId}/quizzes/new`}>
-                      Tạo bộ trắc nghiệm
-                      <ArrowRightIcon className="ml-2 size-4" />
+                      Tạo Quiz
+                      <ArrowRightIcon className="ml-1.5 size-3.5" />
                     </Link>
                   </Button>
                 ) : (
-                  <Button disabled className="rounded-xl font-bold shrink-0">
-                    Lưu phân tích trước để tạo Quiz
+                  <Button disabled className="w-full rounded-xl font-bold text-xs h-9">
+                    Yêu cầu lưu phân tích
                   </Button>
                 )}
               </div>
+            </Card>
 
-              <div className="mt-8 rounded-2xl border border-border bg-muted/10 p-5">
-                <h4 className="font-bold text-foreground text-sm flex items-center gap-2">
-                  <ZapIcon className="size-4 text-primary fill-primary/15" />
-                  Thông tin cấu trúc bộ đề trắc nghiệm
-                </h4>
-
-                <div className="mt-4 grid gap-4 sm:grid-cols-3 text-center">
-                  <div className="rounded-xl bg-card p-3.5 shadow-sm border border-border">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider  font-bold">Độ khó ước tính</p>
-                    <p className="mt-1 text-xs  font-bold text-primary">Trung bình - Khó</p>
-                  </div>
-                  <div className="rounded-xl bg-card p-3.5 shadow-sm border border-border">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider  font-bold">Số lượng câu hỏi</p>
-                    <p className="mt-1 text-xs  font-bold text-primary">30 câu trắc nghiệm</p>
-                  </div>
-                  <div className="rounded-xl bg-card p-3.5 shadow-sm border border-border">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider  font-bold">Thời gian làm bài</p>
-                    <p className="mt-1 text-xs  font-bold text-primary">45 phút</p>
-                  </div>
+            {/* Card 3: Improve CV */}
+            <Card className="rounded-[24px] border border-border/60 bg-white dark:bg-card shadow-sm flex flex-col justify-between p-5">
+              <div className="space-y-3">
+                <div className="rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 p-3 w-fit">
+                  <TrendingUpIcon className="size-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-foreground">Improve CV</h4>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    Xem lại toàn bộ chỉ mục đề xuất và kế hoạch nâng cấp chất lượng CV.
+                  </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+
+              <div className="mt-6">
+                <Button
+                  onClick={() => setActiveTab("improvements")}
+                  className="w-full rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground font-bold shadow-sm shadow-primary/10 cursor-pointer text-xs h-9"
+                >
+                  Xem đề xuất
+                  <ArrowRightIcon className="ml-1.5 size-3.5" />
+                </Button>
+              </div>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

@@ -1,15 +1,7 @@
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
-import {
-  ArrowLeft,
-  BriefcaseBusiness,
-  EyeOff,
-  FileText,
-  MessageCircle,
-  Trash2,
-} from "lucide-react"
+import { EyeOff, Trash2 } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ExploreHeader } from "@/components/explore/explore-header"
 import {
@@ -19,8 +11,7 @@ import {
 import { getExplorePostById } from "@/features/explore/db"
 import { getPlanSummaryForUser } from "@/features/plans/entitlements"
 import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
-import { getExplorePostTypeLabel, getRoleLabel } from "@/features/explore/exploreRules.mjs"
-import { ExplorePostDetailComments } from "./_ExplorePostDetailComments"
+import { ExplorePostDetailClient } from "./ExplorePostDetailClient"
 
 export default async function ExplorePostDetailPage({
   params,
@@ -46,110 +37,47 @@ export default async function ExplorePostDetailPage({
   const isRecruiter = user.role === "recruiter"
   const isAdmin = user.role === "admin"
 
+  const adminActions = isAdmin && isJob ? (
+    <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100 dark:border-border/60">
+      <form
+        action={async () => {
+          "use server"
+          await hideExplorePostAsAdminAction(post.id)
+        }}
+      >
+        <Button type="submit" variant="outline" className="rounded-xl text-xs">
+          <EyeOff className="mr-1.5 size-3.5" />
+          Ẩn bài (Admin)
+        </Button>
+      </form>
+      <form
+        action={async () => {
+          "use server"
+          await deleteExplorePostAsAdminAction(post.id)
+        }}
+      >
+        <Button type="submit" variant="destructive" className="rounded-xl text-xs">
+          <Trash2 className="mr-1.5 size-3.5" />
+          Xóa bài (Admin)
+        </Button>
+      </form>
+    </div>
+  ) : null
+
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(179,0,0,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(99,102,241,0.08),transparent_24%),linear-gradient(to_bottom,var(--background),var(--background))]">
+    <div className="min-h-screen bg-background text-foreground bg-[radial-gradient(circle_at_top,rgba(179,0,0,0.06),transparent_35%),radial-gradient(circle_at_top_right,rgba(99,102,241,0.05),transparent_25%),linear-gradient(to_bottom,var(--background),var(--background))]">
       <ExploreHeader
         user={{ name: user.name, imageUrl: user.imageUrl, role: user.role }}
         plan={plan}
       />
 
-      <main className="container max-w-5xl space-y-6 py-8">
-        <Button asChild variant="ghost" className="px-0">
-          <Link href="/explore">
-            <ArrowLeft className="mr-2 size-4" />
-            Quay lại Khám phá
-          </Link>
-        </Button>
-
-        <article className="rounded-[32px] border border-primary/10 bg-white/85 p-6 shadow-sm backdrop-blur dark:bg-card/80 md:p-8">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge className="rounded-full bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 text-white">
-              {isJob ? (
-                <BriefcaseBusiness className="mr-1 size-3.5" />
-              ) : (
-                <FileText className="mr-1 size-3.5" />
-              )}
-              {getExplorePostTypeLabel(post.type)}
-            </Badge>
-            {post.companyName && <Badge variant="outline">{post.companyName}</Badge>}
-            {post.location && <Badge variant="outline">{post.location}</Badge>}
-            {post.salaryRange && <Badge variant="outline">{post.salaryRange}</Badge>}
-          </div>
-
-          <h1 className="mt-5 bg-gradient-to-r from-indigo-600 via-rose-500 to-amber-400 bg-clip-text text-3xl font-semibold tracking-tight text-transparent md:text-5xl">
-            {post.title}
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {post.author?.name ?? "Người dùng"} · {getRoleLabel(post.author?.role ?? "user")}
-          </p>
-
-          <div className="mt-6 whitespace-pre-line text-sm leading-7 md:text-base">
-            {post.content}
-          </div>
-
-          <div className="mt-6 flex flex-wrap gap-2">
-            {post.positionTitle && <Badge variant="outline">{post.positionTitle}</Badge>}
-            {post.skills && <Badge variant="outline">{post.skills}</Badge>}
-          </div>
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            {isAdmin && isJob && (
-              <>
-                <form
-                  action={async () => {
-                    "use server"
-                    await hideExplorePostAsAdminAction(post.id)
-                  }}
-                >
-                  <Button type="submit" variant="outline" className="rounded-2xl border-primary/15 bg-white/80">
-                    <EyeOff className="mr-2 size-4" />
-                    Ẩn bài
-                  </Button>
-                </form>
-                <form
-                  action={async () => {
-                    "use server"
-                    await deleteExplorePostAsAdminAction(post.id)
-                  }}
-                >
-                  <Button type="submit" variant="destructive" className="rounded-2xl">
-                    <Trash2 className="mr-2 size-4" />
-                    Xóa bài
-                  </Button>
-                </form>
-              </>
-            )}
-            {!isRecruiter && isJob && post.status === "published" && (
-              <Button asChild className="rounded-2xl bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 text-white shadow-lg shadow-red-500/20">
-                <Link href={`/app/analyze?source=explore&postId=${post.id}`}>
-                  Phân tích CV với bài này
-                </Link>
-              </Button>
-            )}
-            {!isJob && post.cvUrl && (
-              <Button asChild variant="outline" className="rounded-2xl border-primary/15 bg-white/80">
-                <Link href={post.cvUrl} target="_blank">
-                  Xem CV
-                </Link>
-              </Button>
-            )}
-          </div>
-        </article>
-
-        <section className="rounded-[28px] border border-primary/10 bg-white/85 p-6 shadow-sm backdrop-blur dark:bg-card/80">
-          <div className="mb-4 flex items-center gap-2 font-semibold">
-            <MessageCircle className="size-4 text-primary" />
-            Bình luận
-          </div>
-          <ExplorePostDetailComments
-            currentUserId={userId}
-            postId={post.id}
-            comments={post.comments}
-            canComment={post.status === "published"}
-            isAdmin={isAdmin}
-          />
-        </section>
-      </main>
+      <ExplorePostDetailClient
+        post={post}
+        currentUserId={userId}
+        isAdmin={isAdmin}
+        isRecruiter={isRecruiter}
+        adminActions={adminActions}
+      />
     </div>
   )
 }

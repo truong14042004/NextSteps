@@ -18,7 +18,11 @@ import {
   BrainIcon,
   FileTextIcon,
   Loader2Icon,
-  HelpCircleIcon
+  HelpCircleIcon,
+  PlayIcon,
+  PlusIcon,
+  HistoryIcon,
+  AwardIcon
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -86,7 +90,7 @@ type Props = {
 export function QuizzesHubClient({ initialJobInfos }: Props) {
   const [jobInfos, setJobInfos] = useState<JobInfoWithQuiz[]>(initialJobInfos)
   const [view, setView] = useState<"hub" | "taking" | "result">("hub")
-  
+
   // Generating state
   const [generatingJobId, setGeneratingJobId] = useState<string | null>(null)
   const [loadingProgress, setLoadingProgress] = useState(0)
@@ -173,7 +177,7 @@ export function QuizzesHubClient({ initialJobInfos }: Props) {
         return
       }
       const { quizId } = await res.json()
-      
+
       // 2. Start the attempt immediately
       await handleStartAttempt(jobInfoId, quizId)
     } catch (e) {
@@ -215,7 +219,7 @@ export function QuizzesHubClient({ initialJobInfos }: Props) {
       setActiveQuizId(quizId)
       setActiveAttemptId(attemptId)
       setQuestions(data.questions)
-      
+
       // Initialize answers map
       const initialAnswers: Record<string, number | null> = {}
       data.questions.forEach(q => {
@@ -265,7 +269,7 @@ export function QuizzesHubClient({ initialJobInfos }: Props) {
         setResultAttempt(data.attempt)
         setResultQuestions(data.questions)
         setView("result")
-        
+
         // Refresh jobInfos list to display updated stats
         await refreshJobInfosList()
       }
@@ -336,6 +340,71 @@ export function QuizzesHubClient({ initialJobInfos }: Props) {
     }
   }, [jobInfos])
 
+  // New states computed for workspace flow
+  const { inProgressAttempt, lastCompletedAttempt, flatAttempts } = useMemo(() => {
+    const list: (Attempt & { jobName: string; jobInfoId: string; quizId: string; totalQuestions: number; quizTitle: string })[] = []
+    let inProg: any = null
+    let lastComp: any = null
+
+    jobInfos.forEach(job => {
+      job.quizzes.forEach(quiz => {
+        quiz.attempts.forEach(attempt => {
+          const item = {
+            ...attempt,
+            jobName: job.name,
+            jobInfoId: job.id,
+            quizId: quiz.id,
+            totalQuestions: quiz.totalQuestions,
+            quizTitle: quiz.title
+          }
+          list.push(item)
+
+          if (attempt.status === "in_progress") {
+            const expiresTime = attempt.expiresAt ? new Date(attempt.expiresAt).getTime() : 0
+            if (expiresTime > Date.now()) {
+              if (!inProg || new Date(attempt.startedAt) > new Date(inProg.startedAt)) {
+                inProg = item
+              }
+            }
+          } else if (attempt.status === "submitted" || attempt.status === "expired") {
+            if (!lastComp || new Date(attempt.submittedAt || attempt.startedAt) > new Date(lastComp.submittedAt || lastComp.startedAt)) {
+              lastComp = item
+            }
+          }
+        })
+      })
+    })
+
+    list.sort((a, b) => {
+      const dateA = new Date(a.submittedAt || a.startedAt).getTime()
+      const dateB = new Date(b.submittedAt || b.startedAt).getTime()
+      return dateB - dateA
+    })
+
+    return {
+      inProgressAttempt: inProg,
+      lastCompletedAttempt: lastComp,
+      flatAttempts: list
+    }
+  }, [jobInfos])
+
+  const handleContinueLearning = () => {
+    if (inProgressAttempt) {
+      void handleStartAttempt(inProgressAttempt.jobInfoId, inProgressAttempt.quizId, inProgressAttempt.id)
+      return
+    }
+    const firstJobWithQuiz = jobInfos.find(j => j.quizzes.length > 0)
+    if (firstJobWithQuiz) {
+      const q = firstJobWithQuiz.quizzes[0]
+      const inProg = q.attempts.find(a => a.status === "in_progress")
+      void handleStartAttempt(firstJobWithQuiz.id, q.id, inProg?.id)
+      return
+    }
+    if (jobInfos.length > 0) {
+      void handleCreateQuiz(jobInfos[0].id)
+    }
+  }
+
   // RENDER SECTIONS
   if (view === "taking") {
     return (
@@ -367,7 +436,6 @@ export function QuizzesHubClient({ initialJobInfos }: Props) {
         onRetake={() => {
           if (resultAttempt) {
             setView("hub")
-            // Find and start a new attempt for the active quiz
             void handleStartAttempt(activeJobInfoId!, activeQuizId!)
           }
         }}
@@ -382,43 +450,58 @@ export function QuizzesHubClient({ initialJobInfos }: Props) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="container my-6 space-y-8 max-w-6xl mx-auto">
       {/* 1. Hero Section */}
       <section className="relative overflow-hidden rounded-[32px] border border-primary/10 bg-gradient-to-br from-white via-red-50/20 to-violet-50/30 p-6 shadow-sm dark:from-card dark:via-primary/5 dark:to-secondary/5 md:p-8">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(179,0,0,0.05),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(124,58,237,0.05),transparent_40%)]" />
         
         <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-3xl space-y-4">
+          <div className="max-w-3xl space-y-4 flex-1">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary">
               <SparklesIcon className="size-3.5 animate-pulse" />
-              AI Quiz Practice
+              AI Quiz Practice Workspace
             </div>
 
             <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-5xl">
-              Trắc nghiệm theo CV/JD
+              Trắc nghiệm AI
             </h1>
 
             <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
-              Tạo bộ câu hỏi cá nhân hoá từ CV và mô tả công việc để kiểm tra kiến thức trước phỏng vấn.
+              Luyện tập và củng cố kiến thức chuyên môn được cá nhân hóa hoàn toàn theo CV và mô tả công việc (JD) của bạn.
             </p>
 
-            <div className="flex flex-wrap gap-2 pt-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
-                30 câu hỏi
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3.5 py-1.5 text-xs font-medium text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
-                45 phút làm bài
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-3.5 py-1.5 text-xs font-medium text-violet-700 dark:bg-violet-950/30 dark:text-violet-400">
-                Theo vị trí ứng tuyển
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-xs font-medium text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
-                Feedback sau bài làm
-              </span>
+            <div className="flex flex-wrap items-center gap-4 pt-2">
+              <div className="flex items-center gap-2">
+                <Button 
+                  onClick={handleContinueLearning}
+                  disabled={generatingJobId !== null}
+                  className="rounded-xl px-5 py-5 bg-primary font-bold text-white hover:bg-primary/90 shadow-md hover:shadow-lg transition-all flex items-center gap-2 group text-xs"
+                >
+                  {inProgressAttempt ? "Tiếp tục bài đang làm" : "Bắt đầu học ngay"}
+                  <ArrowRightIcon className="size-3.5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </div>
+
+              {/* Learning progress indicator */}
+              <div className="space-y-1 min-w-[240px] flex-1 max-w-xs">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted-foreground font-medium flex items-center gap-1">
+                    <ActivityIcon className="size-3 text-primary" />
+                    Tổng tiến độ luyện tập
+                  </span>
+                  <span className="font-bold text-foreground">{stats.completionRate}% câu đúng</span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
+                  <div 
+                    className="h-full rounded-full bg-primary transition-all duration-500" 
+                    style={{ width: `${stats.completionRate}%` }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="hidden lg:flex items-center justify-center pr-4">
+          <div className="hidden lg:flex items-center justify-center pr-4 shrink-0">
             <div className="relative flex size-32 items-center justify-center rounded-[28px] bg-gradient-to-br from-primary/10 to-violet-500/20 p-1 shadow-inner ring-8 ring-white/50 dark:ring-card/50">
               <div className="absolute inset-0 animate-ping rounded-[28px] bg-primary/5 opacity-50" />
               <div className="flex size-full items-center justify-center rounded-[24px] bg-white shadow dark:bg-card">
@@ -429,126 +512,39 @@ export function QuizzesHubClient({ initialJobInfos }: Props) {
         </div>
       </section>
 
-      {/* 2. Quiz Summary Cards */}
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Card 1: Bộ đề đã tạo */}
-        <div className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-border/60 dark:bg-card">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-muted-foreground">Bộ đề đã tạo</span>
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/5 text-primary">
-              <BookOpenIcon className="size-4.5" />
-            </div>
+      {/* 2. Danh sách vị trí ứng tuyển */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-foreground">Vị trí ứng tuyển của bạn</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Chọn vị trí để làm bài trắc nghiệm tùy chỉnh.
+            </p>
           </div>
-          <div className="mt-4">
-            <span className="text-2xl font-bold text-foreground">{stats.created}</span>
-            <span className="ml-1.5 text-xs text-muted-foreground">bộ đề AI</span>
-          </div>
-          <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
-            <div 
-              className="h-full rounded-full bg-primary transition-all duration-500" 
-              style={{ width: `${Math.min((stats.created / 5) * 100, 100)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Card 2: Bài đã làm */}
-        <div className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-border/60 dark:bg-card">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-muted-foreground">Bài đã làm</span>
-            <div className="flex size-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400">
-              <TimerIcon className="size-4.5" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <span className="text-2xl font-bold text-foreground">{stats.done}</span>
-            <span className="ml-1.5 text-xs text-muted-foreground">lượt hoàn thành</span>
-          </div>
-          <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
-            <div 
-              className="h-full rounded-full bg-blue-500 transition-all duration-500" 
-              style={{ width: `${Math.min((stats.done / 10) * 100, 100)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Card 3: Điểm cao nhất */}
-        <div className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-border/60 dark:bg-card">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-muted-foreground">Điểm cao nhất</span>
-            <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400">
-              <TrophyIcon className="size-4.5" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <span className="text-2xl font-bold text-foreground">
-              {stats.highest !== null ? `${stats.highest}%` : "--"}
-            </span>
-            <span className="ml-1.5 text-xs text-muted-foreground">
-              {stats.highest !== null && stats.highest >= 80 ? "Xuất sắc! 🎉" : "Mục tiêu: >80%"}
-            </span>
-          </div>
-          <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
-            <div 
-              className="h-full rounded-full bg-emerald-500 transition-all duration-500" 
-              style={{ width: `${stats.highest ?? 0}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Card 4: Tỉ lệ đúng trung bình */}
-        <div className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-border/60 dark:bg-card">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-muted-foreground">Tỷ lệ đúng trung bình</span>
-            <div className="flex size-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400">
-              <ActivityIcon className="size-4.5" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <span className="text-2xl font-bold text-foreground">{stats.completionRate}%</span>
-            <span className="ml-1.5 text-xs text-muted-foreground">Các câu đã trả lời</span>
-          </div>
-          <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
-            <div 
-              className="h-full rounded-full bg-amber-500 transition-all duration-500" 
-              style={{ width: `${stats.completionRate}%` }}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Job Cards Section */}
-      <section className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Chọn vị trí để luyện trắc nghiệm</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Mỗi vị trí ứng tuyển sẽ có các bộ đề được cá nhân hóa sát với CV và mô tả công việc.
-          </p>
         </div>
 
         {jobInfos.length === 0 ? (
-          <div className="rounded-[28px] border border-dashed border-slate-200 bg-white p-12 text-center dark:border-border dark:bg-card">
-            <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 dark:bg-background">
-              <FileTextIcon className="size-7" />
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center dark:border-border dark:bg-card">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-slate-50 text-slate-400 dark:bg-background">
+              <FileTextIcon className="size-6" />
             </div>
-            <h3 className="mt-4 text-lg font-bold text-foreground">Chưa có dữ liệu để tạo quiz</h3>
-            <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
+            <h3 className="mt-3 text-sm font-bold text-foreground">Chưa có dữ liệu để tạo quiz</h3>
+            <p className="mt-1.5 text-xs text-muted-foreground max-w-sm mx-auto">
               Hãy phân tích CV/JD trước để AI tạo bộ câu hỏi sát với vị trí ứng tuyển của bạn.
             </p>
-            <Button asChild className="mt-6 rounded-xl">
+            <Button asChild className="mt-4 rounded-xl text-xs" size="sm">
               <Link href="/app">Phân tích CV ngay</Link>
             </Button>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-3">
             {jobInfos.map(job => {
               const isGenerating = generatingJobId === job.id
-              const latestQuiz = job.quizzes[0] // Quizzes sorted desc
+              const latestQuiz = job.quizzes[0]
               const hasQuiz = !!latestQuiz
-              
-              // Count remaining attempts
               const attemptsCount = latestQuiz ? latestQuiz.attempts.length : 0
               const reachedMax = latestQuiz ? attemptsCount >= latestQuiz.maxAttempts : false
-              const inProgressAttempt = latestQuiz ? latestQuiz.attempts.find(a => a.status === "in_progress") : null
+              const inProgress = latestQuiz ? latestQuiz.attempts.find(a => a.status === "in_progress") : null
               const bestScore = latestQuiz ? latestQuiz.attempts.reduce((max, a) => {
                 if (a.score != null) {
                   return max === null ? a.score : Math.max(max, a.score)
@@ -556,115 +552,215 @@ export function QuizzesHubClient({ initialJobInfos }: Props) {
                 return max
               }, null as number | null) : null
 
+              const scorePercent = bestScore !== null && latestQuiz ? Math.round((bestScore / latestQuiz.totalQuestions) * 100) : null
+
               return (
-                <div 
-                  key={job.id} 
+                <div
+                  key={job.id}
                   className={cn(
-                    "group relative overflow-hidden rounded-[28px] border border-slate-100 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md dark:border-border/60 dark:bg-card",
-                    isGenerating && "ring-2 ring-primary/20 bg-slate-50/40"
+                    "flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border border-slate-100 dark:border-border/60 bg-white dark:bg-card hover:border-primary/20 dark:hover:border-primary/30 hover:shadow-xs transition-all",
+                    isGenerating && "ring-1 ring-primary/20 bg-slate-50/40"
                   )}
                 >
                   {isGenerating ? (
-                    <QuizGeneratingState progress={loadingProgress} />
-                  ) : (
-                    <div className="space-y-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-1">
-                          <h3 className="font-bold text-foreground text-lg group-hover:text-primary transition-colors">
-                            {job.name}
-                          </h3>
-                          {job.title && (
-                            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                              <BrainIcon className="size-3.5 text-primary" />
-                              {job.title}
-                            </p>
-                          )}
-                          <p className="text-xs text-muted-foreground/80 font-mono capitalize">
-                            Cấp độ: {job.experienceLevel}
-                          </p>
-                        </div>
-                        
-                        <Badge 
-                          variant={hasQuiz ? "default" : "secondary"}
-                          className={cn(
-                            "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                            hasQuiz 
-                              ? reachedMax 
-                                ? "bg-amber-500/15 text-amber-600 border-none"
-                                : "bg-emerald-500/15 text-emerald-600 border-none"
-                              : "bg-slate-100 text-slate-500 border-none dark:bg-muted dark:text-muted-foreground"
-                          )}
-                        >
-                          {hasQuiz 
-                            ? reachedMax 
-                              ? "Hết lượt làm"
-                              : inProgressAttempt 
-                                ? "Đang làm dở" 
-                                : "Sẵn sàng"
-                            : "Chưa tạo đề"
-                          }
-                        </Badge>
-                      </div>
-
-                      {/* Quiz Stats inside card */}
-                      {hasQuiz && (
-                        <div className="grid grid-cols-2 gap-4 rounded-2xl bg-slate-50/50 p-4 dark:bg-background/40">
-                          <div>
-                            <span className="block text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Số bộ đề</span>
-                            <span className="text-sm font-bold text-foreground">{job.quizzes.length} bộ đề</span>
-                          </div>
-                          <div>
-                            <span className="block text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Lượt làm</span>
-                            <span className="text-sm font-bold text-foreground">{attemptsCount} / {latestQuiz.maxAttempts} lượt</span>
-                          </div>
-                          {bestScore !== null && (
-                            <div className="col-span-2 border-t border-slate-100 dark:border-border/60 pt-2.5 mt-0.5">
-                              <span className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5">
-                                <TrophyIcon className="size-3.5 text-amber-500" />
-                                Điểm cao nhất: <strong className="text-foreground">{bestScore}/{latestQuiz.totalQuestions}</strong> ({Math.round(bestScore / latestQuiz.totalQuestions * 100)}%)
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-2 pt-2">
-                        {!hasQuiz || reachedMax ? (
-                          <Button 
-                            onClick={() => handleCreateQuiz(job.id)}
-                            disabled={generatingJobId !== null}
-                            className="flex-1 rounded-xl bg-primary font-bold text-white hover:bg-primary/90"
-                          >
-                            <SparklesIcon className="mr-1.5 size-4" />
-                            {reachedMax ? "Tạo bộ đề mới" : "Tạo bộ đề"}
-                          </Button>
-                        ) : (
-                          <Button 
-                            onClick={() => handleStartAttempt(job.id, latestQuiz.id, inProgressAttempt?.id)}
-                            disabled={generatingJobId !== null}
-                            className="flex-1 rounded-xl bg-emerald-600 font-bold text-white hover:bg-emerald-500"
-                          >
-                            <ArrowRightIcon className="mr-1.5 size-4" />
-                            {inProgressAttempt ? "Tiếp tục làm bài" : "Làm bài ngay"}
-                          </Button>
-                        )}
-
-                        {hasQuiz && latestQuiz.attempts.length > 0 && (
-                          <Button 
-                            variant="outline"
-                            onClick={() => handleViewAttempt(latestQuiz.attempts[0].id)}
-                            className="rounded-xl font-bold"
-                          >
-                            Xem kết quả
-                          </Button>
-                        )}
-                      </div>
+                    <div className="flex-1 py-2">
+                      <QuizGeneratingState progress={loadingProgress} />
                     </div>
+                  ) : (
+                    <>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-foreground text-sm">{job.name}</span>
+                          <Badge variant="outline" className="text-[10px] py-0 px-2 rounded-full uppercase tracking-wider font-mono bg-slate-50 dark:bg-muted text-muted-foreground border-none">
+                            {job.experienceLevel}
+                          </Badge>
+                        </div>
+                        {job.title && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <BrainIcon className="size-3 text-primary" />
+                            {job.title}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-6 flex-wrap sm:flex-nowrap">
+                        {/* Progress */}
+                        <div className="space-y-1 min-w-[100px]">
+                          <span className="block text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Lượt làm</span>
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                            <span>{attemptsCount} / {latestQuiz ? latestQuiz.maxAttempts : 3}</span>
+                            <div className="w-12 h-1 rounded-full bg-slate-100 dark:bg-muted overflow-hidden">
+                              <div
+                                className="h-full bg-primary"
+                                style={{ width: `${Math.min((attemptsCount / (latestQuiz ? latestQuiz.maxAttempts : 3)) * 100, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Score */}
+                        <div className="min-w-[80px]">
+                          <span className="block text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Điểm cao nhất</span>
+                          <span className="text-xs font-bold text-foreground">
+                            {scorePercent !== null ? `${scorePercent}%` : "--"}
+                          </span>
+                        </div>
+
+                        {/* Status */}
+                        <div className="min-w-[90px]">
+                          <span className="block text-[10px] text-muted-foreground uppercase tracking-wider font-bold mb-0.5">Trạng thái</span>
+                          <Badge
+                            className={cn(
+                              "rounded-full px-2.5 py-0 text-[10px] font-semibold border-none",
+                              hasQuiz
+                                ? reachedMax
+                                  ? "bg-amber-500/15 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400"
+                                  : inProgress
+                                    ? "bg-blue-500/15 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400"
+                                    : "bg-emerald-500/15 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400"
+                                : "bg-slate-100 text-slate-500 dark:bg-muted dark:text-muted-foreground"
+                            )}
+                          >
+                            {hasQuiz
+                              ? reachedMax
+                                ? "Hết lượt làm"
+                                : inProgress
+                                  ? "Đang làm dở"
+                                  : "Sẵn sàng"
+                              : "Chưa tạo đề"
+                            }
+                          </Badge>
+                        </div>
+
+                        {/* Action */}
+                        <div className="pl-2">
+                          {!hasQuiz || reachedMax ? (
+                            <Button
+                              onClick={() => handleCreateQuiz(job.id)}
+                              disabled={generatingJobId !== null}
+                              size="sm"
+                              className="rounded-xl bg-primary text-white font-semibold hover:bg-primary/95 text-xs h-8"
+                            >
+                              <SparklesIcon className="mr-1 size-3" />
+                              Tạo đề
+                            </Button>
+                          ) : (
+                            <Button
+                              onClick={() => handleStartAttempt(job.id, latestQuiz.id, inProgress?.id)}
+                              disabled={generatingJobId !== null}
+                              size="sm"
+                              className={cn(
+                                "rounded-xl font-semibold text-white text-xs h-8",
+                                inProgress ? "bg-blue-600 hover:bg-blue-500" : "bg-emerald-600 hover:bg-emerald-500"
+                              )}
+                            >
+                              <PlayIcon className="mr-1 size-3" />
+                              {inProgress ? "Tiếp tục" : "Làm bài"}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </>
                   )}
                 </div>
               )
             })}
+          </div>
+        )}
+      </section>
+
+      {/* 3. Lịch sử làm bài */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Lịch sử làm bài gần đây</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Xem lại kết quả chi tiết các bài trắc nghiệm bạn đã thực hiện.
+          </p>
+        </div>
+
+        {flatAttempts.length === 0 ? (
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center dark:border-border dark:bg-card text-xs text-muted-foreground">
+            Chưa có lượt làm bài nào được ghi nhận. Hãy bắt đầu bài trắc nghiệm đầu tiên!
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-2xl border border-slate-100 dark:border-border/60 bg-white dark:bg-card">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-border/60 bg-slate-50/50 dark:bg-background/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <th className="p-4">Vị trí & Bộ đề</th>
+                    <th className="p-4">Điểm số</th>
+                    <th className="p-4">Thời gian</th>
+                    <th className="p-4">Kết quả</th>
+                    <th className="p-4 text-right">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-border/60">
+                  {flatAttempts.slice(0, 10).map((attempt) => {
+                    const isSubmitted = attempt.status === "submitted"
+                    const score = attempt.score ?? 0
+                    const pct = Math.round((score / attempt.totalQuestions) * 100)
+                    const isPass = pct >= 80
+
+                    return (
+                      <tr key={attempt.id} className="hover:bg-slate-50/50 dark:hover:bg-muted/10 transition-colors">
+                        <td className="p-4 font-semibold text-foreground">
+                          <div>{attempt.jobName}</div>
+                          <div className="text-[10px] text-muted-foreground font-normal mt-0.5">{attempt.quizTitle}</div>
+                        </td>
+                        <td className="p-4 font-bold text-foreground">
+                          {isSubmitted ? `${score}/${attempt.totalQuestions} (${pct}%)` : "--"}
+                        </td>
+                        <td className="p-4 text-muted-foreground">
+                          {new Date(attempt.submittedAt || attempt.startedAt).toLocaleString("vi-VN", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit"
+                          })}
+                        </td>
+                        <td className="p-4">
+                          {!isSubmitted ? (
+                            <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/10 border-none text-[9px]">
+                              Đang làm
+                            </Badge>
+                          ) : isPass ? (
+                            <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/10 border-none text-[9px]">
+                              Đạt
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/10 border-none text-[9px]">
+                              Chưa đạt
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="p-4 text-right">
+                          {isSubmitted ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewAttempt(attempt.id)}
+                              className="h-7 text-primary hover:text-primary/80 font-semibold text-xs px-2.5 rounded-lg"
+                            >
+                              Xem lại
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleStartAttempt(attempt.jobInfoId, attempt.quizId, attempt.id)}
+                              className="h-7 text-blue-600 hover:text-blue-500 font-semibold text-xs px-2.5 rounded-lg"
+                            >
+                              Làm tiếp
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </section>
@@ -683,11 +779,11 @@ function QuizGeneratingState({ progress }: { progress: number }) {
         <h4 className="font-bold text-foreground">AI đang tạo 30 câu hỏi trắc nghiệm...</h4>
         <p className="text-xs text-muted-foreground">Thường mất từ 15–40 giây. Vui lòng không đóng trang.</p>
       </div>
-      
+
       {/* Progress Bar */}
       <div className="w-full max-w-xs h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-muted relative">
-        <div 
-          className="h-full rounded-full bg-gradient-to-r from-primary to-violet-500 transition-all duration-500" 
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-primary to-violet-500 transition-all duration-500"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -753,7 +849,7 @@ function QuizTakingView({
 
         {/* Visual progress bar */}
         <div className="w-full h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-muted mt-2">
-          <div 
+          <div
             className="h-full rounded-full bg-primary transition-all duration-300"
             style={{ width: `${(answeredCount / questions.length) * 100}%` }}
           />
@@ -925,7 +1021,7 @@ function QuizResultView({
         {/* Score widget */}
         <Card className="rounded-[28px] border border-slate-100 bg-white p-6 shadow-sm dark:border-border/60 dark:bg-card flex flex-col items-center justify-center text-center">
           <span className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-4">Điểm số đạt được</span>
-          
+
           <div className="relative flex size-32 items-center justify-center">
             <svg className="size-full -rotate-90" viewBox="0 0 36 36">
               <path
@@ -1004,7 +1100,7 @@ function QuizResultView({
           {questions.map(q => {
             const selected = selectedByQuestion.get(q.id) ?? null
             const isCorrect = selected !== null && selected === q.correctIndex
-            
+
             return (
               <li key={q.id}>
                 <Card className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-xs dark:border-border/60 dark:bg-card">

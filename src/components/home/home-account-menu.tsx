@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Crown, Home, LayoutDashboard, LogOut, User } from "lucide-react"
+import { Crown, LogOut } from "lucide-react"
 import { useState } from "react"
 
 import {
@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
 import { UserAvatar } from "@/features/users/components/UserAvatar"
 import { cn } from "@/lib/utils"
 
@@ -49,88 +50,70 @@ export function HomeAccountMenu({ user, plan }: HomeAccountMenuProps) {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-full outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          aria-label="Mở menu tài khoản"
-        >
-          {!isAdmin && (
-            <span
-              className={cn(
-                "hidden max-w-36 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold sm:inline-flex",
-                isPaidPlan
-                  ? "border-amber-300/70 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
-                  : "border-border bg-muted text-muted-foreground"
-              )}
-            >
-              <Crown className="size-3.5 shrink-0" />
-              <span className="truncate">Gói {plan.planName}</span>
-            </span>
+    <div className="flex items-center gap-3">
+      {/* Badge gói hiện tại */}
+      {!isAdmin && (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold select-none transition-colors",
+            isPaidPlan
+              ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+              : "border-slate-800 bg-slate-900 text-slate-400"
           )}
-          <UserAvatar user={user} />
-        </button>
-      </DropdownMenuTrigger>
+        >
+          <Crown className="size-3 text-amber-400 shrink-0" />
+          <span className="truncate">Gói {plan.planName}</span>
+        </span>
+      )}
 
-      <DropdownMenuContent align="end" className="w-60">
-        {!isAdmin && (
-          <>
-            <div className="px-2 py-2">
-              <div
-                className={cn(
-                  "rounded-lg border px-3 py-2",
-                  isPaidPlan
-                    ? "border-amber-300/70 bg-amber-50/80 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
-                    : "border-border bg-muted/60"
-                )}
-              >
-                <div className="flex items-center justify-between gap-2 text-sm font-semibold">
-                  <span className="flex items-center gap-2">
-                    <Crown className="size-4" />
-                    Gói hiện tại
-                  </span>
-                  <span className="truncate">{plan.planName}</span>
-                </div>
-                <p className="mt-1 truncate text-xs text-muted-foreground">
-                  {plan.resetText}
-                </p>
-              </div>
+      {/* Nút Dashboard */}
+      {!isRecruiter && (
+        <Link href={isAdmin ? "/admin" : "/app"}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white transition-all text-xs font-semibold px-4 h-8"
+          >
+            Dashboard
+          </Button>
+        </Link>
+      )}
+
+      {/* Avatar & Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="flex items-center rounded-full outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            aria-label="Mở menu tài khoản"
+          >
+            <UserAvatar user={user} />
+          </button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="end" className="w-60 rounded-3xl p-4 border border-white/10 shadow-2xl bg-slate-950 text-slate-200">
+          <div className="flex items-center gap-3 mb-3">
+            <UserAvatar user={user} className="size-10" />
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-bold text-slate-200 truncate">{user.name}</h4>
+              <p className="text-[11px] text-slate-400 truncate capitalize mt-0.5">
+                {user.role === 'admin' ? 'Quản trị viên' : user.role === 'recruiter' ? 'Nhà tuyển dụng' : 'Thành viên'}
+              </p>
             </div>
-            <DropdownMenuSeparator />
-          </>
-        )}
+          </div>
 
-        {isAdmin && (
-          <DropdownMenuItem asChild>
-            <Link href="/">
-              <Home className="mr-2 size-4" />
-              Trang chủ
-            </Link>
+          <DropdownMenuSeparator className="my-2 bg-white/5 border-none" />
+
+          <DropdownMenuItem
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-colors text-rose-400 hover:bg-rose-950/20 focus:bg-rose-950/20 focus:text-rose-300"
+          >
+            <LogOut className="size-4 shrink-0" />
+            <span className="text-sm font-bold">Đăng xuất</span>
           </DropdownMenuItem>
-        )}
-
-        {!isRecruiter && (
-          <DropdownMenuItem asChild>
-            <Link href={isAdmin ? "/admin" : "/app"}>
-              <LayoutDashboard className="mr-2 size-4" />
-              {isAdmin ? "Admin dashboard" : "Dashboard"}
-            </Link>
-          </DropdownMenuItem>
-        )}
-
-        <DropdownMenuItem asChild>
-          <Link href="/profile">
-            <User className="mr-2 size-4" />
-            Hồ sơ
-          </Link>
-        </DropdownMenuItem>
-
-        <DropdownMenuItem onClick={handleSignOut} disabled={isSigningOut}>
-          <LogOut className="mr-2 size-4" />
-          Đăng xuất
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   )
 }

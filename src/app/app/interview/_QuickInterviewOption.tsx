@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +13,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,12 +32,10 @@ import {
   UploadIcon,
   XIcon,
   FileTextIcon,
-  SparklesIcon,
   UserIcon,
   BriefcaseIcon,
   Layers3Icon,
   ClipboardListIcon,
-  CheckCircle2Icon,
   ArrowRightIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -137,44 +134,44 @@ export function QuickInterviewOption({
   };
 
   return (
-    <div className="min-w-0 space-y-6">
+    <div className="min-w-0">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="candidateName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-2">
-                  <UserIcon className="size-4 text-primary" />
-                  Họ tên ứng viên
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Nguyễn Văn A"
-                    className="h-12 rounded-2xl border-primary/10 bg-background/80 shadow-none"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <FormField
+              control={form.control}
+              name="candidateName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                    <UserIcon className="size-3.5 text-primary" />
+                    Họ tên ứng viên
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Nguyễn Văn A"
+                      className="h-10 rounded-xl border-slate-200 dark:border-border/60 bg-background shadow-none text-sm focus-visible:ring-1"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormField
               control={form.control}
               name="jobTitle"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <BriefcaseIcon className="size-4 text-primary" />
+                  <FormLabel className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                    <BriefcaseIcon className="size-3.5 text-primary" />
                     Vị trí tuyển dụng
                   </FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Frontend Developer"
-                      className="h-12 rounded-2xl border-primary/10 bg-background/80 shadow-none"
+                      className="h-10 rounded-xl border-slate-200 dark:border-border/60 bg-background shadow-none text-sm focus-visible:ring-1"
                       {...field}
                     />
                   </FormControl>
@@ -188,17 +185,17 @@ export function QuickInterviewOption({
               name="experienceLevel"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Layers3Icon className="size-4 text-primary" />
+                  <FormLabel className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                    <Layers3Icon className="size-3.5 text-primary" />
                     Cấp độ
                   </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="h-12 w-full rounded-2xl border-primary/10 bg-background/80 shadow-none">
+                      <SelectTrigger className="h-10 rounded-xl border-slate-200 dark:border-border/60 bg-background shadow-none text-sm focus-visible:ring-1">
                         <SelectValue placeholder="Chọn cấp độ" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="rounded-xl">
                       {experienceLevels.map((level) => (
                         <SelectItem key={level} value={level}>
                           {formatExperienceLevel(level)}
@@ -217,143 +214,121 @@ export function QuickInterviewOption({
             name="jobDescription"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="flex items-center gap-2">
-                  <ClipboardListIcon className="size-4 text-primary" />
-                  Mô tả công việc
+                <FormLabel className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                  <ClipboardListIcon className="size-3.5 text-primary" />
+                  Mô tả công việc (JD)
                 </FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="Nhập mô tả công việc, trách nhiệm, yêu cầu kỹ năng, kinh nghiệm và kỳ vọng của nhà tuyển dụng..."
-                    className="min-h-[180px] rounded-[24px] border-primary/10 bg-background/80 shadow-none"
+                    placeholder="Nhập mô tả công việc, yêu cầu tuyển dụng..."
+                    className="min-h-[110px] max-h-[220px] rounded-xl border-slate-200 dark:border-border/60 bg-background shadow-none text-sm leading-relaxed focus-visible:ring-1"
                     {...field}
                   />
                 </FormControl>
-                <FormDescription>
-                  Mô tả càng cụ thể thì kết quả phân tích càng sát với nhu cầu
-                  tuyển dụng.
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          <div className="space-y-3">
-            <label className="text-sm font-medium leading-none">
-              Tải CV lên{" "}
-              <span className="font-normal text-muted-foreground">
-                (tuỳ chọn)
-              </span>
-            </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+            {/* Upload Zone */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground block">
+                Tải CV lên{" "}
+                <span className="font-normal text-muted-foreground">
+                  (tuỳ chọn)
+                </span>
+              </label>
 
-            {resumeFile ? (
-              <div className="flex items-center gap-3 rounded-[24px] border border-primary/10 bg-primary/5 p-4">
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-white text-primary shadow-sm dark:bg-background">
-                  <FileTextIcon className="size-5" />
+              {resumeFile ? (
+                <div className="flex items-center gap-3 rounded-xl border border-primary/10 bg-primary/5 p-2.5 h-[58px]">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-primary shadow-xs dark:bg-background">
+                    <FileTextIcon className="size-4" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-semibold text-foreground">
+                      {resumeFile.name}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground truncate">
+                      Đã chọn CV để cá nhân hoá câu hỏi
+                    </p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="size-7 shrink-0 rounded-full p-0 hover:bg-slate-200 dark:hover:bg-slate-800"
+                    onClick={() => setResumeFile(null)}
+                  >
+                    <XIcon className="size-3.5" />
+                  </Button>
                 </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {resumeFile.name}
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    CV sẽ được dùng để tạo câu hỏi phù hợp hơn
-                  </p>
-                </div>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="size-8 shrink-0 rounded-full p-0"
-                  onClick={() => setResumeFile(null)}
+              ) : (
+                <div
+                  className={cn(
+                    "group relative overflow-hidden rounded-xl border border-dashed p-3 transition-all h-[58px] flex items-center justify-center cursor-pointer",
+                    isDragOver
+                      ? "border-violet-500 bg-violet-50 dark:bg-violet-950/20"
+                      : "border-slate-200 hover:border-violet-400 dark:border-border/60 bg-slate-50/30 dark:bg-background/40",
+                  )}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(false);
+                    handleFileUpload(e.dataTransfer.files[0] ?? null);
+                  }}
                 >
-                  <XIcon className="size-4" />
-                </Button>
-              </div>
-            ) : (
-              <div
-                className={cn(
-                  "group relative overflow-hidden rounded-[28px] border-2 border-dashed p-8 transition-all",
-                  isDragOver
-                    ? "border-violet-500 bg-violet-50 shadow-sm dark:bg-violet-950/20"
-                    : "border-violet-200/70 bg-gradient-to-br from-violet-50/70 via-background to-fuchsia-50/60 hover:border-violet-400 dark:border-violet-900/40 dark:from-violet-950/10 dark:to-fuchsia-950/10",
-                )}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragOver(true);
-                }}
-                onDragLeave={(e) => {
-                  e.preventDefault();
-                  setIsDragOver(false);
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setIsDragOver(false);
-                  handleFileUpload(e.dataTransfer.files[0] ?? null);
-                }}
+                  <label
+                    htmlFor="cv-upload-interview"
+                    className="flex cursor-pointer items-center gap-2 text-center w-full justify-center"
+                  >
+                    <input
+                      id="cv-upload-interview"
+                      type="file"
+                      accept=".pdf,.doc,.docx,.txt"
+                      className="sr-only"
+                      onChange={(e) => {
+                        handleFileUpload(e.target.files?.[0] ?? null);
+                      }}
+                    />
+
+                    <UploadIcon className="size-4 text-violet-500 group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                      Chọn file hoặc kéo thả CV vào đây (PDF, Word, TXT)
+                    </span>
+                  </label>
+                </div>
+              )}
+            </div>
+
+            {/* Action Button */}
+            <div className="self-end pt-1">
+              <Button
+                type="submit"
+                size="lg"
+                className="h-10 w-full rounded-xl bg-gradient-to-r from-primary via-[#c83a3a] to-secondary text-xs font-bold text-white shadow-xs hover:opacity-95 cursor-pointer"
+                disabled={isSubmitting}
               >
-                <label
-                  htmlFor="cv-upload-interview"
-                  className="flex cursor-pointer flex-col items-center justify-center gap-3 text-center"
-                >
-                  <input
-                    id="cv-upload-interview"
-                    type="file"
-                    accept=".pdf,.doc,.docx,.txt"
-                    className="sr-only"
-                    onChange={(e) => {
-                      handleFileUpload(e.target.files?.[0] ?? null);
-                    }}
-                  />
-
-                  <div className="mb-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-violet-100 dark:bg-background dark:ring-violet-900/40">
-                    <UploadIcon className="size-7 text-violet-600" />
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-foreground">
-                      Click để tải CV lên hoặc kéo thả vào đây
-                    </p>
-                    <p className="text-sm leading-6 text-muted-foreground">
-                      Hỗ trợ PDF, Word, TXT • Tối đa 10MB
-                    </p>
-                  </div>
-                </label>
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-[24px] border border-border bg-muted/30 p-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle2Icon className="mt-0.5 size-5 shrink-0 text-primary" />
-              <div>
-                <p className="text-sm font-medium text-foreground">
-                  Mẹo để buổi phỏng vấn sát thực tế hơn
-                </p>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  Hãy nhập job title rõ ràng, mô tả JD cụ thể và thêm CV nếu có.
-                  AI sẽ dùng các thông tin này để tạo câu hỏi phù hợp hơn với
-                  mục tiêu ứng tuyển của bạn.
-                </p>
-              </div>
+                <LoadingSwap isLoading={isSubmitting}>
+                  <span className="inline-flex items-center gap-1.5">
+                    {isSubmitting && resumeFile
+                      ? "Đang phân tích CV..."
+                      : "Bắt đầu phỏng vấn ngay"}
+                    {!isSubmitting && <ArrowRightIcon className="size-3.5" />}
+                  </span>
+                </LoadingSwap>
+              </Button>
             </div>
           </div>
-
-          <Button
-            type="submit"
-            size="lg"
-            className="h-12 w-full rounded-2xl bg-gradient-to-r from-primary via-[#c83a3a] to-secondary text-sm font-semibold text-white shadow-md hover:opacity-95"
-            disabled={isSubmitting}
-          >
-            <LoadingSwap isLoading={isSubmitting}>
-              <span className="inline-flex items-center gap-2">
-                {isSubmitting && resumeFile
-                  ? "Đang phân tích CV..."
-                  : "Bắt đầu phỏng vấn"}
-                {!isSubmitting && <ArrowRightIcon className="size-4" />}
-              </span>
-            </LoadingSwap>
-          </Button>
         </form>
       </Form>
     </div>

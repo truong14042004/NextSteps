@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   Form,
   FormControl,
@@ -31,13 +32,12 @@ import {
   FileCodeIcon,
   GlobeIcon,
   Layers3Icon,
-  LightbulbIcon,
-  TerminalIcon,
   UploadCloudIcon,
   UserIcon,
 } from "lucide-react";
 import { ResumeActions } from "@/components/resume-analysis/ResumeActions";
 import { ResumeDropzone } from "@/components/resume-analysis/ResumeDropzone";
+import { ResumeTipsCard } from "@/components/resume-analysis/ResumeTipsCard";
 import {
   INDUSTRIES,
   INDUSTRY_KEYWORDS,
@@ -70,18 +70,17 @@ export function ResumeUploadCard({
     INDUSTRY_KEYWORDS.other;
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
+    <section className="rounded-[28px] border border-border/60 bg-white dark:bg-card p-6 shadow-sm md:p-8">
       <div className="mb-6 flex items-start gap-4">
         <div className="rounded-2xl bg-gradient-to-br from-primary to-orange-500 p-2.5 text-primary-foreground shadow-md">
           <ClipboardListIcon className="size-5" />
         </div>
         <div>
           <h2 className="text-xl font-bold tracking-tight text-foreground">
-            Không gian làm việc
+            AI Analysis Workspace
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Điền thông tin và tải lên CV để nhận đánh giá tối ưu chi tiết từ AI
-            Career Coach.
+            Điền thông tin và tải lên CV để nhận đánh giá tối ưu chi tiết từ AI Career Coach.
           </p>
         </div>
       </div>
@@ -93,8 +92,7 @@ export function ResumeUploadCard({
             <div>
               <p className="font-bold">Bạn đã hết lượt phân tích</p>
               <p className="mt-1 leading-relaxed text-muted-foreground">
-                Vui lòng mua thêm lượt hoặc nâng cấp gói để tiếp tục trải nghiệm
-                dịch vụ.
+                Vui lòng mua thêm lượt hoặc nâng cấp gói để tiếp tục trải nghiệm dịch vụ.
               </p>
               <div className="mt-3">
                 <Button
@@ -142,214 +140,255 @@ export function ResumeUploadCard({
           onSubmit={analysis.form.handleSubmit(analysis.handleSubmitAnalysis)}
           className="space-y-6"
         >
-          <FormField
-            control={analysis.form.control}
-            name="candidateName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                  <UserIcon className="size-4 text-primary" />
-                  Họ tên ứng viên
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Ví dụ: Nguyễn Văn A"
-                    className="h-11 rounded-xl border-border bg-muted/20 text-foreground placeholder:text-muted-foreground focus:border-primary focus:bg-card"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <FormField
-              control={analysis.form.control}
-              name="jobTitle"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    <BriefcaseIcon className="size-4 text-primary" />
-                    Vị trí tuyển dụng
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Ví dụ: Frontend Developer"
-                      className="h-11 rounded-xl border-border bg-muted/20 text-foreground placeholder:text-muted-foreground focus:border-primary focus:bg-card"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={analysis.form.control}
-              name="experienceLevel"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    <Layers3Icon className="size-4 text-primary" />
-                    Cấp độ yêu cầu
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            {/* Left Column: Input Fields (Name, Position, Level, JD) */}
+            <div className="space-y-6">
+              <FormField
+                control={analysis.form.control}
+                name="candidateName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                      <UserIcon className="size-4 text-primary" />
+                      Họ tên ứng viên
+                    </FormLabel>
                     <FormControl>
-                      <SelectTrigger className="h-11 rounded-xl border-border bg-muted/20 text-foreground focus:border-primary focus:bg-card">
-                        <SelectValue placeholder="Chọn cấp độ" />
-                      </SelectTrigger>
+                      <Input
+                        placeholder="Ví dụ: Nguyễn Văn A"
+                        className="h-11 rounded-xl border-border bg-muted/20 text-foreground placeholder:text-muted-foreground focus:border-primary focus:bg-card"
+                        {...field}
+                      />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormField
+                  control={analysis.form.control}
+                  name="jobTitle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                        <BriefcaseIcon className="size-4 text-primary" />
+                        Vị trí tuyển dụng
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Ví dụ: Frontend Developer"
+                          className="h-11 rounded-xl border-border bg-muted/20 text-foreground placeholder:text-muted-foreground focus:border-primary focus:bg-card"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={analysis.form.control}
+                  name="experienceLevel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                        <Layers3Icon className="size-4 text-primary" />
+                        Cấp độ yêu cầu
+                      </FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-11 rounded-xl border-border bg-muted/20 text-foreground focus:border-primary focus:bg-card">
+                            <SelectValue placeholder="Chọn cấp độ" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="rounded-xl">
+                          {experienceLevels.map((level) => (
+                            <SelectItem
+                              key={level}
+                              value={level}
+                              className="rounded-lg"
+                            >
+                              {formatExperienceLevel(level)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={analysis.form.control}
+                name="jobDescription"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-center justify-between gap-3">
+                      <FormLabel className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                        <ClipboardListIcon className="size-4 text-primary" />
+                        Mô tả công việc (Job Description)
+                      </FormLabel>
+
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={analysis.handlePasteJD}
+                          className="flex cursor-pointer items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-primary hover:underline"
+                        >
+                          <FileCodeIcon className="size-3" />
+                          Dán từ Clipboard
+                        </button>
+                        <span className="text-[10px] font-semibold text-muted-foreground">
+                          {analysis.jobDescText.length} ký tự
+                        </span>
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Sao chép và dán đầy đủ mô tả công việc (JD)..."
+                        className="min-h-[160px] rounded-xl border-border bg-muted/20 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground focus:border-primary focus:bg-card"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Right Column: Upload CV, ATS Keywords, collapsible Tips, settings, actions */}
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  <UploadCloudIcon className="size-4 text-primary" />
+                  Tải lên hồ sơ (CV)
+                </span>
+
+                <ResumeDropzone
+                  resumeFile={upload.resumeFile}
+                  isDragOver={upload.isDragOver}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    upload.setIsDragOver(true);
+                  }}
+                  onDragLeave={(event) => {
+                    event.preventDefault();
+                    upload.setIsDragOver(false);
+                  }}
+                  onDrop={upload.handleDrop}
+                  onSelectFile={upload.handleSelectFile}
+                  onClearFile={upload.clearResumeFile}
+                />
+              </div>
+
+              {/* ATS Keywords inside Workspace */}
+              <div className="rounded-2xl border border-border/60 bg-muted/10 p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
+                    Từ khóa ATS gợi ý
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(industryKeywords.join(", "));
+                      toast.success("Đã sao chép từ khóa vào clipboard");
+                    }}
+                    className="text-[10px] font-bold text-primary uppercase tracking-wider hover:underline"
+                  >
+                    Sao chép từ khóa
+                  </button>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {industryKeywords.map((keyword) => (
+                    <span
+                      key={keyword}
+                      className="inline-block cursor-default rounded-md border border-border bg-white dark:bg-card px-2 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-750"
+                    >
+                      {keyword}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Collapsible AI Tips Section */}
+              <ResumeTipsCard />
+
+              <div className="grid grid-cols-1 gap-4 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    <Building2Icon className="size-3.5 text-primary" />
+                    Lĩnh vực / Ngành nghề
+                  </label>
+                  <Select
+                    onValueChange={analysis.setIndustry}
+                    value={analysis.industry}
+                  >
+                    <SelectTrigger className="h-10 rounded-lg border-border bg-white dark:bg-card text-foreground">
+                      <SelectValue placeholder="Chọn ngành nghề" />
+                    </SelectTrigger>
                     <SelectContent className="rounded-xl">
-                      {experienceLevels.map((level) => (
+                      {INDUSTRIES.map((industry) => (
                         <SelectItem
-                          key={level}
-                          value={level}
+                          key={industry.value}
+                          value={industry.value}
                           className="rounded-lg"
                         >
-                          {formatExperienceLevel(level)}
+                          {industry.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-              <UploadCloudIcon className="size-4 text-primary" />
-              Tải lên hồ sơ (CV)
-            </span>
-
-            <ResumeDropzone
-              resumeFile={upload.resumeFile}
-              isDragOver={upload.isDragOver}
-              onDragOver={(event) => {
-                event.preventDefault();
-                upload.setIsDragOver(true);
-              }}
-              onDragLeave={(event) => {
-                event.preventDefault();
-                upload.setIsDragOver(false);
-              }}
-              onDrop={upload.handleDrop}
-              onSelectFile={upload.handleSelectFile}
-              onClearFile={upload.clearResumeFile}
-            />
-          </div>
-
-          <FormField
-            control={analysis.form.control}
-            name="jobDescription"
-            render={({ field }) => (
-              <FormItem>
-                <div className="flex items-center justify-between gap-3">
-                  <FormLabel className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    <ClipboardListIcon className="size-4 text-primary" />
-                    Mô tả công việc (Job Description)
-                  </FormLabel>
-
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={analysis.handlePasteJD}
-                      className="flex cursor-pointer items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-primary hover:underline"
-                    >
-                      <FileCodeIcon className="size-3" />
-                      Dán từ Clipboard
-                    </button>
-                    <span className="text-[10px] font-semibold text-muted-foreground">
-                      {analysis.jobDescText.length} ký tự
-                    </span>
-                  </div>
                 </div>
-                <FormControl>
-                  <Textarea
-                    placeholder="Sao chép và dán đầy đủ mô tả công việc (JD)..."
-                    className="min-h-[160px] rounded-xl border-border bg-muted/20 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground focus:border-primary focus:bg-card"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
 
-          <div className="grid grid-cols-1 gap-4 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                <Building2Icon className="size-3.5 text-primary" />
-                Lĩnh vực / Ngành nghề
-              </label>
-              <Select
-                onValueChange={analysis.setIndustry}
-                value={analysis.industry}
-              >
-                <SelectTrigger className="h-10 rounded-lg border-border bg-card text-foreground">
-                  <SelectValue placeholder="Chọn ngành nghề" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {INDUSTRIES.map((industry) => (
-                    <SelectItem
-                      key={industry.value}
-                      value={industry.value}
-                      className="rounded-lg"
-                    >
-                      {industry.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    <GlobeIcon className="size-3.5 text-primary" />
+                    Ngôn ngữ phân tích
+                  </label>
+                  <Select
+                    onValueChange={analysis.setLanguage}
+                    value={analysis.language}
+                  >
+                    <SelectTrigger className="h-10 rounded-lg border-border bg-white dark:bg-card text-foreground">
+                      <SelectValue placeholder="Chọn ngôn ngữ" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      {LANGUAGES.map((language) => (
+                        <SelectItem
+                          key={language.value}
+                          value={language.value}
+                          className="rounded-lg"
+                        >
+                          {language.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-            <div className="space-y-2">
-              <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                <GlobeIcon className="size-3.5 text-primary" />
-                Ngôn ngữ phân tích
-              </label>
-              <Select
-                onValueChange={analysis.setLanguage}
-                value={analysis.language}
-              >
-                <SelectTrigger className="h-10 rounded-lg border-border bg-card text-foreground">
-                  <SelectValue placeholder="Chọn ngôn ngữ" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {LANGUAGES.map((language) => (
-                    <SelectItem
-                      key={language.value}
-                      value={language.value}
-                      className="rounded-lg"
-                    >
-                      {language.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {QUICK_EXAMPLES.map((example) => (
+                  <button
+                    key={example.label}
+                    type="button"
+                    onClick={() => analysis.fillExample(example)}
+                    className="flex cursor-pointer items-center justify-between rounded-xl border border-border bg-white dark:bg-card p-3 text-left text-xs font-semibold text-foreground transition-all hover:border-primary/55 hover:bg-primary/5"
+                  >
+                    <span>{example.label}</span>
+                    <ArrowRightIcon className="size-3 text-primary" />
+                  </button>
+                ))}
+              </div>
+
+              <ResumeActions
+                isLoading={analysis.isLoading}
+                hasRemainingUsage={analysis.hasRemainingUsage}
+              />
             </div>
           </div>
-
-          <div className="grid gap-2 sm:grid-cols-3">
-            {QUICK_EXAMPLES.map((example) => (
-              <button
-                key={example.label}
-                type="button"
-                onClick={() => analysis.fillExample(example)}
-                className="flex cursor-pointer items-center justify-between rounded-xl border border-border bg-card p-3 text-left text-xs font-semibold text-foreground transition-all hover:border-primary/50 hover:bg-primary/5"
-              >
-                <span>{example.label}</span>
-                <ArrowRightIcon className="size-3 text-primary" />
-              </button>
-            ))}
-          </div>
-
-          <ResumeActions
-            isLoading={analysis.isLoading}
-            hasRemainingUsage={analysis.hasRemainingUsage}
-          />
         </form>
       </Form>
     </section>

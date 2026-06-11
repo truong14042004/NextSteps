@@ -16,7 +16,7 @@ export function errorToast(message: string) {
             toast.dismiss(toastId)
           }}
         >
-          <Link href="/app/upgrade">Upgrade</Link>
+          <Link href="/#pricing">Upgrade</Link>
         </Button>
       ),
     })

@@ -24,7 +24,7 @@ const plans = [
       "Unlimited resume analysis",
     ],
     cta: "Upgrade",
-    href: "/app/upgrade",
+    href: "/#pricing",
     highlight: true,
   },
 ]

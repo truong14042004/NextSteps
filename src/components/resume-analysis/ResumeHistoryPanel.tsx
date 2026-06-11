@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
+import { useRouter } from "next/navigation";
+import { format, formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,25 +20,52 @@ import {
   FileTextIcon,
   PencilIcon,
   RefreshCwIcon,
+  SearchIcon,
+  FilterIcon,
+  BrainIcon,
+  CalendarIcon,
+  AwardIcon,
+  ZapIcon,
+  EyeIcon,
+  EyeOffIcon,
 } from "lucide-react";
 import { useResumeHistory } from "@/hooks/useResumeHistory";
 
 export function ResumeHistoryPanel({
   isActive,
   usageUsed,
+  historyState,
 }: {
   isActive: boolean;
   usageUsed: number;
+  historyState: ReturnType<typeof useResumeHistory>;
 }) {
-  const historyState = useResumeHistory({ isActive });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [levelFilter, setLevelFilter] = useState("all");
+  const router = useRouter();
 
-  const historyCount = useMemo(
-    () => historyState.history?.length ?? 0,
-    [historyState.history],
-  );
+  const filteredHistory = useMemo(() => {
+    if (!historyState.history) return [];
+    return historyState.history.filter((item) => {
+      const nameMatch = item.name
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const titleMatch = item.title
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const matchesSearch = nameMatch || titleMatch;
+
+      const matchesLevel =
+        levelFilter === "all" || item.experienceLevel === levelFilter;
+
+      return matchesSearch && matchesLevel;
+    });
+  }, [historyState.history, searchQuery, levelFilter]);
+
+  const historyCount = useMemo(() => filteredHistory.length, [filteredHistory]);
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <section className="overflow-hidden rounded-[28px] border border-border/60 bg-white dark:bg-card p-6 shadow-sm">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-foreground">
@@ -53,16 +81,44 @@ export function ResumeHistoryPanel({
         </Badge>
       </div>
 
+      {/* Search and Filter UI */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <SearchIcon className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Tìm theo tên ứng viên hoặc vị trí..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-10 rounded-xl border-border/60 bg-muted/20 focus:bg-card"
+          />
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <FilterIcon className="size-4 text-muted-foreground hidden sm:block" />
+          <select
+            value={levelFilter}
+            onChange={(e) => setLevelFilter(e.target.value)}
+            className="h-10 rounded-xl border border-border/60 bg-muted/20 px-3 text-xs font-semibold text-muted-foreground focus:border-primary focus:bg-card focus:outline-none cursor-pointer"
+          >
+            <option value="all">Tất cả cấp độ</option>
+            <option value="intern">Intern</option>
+            <option value="fresh">Fresh</option>
+            <option value="junior">Junior</option>
+            <option value="mid-level">Mid-Level</option>
+            <option value="senior">Senior</option>
+          </select>
+        </div>
+      </div>
+
       {historyState.historyLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((item) => (
+        <div className="grid gap-6 md:grid-cols-2">
+          {[1, 2, 3, 4].map((item) => (
             <div
               key={item}
-              className="h-20 animate-pulse rounded-2xl border border-border bg-muted/40"
+              className="h-44 animate-pulse rounded-[28px] border border-slate-100 bg-muted/40"
             />
           ))}
         </div>
-      ) : historyState.history == null || historyCount === 0 ? (
+      ) : historyState.history == null || historyState.history.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 py-16 text-center text-muted-foreground">
           <div className="rounded-full bg-primary/10 p-4 text-primary">
             <ClockIcon className="size-8" />
@@ -76,9 +132,18 @@ export function ResumeHistoryPanel({
             </p>
           </div>
         </div>
+      ) : historyCount === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-2 py-12 text-center text-muted-foreground">
+          <p className="text-sm font-semibold">
+            Không tìm thấy kết quả phù hợp
+          </p>
+          <p className="text-xs">
+            Vui lòng thay đổi từ khóa tìm kiếm hoặc bộ lọc.
+          </p>
+        </div>
       ) : (
-        <div className="space-y-4">
-          {historyState.history.map((item) => {
+        <div className="grid gap-6 md:grid-cols-2">
+          {filteredHistory.map((item) => {
             const parsed = item.analysisResult
               ? (() => {
                   try {
@@ -95,72 +160,143 @@ export function ResumeHistoryPanel({
             return (
               <div
                 key={item.id}
-                className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
+                className={cn(
+                  "group relative overflow-hidden rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md dark:border-border/60 dark:bg-card flex flex-col justify-between",
+                  isExpanded && "ring-1 ring-primary/20 md:col-span-2",
+                )}
               >
-                <button
-                  type="button"
-                  onClick={() => historyState.toggleExpanded(item.id)}
-                  className="group flex w-full cursor-pointer items-center gap-4 p-5 text-left transition-colors hover:bg-muted/30"
-                >
-                  <div className="rounded-xl bg-primary/10 p-3 text-primary">
-                    <FileTextIcon className="size-5" />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-foreground">
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1 min-w-0">
+                      <h3 className="font-bold text-foreground text-base truncate">
                         {item.name}
-                      </p>
-
+                      </h3>
                       {item.title && (
-                        <Badge
-                          variant="secondary"
-                          className="rounded-md px-2 py-0.5 text-[10px] font-medium"
-                        >
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 truncate">
+                          <BrainIcon className="size-3.5 text-primary shrink-0" />
                           {item.title}
-                        </Badge>
+                        </p>
                       )}
-
-                      <Badge
-                        variant="outline"
-                        className="rounded-md px-2 py-0.5 text-[10px] font-medium"
-                      >
-                        {formatExperienceLevel(item.experienceLevel)}
-                      </Badge>
-
-                      {parsed ? (
-                        <Badge className="rounded-md border-none bg-emerald-600 px-2 py-0.5 text-[10px] font-medium text-white">
-                          Đã đánh giá
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="rounded-md px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
-                        >
-                          Chờ kết quả
-                        </Badge>
-                      )}
+                      <p className="text-[10px] text-muted-foreground/80 font-semibold font-mono uppercase">
+                        Cấp độ: {formatExperienceLevel(item.experienceLevel)}
+                      </p>
                     </div>
 
-                    <p className="mt-1.5 text-[10px] text-muted-foreground">
-                      {formatDistanceToNow(new Date(item.createdAt), {
-                        addSuffix: true,
-                        locale: vi,
-                      })}
-                    </p>
+                    <Badge
+                      className={cn(
+                        "rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider shrink-0",
+                        parsed
+                          ? "bg-emerald-500/15 text-emerald-600 border-none"
+                          : "bg-slate-100 text-slate-500 border-none dark:bg-muted dark:text-muted-foreground",
+                      )}
+                    >
+                      {parsed ? "Đã đánh giá" : "Chờ kết quả"}
+                    </Badge>
                   </div>
 
-                  <ChevronRightIcon
+                  {/* Quiz-like Stats Grid */}
+                  <div className="grid grid-cols-3 gap-3 rounded-2xl bg-slate-50/50 p-3.5 dark:bg-background/40">
+                    <div>
+                      <span className="block text-[9px] text-muted-foreground uppercase tracking-wider font-bold flex items-center gap-1">
+                        <AwardIcon className="size-3 text-emerald-500" /> ATS
+                      </span>
+                      <span className="text-xs font-bold text-foreground mt-0.5 block">
+                        {parsed?.ats?.score != null
+                          ? `${parsed.ats.score}/10`
+                          : "--"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-[9px] text-muted-foreground uppercase tracking-wider font-bold flex items-center gap-1">
+                        <ZapIcon className="size-3 text-amber-500" /> Match
+                      </span>
+                      <span className="text-xs font-bold text-foreground mt-0.5 block">
+                        {parsed?.jobMatch?.score != null
+                          ? `${parsed.jobMatch.score * 10}%`
+                          : "--"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-[9px] text-muted-foreground uppercase tracking-wider font-bold flex items-center gap-1">
+                        <CalendarIcon className="size-3 text-blue-500" /> Ngày
+                      </span>
+                      <span className="text-[10px] font-bold text-foreground mt-0.5 block truncate">
+                        {format(new Date(item.createdAt), "dd/MM/yyyy")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Actions inside Card */}
+                <div className="flex items-center justify-between gap-2 pt-3.5 border-t border-slate-100 dark:border-border/60 mt-4">
+                  {/* Left Side: Secondary actions */}
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        if (!isExpanded) historyState.toggleExpanded(item.id);
+                        historyState.startEditing(item);
+                      }}
+                      className="rounded-xl font-bold text-xs h-9 border-slate-200 hover:bg-slate-50 dark:border-border text-muted-foreground hover:text-foreground transition-all px-3"
+                    >
+                      <PencilIcon className="size-3.5 mr-1.5" />
+                      Chỉnh sửa
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        sessionStorage.setItem(
+                          "analyze_prefill",
+                          JSON.stringify({
+                            candidateName: item.name,
+                            jobTitle: item.title ?? "",
+                            experienceLevel: item.experienceLevel,
+                            jobDescription: item.description,
+                          }),
+                        );
+                        router.push(`/app/analyze?jobInfoId=${item.id}`);
+                      }}
+                      className="rounded-xl font-bold text-xs h-9 border-primary/20 hover:bg-primary/5 text-primary transition-all px-3"
+                    >
+                      <RefreshCwIcon className="size-3.5 mr-1.5" />
+                      Phân tích lại
+                    </Button>
+                  </div>
+
+                  {/* Right Side: Primary Toggle Detail Button */}
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      historyState.toggleExpanded(item.id);
+                      historyState.cancelEditing();
+                    }}
                     className={cn(
-                      "size-4 flex-shrink-0 text-muted-foreground transition-transform duration-300",
-                      isExpanded && "rotate-90 text-primary",
+                      "rounded-xl font-bold text-xs h-9 px-4 transition-all shadow-xs flex items-center gap-1.5",
+                      isExpanded
+                        ? "bg-slate-100 hover:bg-slate-200 dark:bg-muted text-slate-700 dark:text-muted-foreground dark:hover:bg-muted/80 shadow-none"
+                        : "bg-primary text-primary-foreground hover:bg-primary/95"
                     )}
-                  />
-                </button>
+                  >
+                    {isExpanded ? (
+                      <>
+                        <EyeOffIcon className="size-3.5" />
+                        Đóng chi tiết
+                      </>
+                    ) : (
+                      <>
+                        <EyeIcon className="size-3.5" />
+                        Xem kết quả
+                      </>
+                    )}
+                  </Button>
+                </div>
 
                 {isExpanded && (
-                  <div className="border-t border-border px-5 py-6">
-                    <div className="mx-auto w-full max-w-full">
+                  <div className="w-full border-t border-border/60 pt-5 mt-5">
                     {isEditing && historyState.editValues ? (
                       <div className="space-y-4">
                         <div className="space-y-1.5">
@@ -201,9 +337,10 @@ export function ResumeHistoryPanel({
                           >
                             {(
                               [
+                                "intern",
                                 "fresh",
                                 "junior",
-                                "mid",
+                                "mid-level",
                                 "senior",
                               ] as ExperienceLevel[]
                             ).map((level) => (
@@ -284,26 +421,6 @@ export function ResumeHistoryPanel({
                               </TabsTrigger>
                             )}
                           </TabsList>
-
-                          <div className="flex items-center gap-4 text-xs font-semibold">
-                            <button
-                              type="button"
-                              onClick={() => historyState.startEditing(item)}
-                              className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
-                            >
-                              <PencilIcon className="size-3" />
-                              Sửa thông tin
-                            </button>
-
-                            <Link
-                              href={`/app/job-infos/${item.id}/resume`}
-                              onClick={(event) => event.stopPropagation()}
-                              className="flex items-center gap-1 text-primary hover:underline"
-                            >
-                              <RefreshCwIcon className="size-3" />
-                              Phân tích lại
-                            </Link>
-                          </div>
                         </div>
 
                         <TabsContent
@@ -372,7 +489,6 @@ export function ResumeHistoryPanel({
                         )}
                       </Tabs>
                     )}
-                    </div>
                   </div>
                 )}
               </div>

@@ -34,6 +34,7 @@ export type InterviewJobInfo = {
   experienceLevel: string;
   description: string;
   cvSummary?: string;
+  analysisResult?: string | null;
 };
 
 type SourceMode = "previous" | "new";
@@ -316,88 +317,80 @@ function InterviewPageContent() {
 
         {/* Main Interview Setup Section */}
         <div className="space-y-6 self-start min-w-0">
-          <div className="rounded-[28px] border border-slate-100 bg-white p-6 shadow-sm dark:border-border/60 dark:bg-card/80 md:p-8">
-            <div className="mb-8 text-center md:text-left">
-              <h2 className="text-2xl font-bold text-foreground">
-                Bạn muốn bắt đầu như thế nào?
+          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-xs dark:border-border/60 dark:bg-card/80 md:p-6">
+            
+            {/* Header */}
+            <div className="mb-5">
+              <h2 className="text-lg font-bold text-foreground">
+                Bắt đầu phỏng vấn
               </h2>
-              <p className="mt-1.5 text-sm text-muted-foreground">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 Chọn phương thức thiết lập câu hỏi phù hợp nhất cho buổi phỏng vấn giả định.
               </p>
             </div>
 
-            {/* Option Selector Cards */}
-            <div className="grid gap-4 md:grid-cols-2 mb-8">
-              {/* Option 1: Dữ liệu đã phân tích */}
+            {/* Entry Selection Cards */}
+            <div className="grid gap-4 sm:grid-cols-2 mb-6">
+              {/* Option 1: CV/JD đã lưu */}
               <button
                 type="button"
                 onClick={() => setSourceMode("previous")}
                 className={cn(
-                  "group relative flex flex-col items-start rounded-2xl border p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:shadow-sm",
+                  "group flex items-start gap-3 rounded-xl border p-4 text-left transition-all cursor-pointer",
                   sourceMode === "previous"
-                    ? "border-primary/30 bg-primary/5 dark:bg-primary/10"
-                    : "border-slate-100 bg-slate-50/50 hover:border-slate-200 dark:border-border dark:bg-background/40"
+                    ? "border-primary/30 bg-primary/5 dark:bg-primary/10 shadow-xs"
+                    : "border-slate-150 hover:border-primary/20 bg-white hover:bg-slate-50/20 dark:border-border/40 dark:bg-card"
                 )}
               >
                 <div
                   className={cn(
-                    "mb-4 flex size-12 items-center justify-center rounded-xl border transition-colors",
+                    "flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors",
                     sourceMode === "previous"
-                      ? "border-primary/20 bg-white text-primary dark:bg-card"
-                      : "border-slate-200 bg-white text-slate-500 dark:border-border dark:bg-card dark:text-muted-foreground"
+                      ? "bg-primary text-white"
+                      : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 group-hover:text-primary group-hover:bg-primary/5"
                   )}
                 >
-                  <HistoryIcon className="size-5" />
+                  <HistoryIcon className="size-4.5" />
                 </div>
-
-                <h3 className="text-lg font-bold text-foreground">
-                  Dùng CV/JD đã phân tích
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  AI sẽ tạo câu hỏi sát với CV, JD và vị trí bạn đã lưu.
-                </p>
-
-                {sourceMode === "previous" && (
-                  <div className="absolute top-4 right-4 flex size-5 items-center justify-center rounded-full bg-primary text-white">
-                    <CheckIcon className="size-3" />
-                  </div>
-                )}
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                    CV/JD đã lưu
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground leading-normal">
+                    Luyện tập dựa trên CV & mô tả công việc đã phân tích trước đó.
+                  </p>
+                </div>
               </button>
 
-              {/* Option 2: Tạo buổi phỏng vấn mới */}
+              {/* Option 2: Tạo mới */}
               <button
                 type="button"
                 onClick={() => setSourceMode("new")}
                 className={cn(
-                  "group relative flex flex-col items-start rounded-2xl border p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:shadow-sm",
+                  "group flex items-start gap-3 rounded-xl border p-4 text-left transition-all cursor-pointer",
                   sourceMode === "new"
-                    ? "border-violet-500/30 bg-violet-50/30 dark:bg-violet-950/20"
-                    : "border-slate-100 bg-slate-50/50 hover:border-slate-200 dark:border-border dark:bg-background/40"
+                    ? "border-violet-500/30 bg-violet-50/30 dark:bg-violet-950/20 shadow-xs"
+                    : "border-slate-150 hover:border-violet-500/20 bg-white hover:bg-slate-50/20 dark:border-border/40 dark:bg-card"
                 )}
               >
                 <div
                   className={cn(
-                    "mb-4 flex size-12 items-center justify-center rounded-xl border transition-colors",
+                    "flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors",
                     sourceMode === "new"
-                      ? "border-violet-500/20 bg-white text-violet-600 dark:bg-card"
-                      : "border-slate-200 bg-white text-slate-500 dark:border-border dark:bg-card dark:text-muted-foreground"
+                      ? "bg-violet-600 text-white"
+                      : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 group-hover:text-violet-600 group-hover:bg-violet-500/5"
                   )}
                 >
-                  <PlusCircleIcon className="size-5" />
+                  <PlusCircleIcon className="size-4.5" />
                 </div>
-
-                <h3 className="text-lg font-bold text-foreground">
-                  Tạo buổi phỏng vấn mới
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Nhập nhanh vị trí ứng tuyển để bắt đầu luyện tập ngay.
-                </p>
-
-                {sourceMode === "new" && (
-                  <div className="absolute top-4 right-4 flex size-5 items-center justify-center rounded-full bg-violet-600 text-white">
-                    <CheckIcon className="size-3" />
-                  </div>
-                )}
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-foreground group-hover:text-violet-600 transition-colors">
+                    Tạo mới
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground leading-normal">
+                    Tạo nhanh buổi phỏng vấn bằng cách nhập JD hoặc tải lên CV mới.
+                  </p>
+                </div>
               </button>
             </div>
 
@@ -413,72 +406,72 @@ function InterviewPageContent() {
         </div>
 
         {/* Right Sidebar / Coach Panel */}
-        <aside className="flex flex-col gap-6 lg:sticky lg:top-8 self-start">
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-8 self-start">
           {/* AI Career Coach Panel */}
-          <div className="rounded-[28px] border border-slate-100 bg-white p-6 shadow-sm dark:border-border/60 dark:bg-card">
-            <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-violet-50 text-violet-600 dark:bg-violet-950/30 dark:text-violet-400">
-                <WandSparklesIcon className="size-5.5" />
+          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-xs dark:border-border/60 dark:bg-card">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-9 items-center justify-center rounded-lg bg-violet-50 text-violet-600 dark:bg-violet-950/30 dark:text-violet-400">
+                <WandSparklesIcon className="size-4.5" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-foreground">AI Interview Coach</h3>
-                <p className="text-xs text-muted-foreground">Người bạn đồng hành luyện tập</p>
+                <h3 className="text-sm font-bold text-foreground">AI Interview Coach</h3>
+                <p className="text-[10px] text-muted-foreground">Người bạn đồng hành luyện tập</p>
               </div>
             </div>
 
             {/* Coach Checklist */}
-            <div className="mt-6 space-y-3.5">
-              <div className="flex items-start gap-3 rounded-xl border border-slate-50 bg-slate-50/30 p-3.5 dark:border-border/30 dark:bg-background/20">
-                <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400">
-                  <CheckCircle2Icon className="size-3.5" />
+            <div className="mt-4 space-y-2.5">
+              <div className="flex items-start gap-2.5 rounded-lg border border-slate-50 bg-slate-50/20 p-2.5 dark:border-border/30 dark:bg-background/10">
+                <div className="flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 mt-0.5">
+                  <CheckCircle2Icon className="size-3" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Chuẩn bị câu trả lời theo STAR</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Situation (Tình huống) - Task (Nhiệm vụ) - Action (Hành động) - Result (Kết quả).</p>
+                  <p className="text-xs font-bold text-foreground">Chuẩn bị câu trả lời theo STAR</p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground leading-normal">Situation (Tình huống) - Task (Nhiệm vụ) - Action (Hành động) - Result (Kết quả).</p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 rounded-xl border border-slate-50 bg-slate-50/30 p-3.5 dark:border-border/30 dark:bg-background/20">
-                <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400">
-                  <CheckCircle2Icon className="size-3.5" />
+              <div className="flex items-start gap-2.5 rounded-lg border border-slate-50 bg-slate-50/20 p-2.5 dark:border-border/30 dark:bg-background/10">
+                <div className="flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 mt-0.5">
+                  <CheckCircle2Icon className="size-3" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Luyện phản xạ với tình huống</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Tập trung lắng nghe và trả lời trôi chảy, tránh các từ ậm ừ.</p>
+                  <p className="text-xs font-bold text-foreground">Luyện phản xạ với tình huống</p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground leading-normal">Tập trung lắng nghe và trả lời trôi chảy, tránh các từ ậm ừ.</p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 rounded-xl border border-slate-50 bg-slate-50/30 p-3.5 dark:border-border/30 dark:bg-background/20">
-                <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400">
-                  <CheckCircle2Icon className="size-3.5" />
+              <div className="flex items-start gap-2.5 rounded-lg border border-slate-50 bg-slate-50/20 p-2.5 dark:border-border/30 dark:bg-background/10">
+                <div className="flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 mt-0.5">
+                  <CheckCircle2Icon className="size-3" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Nhận feedback chi tiết</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Đánh giá về cả nội dung chuyên môn lẫn sự tự tin trong giọng nói.</p>
+                  <p className="text-xs font-bold text-foreground">Nhận feedback chi tiết</p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground leading-normal">Đánh giá về cả nội dung chuyên môn lẫn sự tự tin trong giọng nói.</p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 rounded-xl border border-slate-50 bg-slate-50/30 p-3.5 dark:border-border/30 dark:bg-background/20">
-                <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400">
-                  <CheckCircle2Icon className="size-3.5" />
+              <div className="flex items-start gap-2.5 rounded-lg border border-slate-50 bg-slate-50/20 p-2.5 dark:border-border/30 dark:bg-background/10">
+                <div className="flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 mt-0.5">
+                  <CheckCircle2Icon className="size-3" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Gợi ý cải thiện rõ ràng</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Chỉ ra điểm cần khắc phục và phiên bản trả lời tốt hơn tham khảo.</p>
+                  <p className="text-xs font-bold text-foreground">Gợi ý cải thiện rõ ràng</p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground leading-normal">Chỉ ra điểm cần khắc phục và phiên bản trả lời tốt hơn tham khảo.</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Daily Suggestion Card */}
-          <div className="rounded-[28px] border border-amber-100 bg-gradient-to-br from-amber-50 to-orange-50 p-6 shadow-sm dark:border-amber-950/30 dark:from-amber-950/10 dark:to-orange-950/10">
-            <div className="flex items-start gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white shadow-xs">
-                <LightbulbIcon className="size-5" />
+          <div className="rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50/40 to-orange-50/40 p-4.5 shadow-xs dark:border-amber-950/20 dark:from-amber-950/5 dark:to-orange-950/5">
+            <div className="flex items-start gap-2.5">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white shadow-xs">
+                <LightbulbIcon className="size-4" />
               </div>
               <div>
-                <h4 className="text-base font-bold text-amber-900 dark:text-amber-400">Gợi ý hôm nay</h4>
-                <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
+                <h4 className="text-xs font-bold text-amber-900 dark:text-amber-400">Gợi ý hôm nay</h4>
+                <p className="mt-1 text-xs text-amber-850 dark:text-amber-300 leading-normal">
                   Hãy luyện 1 buổi phỏng vấn ngắn 5–10 phút cho vị trí bạn đang ứng tuyển gần nhất để duy trì phong độ và phản xạ tốt nhé!
                 </p>
               </div>

@@ -38,7 +38,7 @@ export default async function ExploreHomePage() {
       />
 
       <ExplorePage
-        currentUser={{ id: userId, name: user.name, role: user.role }}
+        currentUser={{ id: userId, name: user.name, role: user.role, imageUrl: user.imageUrl }}
         posts={posts}
         myRequest={myRequest ?? null}
         myPosts={myPosts}

@@ -3,9 +3,10 @@
 import { experimental_useObject as useObject } from "@ai-sdk/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { DeepPartial } from "ai";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { type DeepPartial } from "ai";
+
 import { z } from "zod";
 import { aiAnalyzeSchema } from "@/services/ai/resumes/schemas";
 import { createJobInfoForAnalysis } from "@/features/jobInfos/actions";
@@ -78,7 +79,14 @@ export function useResumeAnalysis({
     [language],
   );
 
-  const { object: aiAnalysis, isLoading, submit: submitAnalysisRequest } = useObject({
+  // Persist the analysis result separately — useObject's `object` can reset to
+  // undefined after the stream ends in some AI SDK versions (schema validation
+  // timing, stream closure, etc.). onFinish copies the final value into state.
+  const [persistedAnalysis, setPersistedAnalysis] = useState<
+    DeepPartial<z.infer<typeof aiAnalyzeSchema>> | undefined
+  >(undefined);
+
+  const { object: streamingAnalysis, isLoading, submit: submitAnalysisRequest } = useObject({
     api: "/api/ai/resumes/analyze",
     schema: aiAnalyzeSchema,
     fetch: (url, options) => {
@@ -95,7 +103,27 @@ export function useResumeAnalysis({
 
       return fetch(url, { ...options, headers, body: formData });
     },
+    onFinish: ({ object }) => {
+      if (object) {
+        setPersistedAnalysis(object as DeepPartial<z.infer<typeof aiAnalyzeSchema>>);
+      }
+    },
+    onError: (error) => {
+      console.error("Resume analysis error:", error);
+      toast.error("Phân tích CV thất bại. Vui lòng thử lại.");
+    },
   });
+
+  // Use streaming object while loading, fall back to persisted after done
+  const aiAnalysis = isLoading ? streamingAnalysis : (streamingAnalysis ?? persistedAnalysis);
+
+  const reAnalyzeWithJobInfo = useCallback(
+    (existingJobInfoId?: string | null) => {
+      if (existingJobInfoId) jobInfoIdRef.current = existingJobInfoId;
+      submitAnalysisRequest(null);
+    },
+    [submitAnalysisRequest],
+  );
 
   useEffect(() => {
     if (isLoading) {
@@ -134,6 +162,9 @@ export function useResumeAnalysis({
         toast.error("Vui lòng tải lên CV của bạn");
         return;
       }
+
+      // Clear previous result before starting a new analysis
+      setPersistedAnalysis(undefined);
 
       const result = await createJobInfoForAnalysis({
         candidateName: values.candidateName,
@@ -196,6 +227,7 @@ export function useResumeAnalysis({
     selectedIndustryLabel,
     selectedLanguageLabel,
     jobDescText,
+    reAnalyzeWithJobInfo,
     fillExample,
     handlePasteJD,
     handleSubmitAnalysis,

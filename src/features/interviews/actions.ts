@@ -11,6 +11,8 @@ import { PLAN_LIMIT_MESSAGE, RATE_LIMIT_MESSAGE } from "@/lib/errorToast"
 import { env } from "@/data/env/server"
 import arcjet, { tokenBucket, request } from "@arcjet/next"
 import { generateAiInterviewFeedback } from "@/services/ai/interviews"
+import { fetchChatMessages } from "@/services/hume/lib/api"
+import { condenseChatMessages } from "@/services/hume/lib/condenseChatMessages"
 
 const aj = arcjet({
   characteristics: ["userId"],
@@ -152,7 +154,7 @@ export async function generateInterviewFeedback(interviewId: string) {
 
   await updateInterviewDb(interviewId, { feedback })
 
-  return { error: false }
+  return { error: false, feedback }
 }
 
 async function findJobInfoForUser(id: string, userId: string) {
@@ -195,4 +197,17 @@ export async function getInterviewsForJobInfo(jobInfoId: string) {
   if (jobInfo == null) return []
 
   return getInterviewsByJobInfoId(jobInfoId)
+}
+
+export async function getHumeMessagesAction(humeChatId: string) {
+  const { userId } = await getCurrentUser()
+  if (userId == null) return []
+  try {
+    const messages = await fetchChatMessages(humeChatId)
+    const condensed = condenseChatMessages(messages)
+    return condensed
+  } catch (e) {
+    console.error("Failed to fetch hume chat messages in server action:", e)
+    return []
+  }
 }

@@ -21,59 +21,71 @@ type ExploreHeaderProps = {
 export function ExploreHeader({ user, plan }: ExploreHeaderProps) {
   const isRecruiter = user.role === "recruiter"
   const isAdmin = user.role === "admin"
-  const navLinkClass =
-    "inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-foreground/85 transition-colors hover:bg-primary/10 hover:text-primary"
+  
   const activeNavLinkClass =
-    "inline-flex h-9 items-center gap-1.5 rounded-full bg-primary/10 px-3 text-sm font-semibold text-primary"
+    "inline-flex h-10 items-center gap-1.5 rounded-full bg-slate-100 dark:bg-white/10 px-4 text-sm font-semibold text-foreground dark:text-white transition-all duration-200"
+  const navLinkClass =
+    "inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-slate-600 dark:text-slate-300 transition-all duration-200 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-foreground dark:hover:text-white"
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/70 backdrop-blur-md">
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
-          <Link href={isRecruiter ? "/explore" : "/"} className="flex items-center gap-2">
-            <Image
-              src="/logo.png"
-              alt="NextStep logo"
-              width={36}
-              height={36}
-              className="rounded-md object-contain"
-              priority
-            />
-            <span className="text-lg font-semibold tracking-tight">NextStep</span>
-          </Link>
-
-          <nav className="hidden items-center gap-3 md:flex">
-            <Link href="/explore" className={activeNavLinkClass}>
-              <Compass className="size-4" />
-              Khám phá
+    <>
+      <header className="pointer-events-none fixed left-0 right-0 top-4 z-50">
+        <div className="container mx-auto px-4">
+          <div className="relative flex h-14 items-center justify-between">
+            {/* Left: logo */}
+            <Link
+              href={isRecruiter ? "/explore" : "/"}
+              className="pointer-events-auto inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 dark:border-white/10 bg-white/75 dark:bg-slate-950/35 shadow-lg shadow-black/5 dark:shadow-black/20 backdrop-blur-xl transition-all hover:bg-slate-100 dark:hover:bg-white/10"
+            >
+              <Image
+                src="/logo.png"
+                alt="NextStep logo"
+                width={34}
+                height={34}
+                className="object-contain"
+                priority
+              />
             </Link>
-            {!isRecruiter && (
-              <>
-                <Link href="/#features" className={navLinkClass}>
-                  Tính năng
-                </Link>
-                <Link href="/#reviews" className={navLinkClass}>
-                  Đánh giá
-                </Link>
-                {!isAdmin && (
-                  <Link href="/#pricing" className={navLinkClass}>
-                    Bảng giá
-                  </Link>
-                )}
-                <Link href="/#faq" className={navLinkClass}>
-                  FAQ
-                </Link>
-              </>
-            )}
-          </nav>
 
-          {isRecruiter ? (
-            <ExploreAccountMenu user={{ name: user.name, imageUrl: user.imageUrl }} />
-          ) : (
-            <HomeAccountMenu user={user} plan={plan} />
-          )}
+            {/* Middle: floating nav */}
+            <nav className="pointer-events-auto hidden items-center gap-1 rounded-full border border-slate-200 dark:border-white/10 bg-white/75 dark:bg-slate-950/55 px-2 py-1.5 shadow-2xl shadow-black/5 dark:shadow-black/25 backdrop-blur-2xl md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+              <Link href="/explore" className={activeNavLinkClass}>
+                <Compass className="size-4" />
+                Khám phá
+              </Link>
+              {!isRecruiter && (
+                <>
+                  <Link href="/" className={navLinkClass}>
+                    Trang chủ
+                  </Link>
+                  <Link href="/#features" className={navLinkClass}>
+                    Tính năng
+                  </Link>
+                  {!isAdmin && (
+                    <Link href="/#pricing" className={navLinkClass}>
+                      Bảng giá
+                    </Link>
+                  )}
+                  <Link href="/#faq" className={navLinkClass}>
+                    FAQ
+                  </Link>
+                </>
+              )}
+            </nav>
+
+            {/* Right: account */}
+            <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-slate-200 dark:border-white/10 bg-white/75 dark:bg-slate-950/35 px-2 py-1.5 shadow-lg shadow-black/5 dark:shadow-black/20 backdrop-blur-xl">
+              {isRecruiter ? (
+                <ExploreAccountMenu user={{ name: user.name, imageUrl: user.imageUrl }} />
+              ) : (
+                <HomeAccountMenu user={user} plan={plan} />
+              )}
+            </div>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+      {/* Spacer to prevent content overlap */}
+      <div className="h-20" />
+    </>
   )
 }

@@ -1,107 +1,57 @@
 "use client";
 
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import {
-  ClockIcon,
-  CheckCircle2Icon,
-  SparklesIcon,
-  ZapIcon,
-} from "lucide-react";
-import type { UsageInfo } from "@/components/resume-analysis/types";
+import { SparklesIcon, MicIcon, CheckCircle2Icon, BriefcaseIcon, FileTextIcon, TargetIcon, BrainIcon } from "lucide-react";
 
-function getUsagePercent(usage: UsageInfo) {
-  return usage.total != null && usage.total > 0
-    ? Math.min((usage.used / usage.total) * 100, 100)
-    : 100;
-}
-
-function formatUsageCount(value: number | null) {
-  return value == null ? "Không giới hạn" : value.toLocaleString("vi-VN");
-}
-
-export function ResumeHeader({ usage }: { usage: UsageInfo }) {
+export function ResumeHeader() {
   return (
-    <header className="relative overflow-hidden rounded-2xl border border-border bg-card/80 p-6 shadow-sm backdrop-blur md:p-8">
-      <div className="absolute right-0 top-0 -mr-16 -mt-16 size-56 rounded-full bg-gradient-to-br from-primary/10 via-primary/5 to-transparent blur-3xl pointer-events-none" />
+    <section className="relative overflow-hidden rounded-[32px] border border-primary/10 bg-gradient-to-br from-white via-red-50/20 to-violet-50/30 p-6 shadow-sm dark:from-card dark:via-primary/5 dark:to-secondary/5 md:p-8">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(179,0,0,0.05),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(124,58,237,0.05),transparent_40%)]" />
 
-      <div className="relative flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+      <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
         <div className="max-w-3xl space-y-4">
-          <Badge className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold text-primary">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary">
             <SparklesIcon className="size-3.5 animate-pulse" />
-            AI Careers Workspace
-          </Badge>
-
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-              Phân tích CV với{" "}
-              <span className="bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent">
-                Trí Tuệ Nhân Tạo
-              </span>
-            </h1>
-            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
-              Tải lên CV và đối chiếu trực tiếp với Job Description để phát hiện
-              khoảng trống kỹ năng, chuẩn ATS và gợi ý cải thiện rõ ràng.
-            </p>
+            AI Career Coach
           </div>
 
-          <div className="flex flex-wrap gap-3 text-xs font-medium text-muted-foreground">
-            <div className="flex items-center gap-1.5 rounded-xl bg-muted px-3 py-1.5">
-              <CheckCircle2Icon className="size-3.5 text-emerald-500" />
-              Đã thực hiện:{" "}
-              <span className="font-bold text-foreground">
-                {usage.used} lượt
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 rounded-xl bg-muted px-3 py-1.5">
-              <ClockIcon className="size-3.5 text-primary" />
-              Thời gian phân tích:{" "}
-              <span className="font-bold text-foreground">~15 giây</span>
-            </div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-5xl">
+            Phân tích CV & Job Description
+          </h1>
+
+          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
+            Đánh giá cấu trúc ATS, độ tương thích kỹ năng và nhận đề xuất cải thiện cá nhân hóa từ AI Career Coach.
+          </p>
+
+          <div className="flex flex-wrap gap-2 pt-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+              <CheckCircle2Icon className="size-3.5" />
+              ATS Analysis
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3.5 py-1.5 text-xs font-medium text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
+              <TargetIcon className="size-3.5" />
+              CV Matching
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-3.5 py-1.5 text-xs font-medium text-violet-700 dark:bg-violet-950/30 dark:text-violet-400">
+              <BrainIcon className="size-3.5" />
+              AI Feedback
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-xs font-medium text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+              <SparklesIcon className="size-3.5" />
+              Career Coach
+            </span>
           </div>
         </div>
 
-        <Card className="w-full max-w-sm rounded-2xl border-border shadow-sm xl:w-80">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                Gói hiện tại: {usage.planName}
-              </span>
-              <ZapIcon className="size-4 text-primary fill-primary/15" />
+        {/* Desktop Visual Element */}
+        <div className="hidden lg:flex items-center justify-center pr-4">
+          <div className="relative flex size-32 items-center justify-center rounded-[28px] bg-gradient-to-br from-primary/10 to-violet-500/20 p-1 shadow-inner ring-8 ring-white/50 dark:ring-card/50">
+            <div className="absolute inset-0 animate-ping rounded-[28px] bg-primary/5 opacity-50" />
+            <div className="flex size-full items-center justify-center rounded-[24px] bg-white shadow dark:bg-card">
+              <FileTextIcon className="size-12 text-primary animate-pulse" />
             </div>
-
-            <div className="mt-2 flex items-baseline gap-1">
-              <span className="text-3xl font-black text-foreground">
-                {formatUsageCount(usage.remaining)}
-              </span>
-              <span className="text-xs font-medium text-muted-foreground">
-                / {formatUsageCount(usage.total)} lượt còn lại
-              </span>
-            </div>
-
-            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-primary transition-all duration-500"
-                style={{ width: `${getUsagePercent(usage)}%` }}
-              />
-            </div>
-
-            <div className="mt-4 flex items-center justify-between text-xs">
-              <Button
-                asChild
-                variant="link"
-                className={cn("h-auto p-0 text-primary")}
-              >
-                <Link href="/#pricing">Nâng cấp / Mua thêm</Link>
-              </Button>
-              <span className="text-muted-foreground">{usage.resetText}</span>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
-    </header>
+    </section>
   );
 }
