@@ -426,6 +426,62 @@ export function InterviewResultsView({
         </div>
       </div>
 
+      {/* Toàn bộ hội thoại phỏng vấn - hiển thị inline, không ẩn */}
+      <div className="bg-white dark:bg-card border border-slate-100 dark:border-border/60 rounded-2xl p-6 shadow-sm">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-5 flex items-center gap-1.5">
+          <MessageSquareIcon className="size-4.5 text-primary" />
+          Toàn bộ hội thoại phỏng vấn
+          {transcriptMessages.length > 0 && (
+            <span className="ml-1 text-xs font-medium normal-case text-slate-400">
+              ({transcriptMessages.length} lượt)
+            </span>
+          )}
+        </h2>
+        {transcriptMessages.length === 0 ? (
+          <p className="text-sm text-center text-muted-foreground py-8">
+            Không có nội dung cuộc hội thoại.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {transcriptMessages.map((msg, i) => (
+              <div
+                key={i}
+                className={`flex items-start gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                {msg.role === "assistant" && (
+                  <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 shadow-sm border border-primary/5">
+                    <span className="text-xs">🤖</span>
+                  </div>
+                )}
+                <div className="space-y-1 max-w-[80%]">
+                  <div
+                    className={`text-[10px] font-semibold tracking-wide uppercase text-slate-400 ${
+                      msg.role === "user" ? "text-right" : "text-left"
+                    }`}
+                  >
+                    {msg.role === "user" ? "Ứng viên" : "Người phỏng vấn"}
+                  </div>
+                  <div
+                    className={`px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-xs ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground rounded-tr-none font-medium"
+                        : "bg-muted dark:bg-slate-900 rounded-tl-none"
+                    }`}
+                  >
+                    <p className="whitespace-pre-line">{msg.content}</p>
+                  </div>
+                </div>
+                {msg.role === "user" && (
+                  <div className="size-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <span className="text-xs text-primary-foreground font-semibold">👤</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Gợi ý luyện tập tiếp theo - Action Cards */}
       <div className="bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-border/60 rounded-2xl p-6">
         <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-1.5">

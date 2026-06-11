@@ -57,6 +57,10 @@ type InterviewTranscriptMessage = {
   content: string
 }
 
+// Quy tắc kết thúc: AI nói 6 lượt (lời chào + 5 câu hỏi) và ứng viên trả lời
+// đủ 5 câu hỏi thì kết thúc buổi phỏng vấn.
+const TOTAL_INTERVIEW_QUESTIONS = 5
+
 type VapiErrorDetails = {
   type: string | null
   message: string | null
@@ -112,6 +116,8 @@ function isClosingAssistantMessage(content: string) {
     "chúc bạn may mắn",
     "buổi phỏng vấn đã hoàn tất",
     "cảm ơn bạn đã dành thời gian",
+    "tạm biệt",
+    "hẹn gặp lại",
   ]
 
   return closingPhrases.some(phrase => normalized.includes(phrase))
@@ -162,6 +168,8 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   const durationRef = useRef<string>("00:00:00")
   const hasFinalizedRef = useRef(false)
   const manualStopRef = useRef(false)
+  const isInterviewCompleteRef = useRef(false)  // AI đã đọc câu kết thúc/tạm biệt
+  const goodbyeEndTimerRef = useRef<NodeJS.Timeout | null>(null)
   const microphoneStreamRef = useRef<MediaStream | null>(null)
   const microphoneDeviceIdRef = useRef<string | null>(null)
   const microphoneRecoveryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -173,8 +181,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   const lastAssistantQuestionRef = useRef<string | null>(null)
   const answeredAssistantQuestionsRef = useRef<string[]>([])
   const assistantModelOutputRef = useRef("")
-  const questionsAskedCountRef = useRef(0)      // số câu hỏi AI đã hỏi
-  const isLastQuestionRef = useRef(false)       // flag: đây là câu cuối, user trả lời xong thì đóng
+  const questionsAskedCountRef = useRef(0)      // số câu hỏi AI đã hỏi (hiển thị tiến độ)
   const router = useRouter()
 
   const clearDurationTimer = useCallback(() => {
@@ -411,6 +418,10 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
 
     clearDurationTimer()
     clearMicrophoneRecoveryTimer()
+    if (goodbyeEndTimerRef.current) {
+      clearTimeout(goodbyeEndTimerRef.current)
+      goodbyeEndTimerRef.current = null
+    }
     stopMicrophoneStream()
     setIsCallActive(false)
     setIsConnecting(false)
@@ -580,6 +591,16 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     vapiInstance.on("speech-end", () => {
       console.log("Vapi speech ended")
 
+      // Nếu AI vừa nói xong câu kết thúc/tạm biệt → đợi một nhịp ngắn cho TTS
+      // phát hết rồi đóng cuộc gọi (thay vì cắt ngang bằng timer cứng).
+      if (isInterviewCompleteRef.current && !manualStopRef.current) {
+        if (goodbyeEndTimerRef.current) clearTimeout(goodbyeEndTimerRef.current)
+        goodbyeEndTimerRef.current = setTimeout(() => {
+          manualStopRef.current = true
+          void stopVapiCall("goodbye-finished")
+        }, 1200)
+      }
+
       // Safety net: persist AI message ngay khi nói xong
       // Tránh mất message nếu conversation-update fire muộn hoặc bị miss
       const spokenContent = assistantModelOutputRef.current.trim()
@@ -680,40 +701,42 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
 
         if (message.transcriptType === "final") {
           setIsAiThinking(true)
-          // Câu hỏi thứ 5 đã được hỏi → user vừa trả lời → kết thúc ngay
-          if (isLastQuestionRef.current) {
-            isLastQuestionRef.current = false
+
+          // Cập nhật danh sách câu hỏi đã được trả lời. answeredQuestions chỉ
+          // tăng khi câu trước của AI là câu hỏi THẬT (không tính lời chào) và
+          // chưa được trả lời, nên độ dài của nó = số câu hỏi user đã trả lời.
+          const nextAnsweredQuestions = getAnsweredQuestionsAfterUserTranscript({
+            answeredQuestions: answeredAssistantQuestionsRef.current,
+            lastAssistantQuestion: lastAssistantQuestionRef.current,
+            userTranscript: transcript,
+          })
+          const answeredCountChanged =
+            nextAnsweredQuestions.length !==
+            answeredAssistantQuestionsRef.current.length
+          answeredAssistantQuestionsRef.current = nextAnsweredQuestions
+
+          if (nextAnsweredQuestions.length >= TOTAL_INTERVIEW_QUESTIONS) {
+            // Ứng viên vừa trả lời xong câu hỏi thứ 5 (AI đã nói 6 lượt: lời
+            // chào + 5 câu hỏi, user đã trả lời 5 lượt) → kết thúc phỏng vấn.
             vapiRef.current?.send({
               type: "add-message",
               message: {
                 role: "system",
-                content: `[SYSTEM NOTE - BẮT BUỘC] Ứng viên đã trả lời đủ 5 câu hỏi. DỮ̀NG HỎI THÊM. Đọc ngay câu kết thúc: "Cảm ơn bạn đã dành thời gian tham gia buổi phỏng vấn hôm nay. Chúc bạn may mắn!"`,
+                content: `[SYSTEM NOTE - BẮT BUỘC] Ứng viên đã trả lời đủ ${TOTAL_INTERVIEW_QUESTIONS} câu hỏi. DỪNG HỎI THÊM. Đọc ngay câu kết thúc và chào tạm biệt: "Cảm ơn bạn đã dành thời gian tham gia buổi phỏng vấn hôm nay. Chúc bạn may mắn trên con đường sự nghiệp sắp tới. Tạm biệt và hẹn gặp lại bạn!"`,
               },
               triggerResponseEnabled: true,
             })
-          } else {
-            // Câu 1–4: track answered để tránh lặp câu hỏi
-            const nextAnsweredQuestions = getAnsweredQuestionsAfterUserTranscript({
-              answeredQuestions: answeredAssistantQuestionsRef.current,
-              lastAssistantQuestion: lastAssistantQuestionRef.current,
-              userTranscript: transcript,
-            })
+          } else if (answeredCountChanged) {
+            // Chưa đủ 5 câu: nhắc AI không hỏi lại các câu đã trả lời.
+            const systemMessage =
+              buildAnsweredQuestionsSystemMessage(nextAnsweredQuestions)
 
-            if (
-              nextAnsweredQuestions.length !==
-              answeredAssistantQuestionsRef.current.length
-            ) {
-              answeredAssistantQuestionsRef.current = nextAnsweredQuestions
-              const systemMessage =
-                buildAnsweredQuestionsSystemMessage(nextAnsweredQuestions)
-
-              if (systemMessage != null) {
-                vapiRef.current?.send({
-                  type: "add-message",
-                  message: { role: "system", content: systemMessage },
-                  triggerResponseEnabled: false,
-                })
-              }
+            if (systemMessage != null) {
+              vapiRef.current?.send({
+                type: "add-message",
+                message: { role: "system", content: systemMessage },
+                triggerResponseEnabled: false,
+              })
             }
           }
 
@@ -786,28 +809,22 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
             lastAssistantQuestionRef.current = lastAssistant.content
 
             // conversation-update fire NHIỀU lần cho cùng một câu hỏi khi AI
-            // đang stream nội dung. Nếu đếm mỗi lần fire thì một câu hỏi duy
-            // nhất có thể đẩy count lên >=5 ngay lập tức, khiến phỏng vấn kết
-            // thúc ngay khi user vừa trả lời câu đầu tiên. Chỉ tăng count khi
-            // đây thực sự là một câu hỏi MỚI (khác câu vừa đếm trước đó).
+            // đang stream nội dung. Chỉ tăng khi đây thực sự là câu hỏi MỚI
+            // (khác câu vừa đếm trước đó) để hiển thị tiến độ cho đúng. Việc
+            // kết thúc phỏng vấn KHÔNG dựa vào biến đếm này mà dựa vào số câu
+            // đã được trả lời (xem handler transcript của user).
             const isSameQuestionAsLast =
               previousQuestion != null &&
               areQuestionsSimilar(previousQuestion, lastAssistant.content)
 
             if (!isSameQuestionAsLast) {
-              // Đếm câu hỏi AI vừa hỏi
               questionsAskedCountRef.current += 1
-              const count = questionsAskedCountRef.current
-              console.info(`AI hỏi câu ${count}`)
-
-              if (count >= 5) {
-                // Đây là câu hỏi thứ 5+: set flag để user trả lời xong thì đóng
-                isLastQuestionRef.current = true
-              }
+              console.info(`AI hỏi câu ${questionsAskedCountRef.current}`)
             }
           }
 
           if (isClosingAssistantMessage(lastAssistant.content)) {
+            isInterviewCompleteRef.current = true
             setIsInterviewComplete(true)
           }
         }
@@ -890,6 +907,10 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     return () => {
       clearDurationTimer()
       clearMicrophoneRecoveryTimer()
+      if (goodbyeEndTimerRef.current) {
+        clearTimeout(goodbyeEndTimerRef.current)
+        goodbyeEndTimerRef.current = null
+      }
       stopMicrophoneStream()
       if (!hasFinalizedRef.current) {
         void stopVapiCall("cleanup")
@@ -933,13 +954,14 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     return () => clearInterval(intervalId)
   }, [interviewId, duration, isCallActive])
 
-  // Auto-end call when interview is complete
+  // Auto-end call when interview is complete (fallback an toàn nếu vì lý do
+  // nào đó không bắt được speech-end của câu tạm biệt).
   useEffect(() => {
     if (!isInterviewComplete) return
     const timer = setTimeout(() => {
       manualStopRef.current = true
       void stopVapiCall("auto-end")
-    }, 5000)
+    }, 15000)
     return () => clearTimeout(timer)
   }, [isInterviewComplete, stopVapiCall])
 
@@ -952,6 +974,11 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     console.log("🎤 Starting interview...")
     hasFinalizedRef.current = false
     manualStopRef.current = false
+    isInterviewCompleteRef.current = false
+    if (goodbyeEndTimerRef.current) {
+      clearTimeout(goodbyeEndTimerRef.current)
+      goodbyeEndTimerRef.current = null
+    }
     endedReasonRef.current = null
     hasReceivedUserAudioRef.current = false
     clearDurationTimer()
@@ -962,7 +989,6 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     lastAssistantQuestionRef.current = null
     answeredAssistantQuestionsRef.current = []
     questionsAskedCountRef.current = 0
-    isLastQuestionRef.current = false
     setInterviewId(null)
     setMessages([])
     setLiveTranscript(null)
