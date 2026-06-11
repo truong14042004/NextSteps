@@ -83,26 +83,6 @@ export function shouldTrackAssistantQuestion(value) {
   return isQuestionLike(value) && !isOpeningInterviewMessage(value)
 }
 
-// Phân biệt "cùng một câu hỏi đang được stream" với "một câu hỏi mới".
-// Khi AI đang nói, nội dung chỉ dài thêm (prefix/substring của nhau), còn câu
-// hỏi mới thì khác hẳn. Dùng cho việc đếm số câu hỏi theo lượt, KHÔNG dùng
-// so trùng theo tỉ lệ từ (areQuestionsSimilar) vì nhiều câu hỏi khác nhau vẫn
-// chia sẻ nhiều từ khoá và sẽ bị nhầm là giống nhau.
-export function isSameOrContinuationQuestion(previous, current) {
-  const a = normalizeInterviewText(previous)
-  const b = normalizeInterviewText(current)
-
-  if (!a || !b) return false
-
-  return (
-    a === b ||
-    a.startsWith(b) ||
-    b.startsWith(a) ||
-    a.includes(b) ||
-    b.includes(a)
-  )
-}
-
 function getQuestionTokens(value) {
   return normalizeInterviewText(value)
     .split(" ")

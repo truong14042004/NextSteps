@@ -16,7 +16,6 @@ import { buildVapiStartCallArgs } from "./vapiStartCallConfig.mjs"
 import {
   buildAnsweredQuestionsSystemMessage,
   getAnsweredQuestionsAfterUserTranscript,
-  isSameOrContinuationQuestion,
   shouldTrackAssistantQuestion,
 } from "./vapiInterviewTurnGuard.mjs"
 import {
@@ -84,8 +83,6 @@ function isClosingAssistantMessage(content: string) {
     "chúc bạn may mắn",
     "buổi phỏng vấn đã hoàn tất",
     "cảm ơn bạn đã dành thời gian",
-    "tạm biệt",
-    "hẹn gặp lại",
   ]
 
   return closingPhrases.some(phrase => normalized.includes(phrase))
@@ -541,7 +538,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
               type: "add-message",
               message: {
                 role: "system",
-                content: `[SYSTEM NOTE - BẮT BUỘC] Ứng viên đã trả lời đủ 5 câu hỏi. DỪNG HỎI THÊM. Đọc ngay câu kết thúc và chào tạm biệt: "Cảm ơn bạn đã dành thời gian tham gia buổi phỏng vấn hôm nay. Chúc bạn may mắn trên con đường sự nghiệp sắp tới. Tạm biệt và hẹn gặp lại bạn!"`,
+                content: `[SYSTEM NOTE - BẮT BUỘC] Ứng viên đã trả lời đủ 5 câu hỏi. DỮ̀NG HỎI THÊM. Đọc ngay câu kết thúc: "Cảm ơn bạn đã dành thời gian tham gia buổi phỏng vấn hôm nay. Chúc bạn may mắn!"`,
               },
               triggerResponseEnabled: true,
             })
@@ -634,25 +631,16 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
           setLiveTranscript(null)
 
           if (shouldTrackAssistantQuestion(lastAssistant.content)) {
-            const previousQuestion = lastAssistantQuestionRef.current
             lastAssistantQuestionRef.current = lastAssistant.content
 
-            // conversation-update fire NHIỀU lần cho cùng một câu hỏi khi AI
-            // đang stream. Chỉ tăng count khi đây thực sự là câu hỏi MỚI (khác
-            // hẳn câu vừa đếm), tránh đếm trùng làm phỏng vấn kết thúc sớm.
-            const isNewQuestion =
-              previousQuestion == null ||
-              !isSameOrContinuationQuestion(previousQuestion, lastAssistant.content)
+            // Đếm câu hỏi AI vừa hỏi
+            questionsAskedCountRef.current += 1
+            const count = questionsAskedCountRef.current
+            console.info(`AI hỏi câu ${count}`)
 
-            if (isNewQuestion) {
-              questionsAskedCountRef.current += 1
-              const count = questionsAskedCountRef.current
-              console.info(`AI hỏi câu ${count}`)
-
-              if (count >= 5) {
-                // Câu hỏi thứ 5: user trả lời xong thì kết thúc
-                isLastQuestionRef.current = true
-              }
+            if (count >= 5) {
+              // Đây là câu hỏi thứ 5+: set flag để user trả lời xong sẽ kết thúc
+              isLastQuestionRef.current = true
             }
           }
 
@@ -787,7 +775,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     const timer = setTimeout(() => {
       manualStopRef.current = true
       void stopVapiCall("auto-end")
-    }, 12000)
+    }, 5000)
     return () => clearTimeout(timer)
   }, [isInterviewComplete, stopVapiCall])
 
