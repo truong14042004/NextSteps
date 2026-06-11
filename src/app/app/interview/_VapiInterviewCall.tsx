@@ -45,6 +45,7 @@ import {
   getAnsweredQuestionsAfterUserTranscript,
   isReadyOnlyResponse,
   isSameOrContinuationQuestion,
+  normalizeInterviewText,
   shouldTrackAssistantQuestion,
 } from "./vapiInterviewTurnGuard.mjs"
 import {
@@ -181,7 +182,6 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   const lastAssistantQuestionRef = useRef<string | null>(null)
   const answeredAssistantQuestionsRef = useRef<string[]>([])
   const assistantModelOutputRef = useRef("")
-  const currentAiMessageIndexRef = useRef<number | null>(null)  // vị trí tin nhắn AI của lượt đang nói
   const questionsAskedCountRef = useRef(0)      // số câu hỏi AI đã hỏi (hiển thị tiến độ)
   const userAnswerCountRef = useRef(0)          // số câu hỏi ứng viên đã trả lời thật
   const pendingAnswerRef = useRef(false)        // AI vừa hỏi 1 câu mới, đang chờ trả lời
@@ -263,27 +263,40 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     return microphoneDeviceIdRef.current
   }, [stopMicrophoneStream])
 
-  // Lưu lời AI của LƯỢT hiện tại vào messages. Gọi ngay khi AI nói xong
-  // (speech-end) hoặc trước khi user nói, để câu hỏi KHÔNG biến mất. Mỗi lượt
-  // (giữa 2 speech-start) là một tin nhắn: lần đầu thêm mới, các lần sau cập
-  // nhật đúng tin nhắn đó (currentAiMessageIndexRef).
-  const commitCurrentAiTurn = useCallback(() => {
-    const content = assistantModelOutputRef.current.trim()
+  // Lưu lời AI vào messages. Gọi từ nhiều nguồn (conversation-update cho lời
+  // chào/text sạch, speech-end cho model-output, và flush khi user trả lời).
+  // Khử trùng theo nội dung (chuẩn hóa): nếu trùng/đang nối tiếp câu AI gần
+  // nhất → cập nhật giữ bản dài hơn; nếu khác hẳn → thêm tin nhắn mới.
+  const commitAiMessage = useCallback((rawContent: string) => {
+    const content = rawContent.trim()
     if (content === "") return
 
     setMessages(prev => {
-      const index = currentAiMessageIndexRef.current
+      let lastIndex = -1
+      for (let i = prev.length - 1; i >= 0; i -= 1) {
+        if (prev[i].role === "assistant") {
+          lastIndex = i
+          break
+        }
+      }
 
-      if (index != null && prev[index]?.role === "assistant") {
-        if (prev[index].content === content) return prev
-        const updated = [...prev]
-        updated[index] = { role: "assistant", content }
-        messagesRef.current = updated
-        return updated
+      if (lastIndex !== -1) {
+        const existing = prev[lastIndex].content
+        const a = normalizeInterviewText(existing)
+        const b = normalizeInterviewText(content)
+        const isSameTurn = a === b || b.startsWith(a) || a.startsWith(b)
+
+        if (isSameTurn) {
+          const better = content.length >= existing.length ? content : existing
+          if (better === existing) return prev
+          const updated = [...prev]
+          updated[lastIndex] = { role: "assistant", content: better }
+          messagesRef.current = updated
+          return updated
+        }
       }
 
       const next = [...prev, { role: "assistant" as const, content }]
-      currentAiMessageIndexRef.current = next.length - 1
       messagesRef.current = next
       return next
     })
@@ -582,7 +595,6 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
       console.log("Vapi speech started")
       // Bắt đầu một LƯỢT nói mới của AI.
       assistantModelOutputRef.current = ""
-      currentAiMessageIndexRef.current = null
       setIsAiThinking(false)
     })
 
@@ -591,7 +603,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
 
       // AI nói xong → LƯU ngay câu vừa nói vào đoạn chat (trước khi user kịp
       // trả lời, tránh câu hỏi bị biến mất).
-      commitCurrentAiTurn()
+      commitAiMessage(assistantModelOutputRef.current)
       setLiveTranscript(null)
 
       // Nếu AI vừa nói xong câu kết thúc/tạm biệt → đợi một nhịp ngắn cho TTS
@@ -683,7 +695,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
 
           // Trước khi xử lý câu trả lời, LƯU chốt câu hỏi AI của lượt vừa rồi
           // vào messages (phòng trường hợp user cắt lời trước speech-end).
-          commitCurrentAiTurn()
+          commitAiMessage(assistantModelOutputRef.current)
 
           // Cập nhật danh sách câu đã trả lời để nhắc AI không hỏi lại (dùng
           // riêng cho gợi ý, không dùng để quyết định kết thúc).
@@ -802,6 +814,10 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
           .reverse()
           .find(m => (m.role === "assistant" || m.role === "bot") && m.content.trim() !== "")
         if (lastAssistant?.content) {
+          // Lưu lời AI (text sạch từ Vapi) vào chat — đặc biệt cần cho lời chào
+          // firstMessage (không sinh model-output nên speech-end không bắt được).
+          commitAiMessage(lastAssistant.content)
+
           if (shouldTrackAssistantQuestion(lastAssistant.content)) {
             const previousQuestion = lastAssistantQuestionRef.current
 
@@ -895,7 +911,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     })
 
     return vapiInstance
-  }, [clearDurationTimer, commitCurrentAiTurn, finalizeCall, markRecognizedSpeech, scheduleMicrophoneRecovery])
+  }, [clearDurationTimer, commitAiMessage, finalizeCall, markRecognizedSpeech, scheduleMicrophoneRecovery])
 
   useEffect(() => {
     if (!env.NEXT_PUBLIC_VAPI_PUBLIC_KEY) {
@@ -988,7 +1004,6 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     lastAssistantQuestionRef.current = null
     answeredAssistantQuestionsRef.current = []
     assistantModelOutputRef.current = ""
-    currentAiMessageIndexRef.current = null
     questionsAskedCountRef.current = 0
     userAnswerCountRef.current = 0
     pendingAnswerRef.current = false
