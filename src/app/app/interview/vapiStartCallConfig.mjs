@@ -75,14 +75,25 @@ export const buildVapiStartCallArgs = ({
     ],
     silenceTimeoutSeconds: 90,
     modelOutputInMessagesEnabled: true,
-    // Override transcriber của assistant. Google transcriber thường gặp lỗi
-    // "vapifault-google-transcriber-failed" làm ngắt cuộc gọi ngay khi ứng
-    // viên vừa nói. Dùng Deepgram (nova-2, tiếng Việt) cho ổn định, đúng với
-    // thiết kế ban đầu vốn đọc transcript từ Deepgram.
+    // Giữ Google (gemini-2.0-flash) làm transcriber chính như cấu hình
+    // assistant. Trước đây khi Google gặp lỗi "vapifault-google-transcriber
+    // -failed" thì cuộc gọi bị ngắt ngay. Thêm fallbackPlan để khi Google
+    // lỗi giữa chừng, Vapi tự chuyển sang transcriber khác (Deepgram tiếng
+    // Việt, rồi auto-fallback) thay vì kết thúc cuộc phỏng vấn.
     transcriber: {
-      provider: "deepgram",
-      model: "nova-2",
-      language: "vi",
+      provider: "google",
+      model: "gemini-2.0-flash",
+      language: "Multilingual",
+      fallbackPlan: {
+        autoFallback: { enabled: true },
+        transcribers: [
+          {
+            provider: "deepgram",
+            model: "nova-2",
+            language: "vi",
+          },
+        ],
+      },
     },
     model: {
       provider: "openai",
