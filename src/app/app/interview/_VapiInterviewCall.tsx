@@ -42,6 +42,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import {
+  areQuestionsSimilar,
   buildAnsweredQuestionsSystemMessage,
   getAnsweredQuestionsAfterUserTranscript,
   shouldTrackAssistantQuestion,
@@ -781,16 +782,28 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
           setLiveTranscript(null)
 
           if (shouldTrackAssistantQuestion(lastAssistant.content)) {
+            const previousQuestion = lastAssistantQuestionRef.current
             lastAssistantQuestionRef.current = lastAssistant.content
 
-            // Đếm câu hỏi AI vừa hỏi
-            questionsAskedCountRef.current += 1
-            const count = questionsAskedCountRef.current
-            console.info(`AI hỏi câu ${count}`)
+            // conversation-update fire NHIỀU lần cho cùng một câu hỏi khi AI
+            // đang stream nội dung. Nếu đếm mỗi lần fire thì một câu hỏi duy
+            // nhất có thể đẩy count lên >=5 ngay lập tức, khiến phỏng vấn kết
+            // thúc ngay khi user vừa trả lời câu đầu tiên. Chỉ tăng count khi
+            // đây thực sự là một câu hỏi MỚI (khác câu vừa đếm trước đó).
+            const isSameQuestionAsLast =
+              previousQuestion != null &&
+              areQuestionsSimilar(previousQuestion, lastAssistant.content)
 
-            if (count >= 5) {
-              // Đây là câu hỏi thứ 5+: set flag để user trả lời xong sẽ kết thúc
-              isLastQuestionRef.current = true
+            if (!isSameQuestionAsLast) {
+              // Đếm câu hỏi AI vừa hỏi
+              questionsAskedCountRef.current += 1
+              const count = questionsAskedCountRef.current
+              console.info(`AI hỏi câu ${count}`)
+
+              if (count >= 5) {
+                // Đây là câu hỏi thứ 5+: set flag để user trả lời xong thì đóng
+                isLastQuestionRef.current = true
+              }
             }
           }
 

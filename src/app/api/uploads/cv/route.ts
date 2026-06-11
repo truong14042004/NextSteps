@@ -67,7 +67,13 @@ export async function POST(request: NextRequest) {
       destination,
     })
 
-    return NextResponse.json({ ...uploadedFile, fileName: file.name })
+    // Client mong đợi `data.url`. uploadBufferToGoogleCloudStorage trả về
+    // `publicUrl`, nên map sang `url` để form đăng CV nhận đúng đường dẫn.
+    return NextResponse.json({
+      ...uploadedFile,
+      url: uploadedFile.publicUrl,
+      fileName: file.name,
+    })
   } catch (error) {
     console.error("Explore CV upload failed:", error)
 
