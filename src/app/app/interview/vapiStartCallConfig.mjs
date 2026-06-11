@@ -75,6 +75,15 @@ export const buildVapiStartCallArgs = ({
     ],
     silenceTimeoutSeconds: 90,
     modelOutputInMessagesEnabled: true,
+    // Override transcriber của assistant. Google transcriber thường gặp lỗi
+    // "vapifault-google-transcriber-failed" làm ngắt cuộc gọi ngay khi ứng
+    // viên vừa nói. Dùng Deepgram (nova-2, tiếng Việt) cho ổn định, đúng với
+    // thiết kế ban đầu vốn đọc transcript từ Deepgram.
+    transcriber: {
+      provider: "deepgram",
+      model: "nova-2",
+      language: "vi",
+    },
     model: {
       provider: "openai",
       model: "gpt-4o",
