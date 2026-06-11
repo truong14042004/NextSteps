@@ -45,6 +45,7 @@ import {
   getAnsweredQuestionsAfterUserTranscript,
   isReadyOnlyResponse,
   isSameOrContinuationQuestion,
+  normalizeInterviewText,
   shouldTrackAssistantQuestion,
 } from "./vapiInterviewTurnGuard.mjs"
 import {
@@ -181,7 +182,6 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   const lastAssistantQuestionRef = useRef<string | null>(null)
   const answeredAssistantQuestionsRef = useRef<string[]>([])
   const assistantModelOutputRef = useRef("")
-  const aiTurnStartedRef = useRef(false)        // đã thêm tin nhắn cho lượt AI đang nói chưa
   const questionsAskedCountRef = useRef(0)      // số câu hỏi AI đã hỏi (hiển thị tiến độ)
   const userAnswerCountRef = useRef(0)          // số câu hỏi ứng viên đã trả lời thật
   const pendingAnswerRef = useRef(false)        // AI vừa hỏi 1 câu mới, đang chờ trả lời
@@ -263,29 +263,41 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     return microphoneDeviceIdRef.current
   }, [stopMicrophoneStream])
 
-  // Lưu lời AI theo từng LƯỢT nói. Mỗi lượt AI nói (giữa 2 lần speech-start)
-  // là một tin nhắn riêng được THÊM mới vào đoạn chat; các cập nhật trong cùng
-  // lượt chỉ sửa nội dung tin nhắn đó. Nhờ vậy câu hỏi cũ KHÔNG bị ghi đè khi
-  // AI hỏi câu mới.
+  // Lưu lời AI theo nội dung. conversation-update có thể báo lại CÙNG một câu
+  // (vd lời chào) nhiều lần trong khi chờ ứng viên trả lời → KHÔNG được thêm
+  // trùng. Quy tắc: so với tin nhắn assistant gần nhất:
+  //  - trùng y hệt → bỏ qua
+  //  - là phần nối dài khi đang stream (prefix của nhau) → cập nhật
+  //  - khác hẳn → đây là lượt nói/câu hỏi MỚI → thêm tin nhắn mới (giữ câu cũ)
   const commitAiTurnMessage = useCallback((rawContent: string) => {
     const content = rawContent.trim()
     if (content === "") return
 
     setMessages(prev => {
-      const next = [...prev]
-      const lastIndex = next.length - 1
-      const lastIsAssistant = lastIndex >= 0 && next[lastIndex].role === "assistant"
-
-      if (aiTurnStartedRef.current && lastIsAssistant) {
-        // Cùng một lượt đang nói → cập nhật nội dung tin nhắn AI cuối.
-        if (next[lastIndex].content === content) return prev
-        next[lastIndex] = { role: "assistant", content }
-      } else {
-        // Lượt nói mới của AI → thêm tin nhắn mới, giữ nguyên các lượt trước.
-        next.push({ role: "assistant", content })
-        aiTurnStartedRef.current = true
+      let lastAssistantIndex = -1
+      for (let i = prev.length - 1; i >= 0; i -= 1) {
+        if (prev[i].role === "assistant") {
+          lastAssistantIndex = i
+          break
+        }
       }
 
+      if (lastAssistantIndex !== -1) {
+        const existing = prev[lastAssistantIndex].content
+        const a = normalizeInterviewText(existing)
+        const b = normalizeInterviewText(content)
+        const isSameTurn = a === b || b.startsWith(a) || a.startsWith(b)
+
+        if (isSameTurn) {
+          if (existing === content) return prev
+          const updated = [...prev]
+          updated[lastAssistantIndex] = { role: "assistant", content }
+          messagesRef.current = updated
+          return updated
+        }
+      }
+
+      const next = [...prev, { role: "assistant" as const, content }]
       messagesRef.current = next
       return next
     })
@@ -680,11 +692,6 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
         if (message.transcriptType === "final") {
           setIsAiThinking(true)
 
-          // Ứng viên vừa trả lời → câu nói kế tiếp của AI là một LƯỢT MỚI,
-          // nên đánh dấu để commitAiTurnMessage thêm tin nhắn mới thay vì ghi
-          // đè câu hỏi trước.
-          aiTurnStartedRef.current = false
-
           // Cập nhật danh sách câu đã trả lời để nhắc AI không hỏi lại (dùng
           // riêng cho gợi ý, không dùng để quyết định kết thúc).
           const nextAnsweredQuestions = getAnsweredQuestionsAfterUserTranscript({
@@ -985,7 +992,6 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     lastAssistantQuestionRef.current = null
     answeredAssistantQuestionsRef.current = []
     assistantModelOutputRef.current = ""
-    aiTurnStartedRef.current = false
     questionsAskedCountRef.current = 0
     userAnswerCountRef.current = 0
     pendingAnswerRef.current = false
