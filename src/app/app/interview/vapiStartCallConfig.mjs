@@ -75,26 +75,6 @@ export const buildVapiStartCallArgs = ({
     ],
     silenceTimeoutSeconds: 90,
     modelOutputInMessagesEnabled: true,
-    // Giữ Google (gemini-2.0-flash) làm transcriber chính như cấu hình
-    // assistant. Trước đây khi Google gặp lỗi "vapifault-google-transcriber
-    // -failed" thì cuộc gọi bị ngắt ngay. Thêm fallbackPlan để khi Google
-    // lỗi giữa chừng, Vapi tự chuyển sang transcriber khác (Deepgram tiếng
-    // Việt, rồi auto-fallback) thay vì kết thúc cuộc phỏng vấn.
-    transcriber: {
-      provider: "google",
-      model: "gemini-2.0-flash",
-      language: "Multilingual",
-      fallbackPlan: {
-        autoFallback: { enabled: true },
-        transcribers: [
-          {
-            provider: "deepgram",
-            model: "nova-2",
-            language: "vi",
-          },
-        ],
-      },
-    },
     model: {
       provider: "openai",
       model: "gpt-4o",
@@ -121,25 +101,28 @@ export const buildVapiStartCallArgs = ({
       waitSeconds: 1.1,
       customEndpointingRules: [
         {
+          // Khi ứng viên nói rõ "xong/hết ý..." → phản hồi nhanh.
           type: "customer",
           regex: userDoneRegex,
           regexOptions: regexIgnoreCase,
           timeoutSeconds: 0.7,
         },
         {
+          // Mặc định: chờ thêm sau khi ứng viên ngừng nói, tránh cắt sớm.
           type: "customer",
           regex: ".+",
-          timeoutSeconds: 2.3,
+          timeoutSeconds: 3,
         },
       ],
       transcriptionEndpointingPlan: {
-        onPunctuationSeconds: 1.2,
-        onNoPunctuationSeconds: 2.6,
+        // Vapi giới hạn các giá trị này tối đa 3 giây.
+        onPunctuationSeconds: 1.5,
+        onNoPunctuationSeconds: 3,
         onNumberSeconds: 2.4,
       },
     },
     stopSpeakingPlan: {
-      numWords: 3,
+      numWords: 4,
       voiceSeconds: 0.35,
       backoffSeconds: 1.5,
       acknowledgementPhrases,

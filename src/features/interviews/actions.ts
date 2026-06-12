@@ -105,6 +105,70 @@ export async function updateInterview(
   return { error: false }
 }
 
+// Lấy transcript CHUẨN của cuộc gọi trực tiếp từ API Vapi (Vapi tự ghép đúng
+// từng lượt nói) và lưu đè vào bản ghi phỏng vấn. Đáng tin cậy hơn việc tự
+// ghép từ sự kiện streaming phía client. Có retry vì Vapi cần một nhịp để
+// hoàn tất transcript sau khi call kết thúc.
+export async function syncVapiTranscript(interviewId: string, callId: string) {
+  const { userId } = await getCurrentUser()
+  if (userId == null) {
+    return { error: true as const, message: "You don't have permission to do this" }
+  }
+
+  const interview = await findInterviewForUser(interviewId, userId)
+  if (interview == null) {
+    return { error: true as const, message: "You don't have permission to do this" }
+  }
+
+  const apiKey = env.VAPI_PRIVATE_KEY
+  if (!apiKey || callId.trim() === "") {
+    return { error: true as const, message: "Vapi chưa được cấu hình" }
+  }
+
+  type VapiRawMessage = { role?: string; content?: string; message?: string }
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      const res = await fetch(`https://api.vapi.ai/call/${callId}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        cache: "no-store",
+      })
+
+      if (res.ok) {
+        const call = (await res.json()) as {
+          messages?: VapiRawMessage[]
+          artifact?: { messages?: VapiRawMessage[] }
+        }
+
+        const raw = call.artifact?.messages ?? call.messages ?? []
+        const transcript = raw
+          .filter(
+            m =>
+              m?.role === "user" || m?.role === "bot" || m?.role === "assistant",
+          )
+          .map(m => ({
+            role: m.role === "user" ? ("user" as const) : ("assistant" as const),
+            content: String(m.message ?? m.content ?? "").trim(),
+          }))
+          .filter(m => m.content !== "")
+
+        if (transcript.length > 0) {
+          await updateInterviewDb(interviewId, {
+            vapiTranscript: JSON.stringify(transcript),
+          })
+          return { error: false as const }
+        }
+      }
+    } catch (e) {
+      console.error("syncVapiTranscript attempt failed:", e)
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 1500))
+  }
+
+  return { error: true as const, message: "Transcript chưa sẵn sàng" }
+}
+
 export async function generateInterviewFeedback(interviewId: string) {
   const { userId, user } = await getCurrentUser({ allData: true })
   if (userId == null || user == null) {
