@@ -98,28 +98,31 @@ export const buildVapiStartCallArgs = ({
       },
     },
     startSpeakingPlan: {
-      waitSeconds: 1.1,
+      waitSeconds: 1.5,
       customEndpointingRules: [
         {
+          // Khi ứng viên nói rõ "xong/hết ý..." → phản hồi nhanh.
           type: "customer",
           regex: userDoneRegex,
           regexOptions: regexIgnoreCase,
           timeoutSeconds: 0.7,
         },
         {
+          // Mặc định: chờ lâu hơn (4s) sau khi ứng viên ngừng nói mới phản hồi,
+          // tránh CẮT SỚM khi ứng viên dừng một nhịp để suy nghĩ.
           type: "customer",
           regex: ".+",
-          timeoutSeconds: 2.3,
+          timeoutSeconds: 4,
         },
       ],
       transcriptionEndpointingPlan: {
-        onPunctuationSeconds: 1.2,
-        onNoPunctuationSeconds: 2.6,
-        onNumberSeconds: 2.4,
+        onPunctuationSeconds: 2,
+        onNoPunctuationSeconds: 4,
+        onNumberSeconds: 3,
       },
     },
     stopSpeakingPlan: {
-      numWords: 3,
+      numWords: 5,
       voiceSeconds: 0.35,
       backoffSeconds: 1.5,
       acknowledgementPhrases,
