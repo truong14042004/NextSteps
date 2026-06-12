@@ -98,7 +98,7 @@ export const buildVapiStartCallArgs = ({
       },
     },
     startSpeakingPlan: {
-      waitSeconds: 1.5,
+      waitSeconds: 1.1,
       customEndpointingRules: [
         {
           // Khi ứng viên nói rõ "xong/hết ý..." → phản hồi nhanh.
@@ -108,21 +108,21 @@ export const buildVapiStartCallArgs = ({
           timeoutSeconds: 0.7,
         },
         {
-          // Mặc định: chờ lâu hơn (4s) sau khi ứng viên ngừng nói mới phản hồi,
-          // tránh CẮT SỚM khi ứng viên dừng một nhịp để suy nghĩ.
+          // Mặc định: chờ thêm sau khi ứng viên ngừng nói, tránh cắt sớm.
           type: "customer",
           regex: ".+",
-          timeoutSeconds: 4,
+          timeoutSeconds: 3,
         },
       ],
       transcriptionEndpointingPlan: {
-        onPunctuationSeconds: 2,
-        onNoPunctuationSeconds: 4,
-        onNumberSeconds: 3,
+        // Vapi giới hạn các giá trị này tối đa 3 giây.
+        onPunctuationSeconds: 1.5,
+        onNoPunctuationSeconds: 3,
+        onNumberSeconds: 2.4,
       },
     },
     stopSpeakingPlan: {
-      numWords: 5,
+      numWords: 4,
       voiceSeconds: 0.35,
       backoffSeconds: 1.5,
       acknowledgementPhrases,
