@@ -127,6 +127,19 @@ export async function syncVapiTranscript(interviewId: string, callId: string) {
 
   type VapiRawMessage = { role?: string; content?: string; message?: string }
 
+  // Số message của bản client đã lưu trước đó (finalizeCall lưu bản client
+  // append-only — đầy đủ từng câu hỏi/câu trả lời như hiển thị lúc phỏng vấn).
+  // Dùng làm mốc để KHÔNG đè bằng bản Vapi ngắn hơn.
+  const clientTranscriptLength = (() => {
+    if (interview.vapiTranscript == null) return 0
+    try {
+      const parsed = JSON.parse(interview.vapiTranscript)
+      return Array.isArray(parsed) ? parsed.length : 0
+    } catch {
+      return 0
+    }
+  })()
+
   for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
       const res = await fetch(`https://api.vapi.ai/call/${callId}`, {
@@ -152,10 +165,18 @@ export async function syncVapiTranscript(interviewId: string, callId: string) {
           }))
           .filter(m => m.content !== "")
 
-        if (transcript.length > 0) {
+        // Chỉ đè khi bản Vapi KHÔNG ngắn hơn bản client. Vapi đôi khi chỉ trả
+        // lời chào + 1 lượt user (gộp), làm mất các câu hỏi AI vốn đã hiển thị
+        // đúng lúc phỏng vấn. No-shrink guard giữ bản client trong trường hợp đó.
+        if (transcript.length > 0 && transcript.length >= clientTranscriptLength) {
           await updateInterviewDb(interviewId, {
             vapiTranscript: JSON.stringify(transcript),
           })
+          return { error: false as const }
+        }
+
+        // Bản Vapi ngắn hơn bản client → coi như đã xong, giữ nguyên bản client.
+        if (transcript.length > 0) {
           return { error: false as const }
         }
       }
