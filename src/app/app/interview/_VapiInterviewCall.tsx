@@ -616,7 +616,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
           // (nguồn chuẩn). Gộp các bản ghi LIÊN TIẾP cùng vai trò thành một
           // bong bóng → mỗi lượt nói = một câu hoàn chỉnh, không bị tách mảnh
           // hay dính sang câu khác.
-          setMessages(() => {
+          setMessages(prev => {
             const rebuilt: InterviewTranscriptMessage[] = []
             for (const item of conversation) {
               if (item.role !== "user" && item.role !== "assistant" && item.role !== "bot") {
@@ -633,6 +633,15 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
                 rebuilt.push({ role, content })
               }
             }
+
+            // KHÔNG để danh sách co lại. conversation-update đôi khi đến với
+            // mảng conversation tạm thời THIẾU câu hỏi vừa hỏi; nếu ghi đè
+            // bằng danh sách ngắn hơn thì câu hỏi sẽ biến mất khi user trả lời.
+            // Chỉ cập nhật khi bản dựng có số tin nhắn >= hiện tại.
+            if (rebuilt.length < prev.length) {
+              return prev
+            }
+
             messagesRef.current = rebuilt
             return rebuilt
           })
