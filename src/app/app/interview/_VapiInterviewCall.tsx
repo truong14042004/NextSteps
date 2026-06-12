@@ -16,6 +16,7 @@ import { buildVapiStartCallArgs } from "./vapiStartCallConfig.mjs"
 import {
   buildAnsweredQuestionsSystemMessage,
   getAnsweredQuestionsAfterUserTranscript,
+  normalizeInterviewText,
   shouldTrackAssistantQuestion,
 } from "./vapiInterviewTurnGuard.mjs"
 import {
@@ -627,20 +628,41 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
             messagesRef.current = nextMessages
             return nextMessages
           })
-          assistantModelOutputRef.current = ""
+          // KHÔNG xóa assistantModelOutputRef ở đây. conversation-update
+          // thường fire TRƯỚC speech-end; nếu xóa thì speech-end (safety net)
+          // sẽ rỗng và không lưu được câu hỏi AI vừa nói → câu hỏi biến mất
+          // khi user trả lời. Ref sẽ được reset ở speech-start của lượt sau.
           setLiveTranscript(null)
 
           if (shouldTrackAssistantQuestion(lastAssistant.content)) {
+            const previousQuestion = lastAssistantQuestionRef.current
             lastAssistantQuestionRef.current = lastAssistant.content
 
-            // Đếm câu hỏi AI vừa hỏi
-            questionsAskedCountRef.current += 1
-            const count = questionsAskedCountRef.current
-            console.info(`AI hỏi câu ${count}`)
+            // conversation-update fire NHIỀU lần cho cùng một câu hỏi khi AI
+            // đang stream. Nếu đếm mỗi lần fire thì một câu hỏi bị đếm nhiều
+            // lần → count nhanh chóng >=5 → phỏng vấn TỰ KẾT THÚC sớm. Chỉ
+            // tăng count khi đây thực sự là câu hỏi MỚI (không phải phần nối
+            // tiếp của câu vừa đếm).
+            const prevNormalized = previousQuestion
+              ? normalizeInterviewText(previousQuestion)
+              : ""
+            const curNormalized = normalizeInterviewText(lastAssistant.content)
+            const isSameQuestion =
+              prevNormalized !== "" &&
+              (prevNormalized === curNormalized ||
+                curNormalized.startsWith(prevNormalized) ||
+                prevNormalized.startsWith(curNormalized))
 
-            if (count >= 5) {
-              // Đây là câu hỏi thứ 5+: set flag để user trả lời xong sẽ kết thúc
-              isLastQuestionRef.current = true
+            if (!isSameQuestion) {
+              // Đếm câu hỏi AI vừa hỏi
+              questionsAskedCountRef.current += 1
+              const count = questionsAskedCountRef.current
+              console.info(`AI hỏi câu ${count}`)
+
+              if (count >= 5) {
+                // Câu hỏi thứ 5: user trả lời xong sẽ kết thúc
+                isLastQuestionRef.current = true
+              }
             }
           }
 
