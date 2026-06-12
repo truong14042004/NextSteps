@@ -93,11 +93,17 @@ type AiMsg = { role: "assistant" | "user"; content: string }
 // Thêm/cập nhật lời AI theo kiểu APPEND-ONLY (không bao giờ xóa tin nhắn cũ):
 //  - cùng lượt đang nói (nội dung trùng/nối dài câu AI gần nhất) → cập nhật,
 //    giữ bản dài hơn (không để co lại)
+//  - nội dung đã xuất hiện ở MỘT tin nhắn AI nào đó (vd Vapi phát LẠI lời
+//    chào/câu hỏi do cuộc gọi khởi động lại) → BỎ QUA, không thêm trùng
 //  - khác hẳn → câu hỏi MỚI → thêm bong bóng mới
-// Nhờ append-only, câu hỏi đã hiện sẽ KHÔNG biến mất khi user trả lời.
+// Nhờ append-only + chống trùng, câu hỏi đã hiện sẽ KHÔNG biến mất khi user
+// trả lời, và lời chào/câu hỏi cũng không bị lặp dù Vapi gửi lại.
 function commitAssistantTurn(prev: AiMsg[], rawContent: string): AiMsg[] {
   const content = rawContent.trim()
   if (content === "") return prev
+
+  const b = normalizeInterviewText(content)
+  if (b === "") return prev
 
   let lastIndex = -1
   for (let i = prev.length - 1; i >= 0; i -= 1) {
@@ -109,7 +115,6 @@ function commitAssistantTurn(prev: AiMsg[], rawContent: string): AiMsg[] {
 
   if (lastIndex !== -1) {
     const a = normalizeInterviewText(prev[lastIndex].content)
-    const b = normalizeInterviewText(content)
     const isSameTurn = a === b || b.startsWith(a) || a.startsWith(b)
 
     if (isSameTurn) {
@@ -120,6 +125,13 @@ function commitAssistantTurn(prev: AiMsg[], rawContent: string): AiMsg[] {
       return updated
     }
   }
+
+  // Chống trùng: nếu nội dung này đã có ở một tin nhắn AI trước đó (Vapi phát
+  // lại lời chào/câu hỏi) thì không thêm nữa.
+  const alreadyExists = prev.some(
+    m => m.role === "assistant" && normalizeInterviewText(m.content) === b,
+  )
+  if (alreadyExists) return prev
 
   return [...prev, { role: "assistant", content }]
 }
@@ -693,19 +705,14 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
           )
           : []
 
-        // Ghép các bản ghi assistant/bot LIÊN TIẾP ở cuối (sau lượt user gần
-        // nhất) thành câu hỏi hiện tại đầy đủ của AI. Bỏ qua tin system chen
-        // giữa (vd các system note mình gửi).
-        let aiTurn = ""
-        for (let i = conversation.length - 1; i >= 0; i -= 1) {
-          const item = conversation[i]
-          if (item.role === "assistant" || item.role === "bot") {
-            const c = item.content.trim()
-            aiTurn = aiTurn === "" ? c : `${c} ${aiTurn}`.trim()
-          } else if (item.role === "user") {
-            break
-          }
-        }
+        // Lấy bản ghi assistant/bot CUỐI CÙNG làm câu hỏi hiện tại của AI.
+        // (Không nối nhiều bản ghi vì khi cuộc gọi bị phát lại, các bản ghi
+        // assistant liên tiếp có thể là lời chào + câu hỏi cũ → nối lại sẽ rối.
+        // commitAssistantTurn đã chống trùng và nối-dài cùng lượt.)
+        const lastAssistantItem = [...conversation]
+          .reverse()
+          .find(item => item.role === "assistant" || item.role === "bot")
+        const aiTurn = lastAssistantItem?.content.trim() ?? ""
 
         if (aiTurn !== "") {
           // Lưu lời AI theo kiểu append-only → câu hỏi KHÔNG biến mất khi user
