@@ -10,7 +10,6 @@ import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { InterviewJobInfo } from "./page"
 import { toast } from "sonner"
-import { syncAssistantMessagesFromConversation } from "./vapiAssistantMessageSync.mjs"
 import { getRandomMaleInterviewerName } from "./vapiInterviewPrompt.mjs"
 import { buildVapiStartCallArgs } from "./vapiStartCallConfig.mjs"
 import {
@@ -87,40 +86,6 @@ function isClosingAssistantMessage(content: string) {
   ]
 
   return closingPhrases.some(phrase => normalized.includes(phrase))
-}
-
-type AiMsg = { role: "assistant" | "user"; content: string }
-
-// Lưu lời AI vào danh sách tin nhắn một cách an toàn, chống MẢNH THỪA:
-//  - nếu nội dung trùng/đã là MỘT PHẦN (substring) của câu AI gần nhất → bỏ qua
-//    (tránh lưu thêm 1 khúc đuôi của câu hỏi đã có)
-//  - nếu nội dung MỞ RỘNG câu AI gần nhất (cùng lượt đang stream) → cập nhật
-//  - nếu khác hẳn → thêm tin nhắn mới
-function commitAiTurnToMessages(prev: AiMsg[], rawContent: string): AiMsg[] {
-  const content = rawContent.trim()
-  if (content === "") return prev
-
-  let lastIndex = -1
-  for (let i = prev.length - 1; i >= 0; i -= 1) {
-    if (prev[i].role === "assistant") {
-      lastIndex = i
-      break
-    }
-  }
-
-  if (lastIndex !== -1) {
-    const a = normalizeInterviewText(prev[lastIndex].content)
-    const b = normalizeInterviewText(content)
-
-    if (a === b || a.includes(b)) return prev
-    if (b.includes(a)) {
-      const updated = [...prev]
-      updated[lastIndex] = { role: "assistant", content }
-      return updated
-    }
-  }
-
-  return [...prev, { role: "assistant", content }]
 }
 
 export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobInfo; onBack?: () => void }) {
@@ -467,15 +432,9 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
 
     vapiInstance.on("speech-end", () => {
       console.log("Vapi speech ended")
-
-      // Safety net: lưu lời AI khi nói xong (phòng conversation-update miss).
-      // commitAiTurnToMessages tự bỏ qua nếu nội dung chỉ là một phần của câu
-      // đã lưu (tránh tạo bong bóng "mảnh đuôi" thừa).
-      setMessages(prev => {
-        const next = commitAiTurnToMessages(prev, assistantModelOutputRef.current)
-        if (next !== prev) messagesRef.current = next
-        return next
-      })
+      // KHÔNG commit lời AI ở đây nữa. Lời AI (đầy đủ, đúng ranh giới mỗi
+      // lượt) được lấy từ mảng conversation ở conversation-update. Commit từ
+      // model-output rời rạc sẽ làm câu hỏi bị tách thành nhiều mảnh.
     })
 
     vapiInstance.on("network-quality-change", (event: unknown) => {
@@ -551,16 +510,6 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
         markRecognizedSpeech()
 
         if (message.transcriptType === "final") {
-          // LƯU CHỐT câu hỏi AI (đang nằm trong ref/live) vào messages TRƯỚC
-          // khi thêm câu trả lời, để câu hỏi không bị mất khi user nói. Dùng
-          // commitAiTurnToMessages để KHÔNG lưu thừa một mảnh đuôi của câu hỏi
-          // đã có.
-          setMessages(prev => {
-            const next = commitAiTurnToMessages(prev, assistantModelOutputRef.current)
-            if (next !== prev) messagesRef.current = next
-            return next
-          })
-
           // Câu hỏi thứ 5 đã được hỏi → user vừa trả lời → kết thúc ngay
           if (isLastQuestionRef.current) {
             isLastQuestionRef.current = false
@@ -568,7 +517,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
               type: "add-message",
               message: {
                 role: "system",
-                content: `[SYSTEM NOTE - BẮT BUỘC] Ứng viên đã trả lời đủ 5 câu hỏi. DỮ̀NG HỎI THÊM. Đọc ngay câu kết thúc: "Cảm ơn bạn đã dành thời gian tham gia buổi phỏng vấn hôm nay. Chúc bạn may mắn!"`,
+                content: `[SYSTEM NOTE - BẮT BUỘC] Ứng viên đã trả lời đủ 5 câu hỏi. DỪNG HỎI THÊM. Đọc ngay câu kết thúc: "Cảm ơn bạn đã dành thời gian tham gia buổi phỏng vấn hôm nay. Chúc bạn may mắn!"`,
               },
               triggerResponseEnabled: true,
             })
@@ -598,23 +547,10 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
             }
           }
 
-          setMessages(prev => {
-            const last = prev.at(-1)
-            // Nếu message trước cũng là user, ghép vào để tránh buột câu thành nhiều bubble
-            if (last?.role === "user") {
-              const merged = [...prev]
-              merged[merged.length - 1] = {
-                role: "user",
-                content: `${last.content} ${transcript}`.trim(),
-              }
-              messagesRef.current = merged
-              return merged
-            }
-            const nextMessages = [...prev, { role: "user" as const, content: transcript }]
-            messagesRef.current = nextMessages
-            return nextMessages
-          })
-          setLiveTranscript(null)
+          // KHÔNG tự thêm câu trả lời vào messages. messages được dựng lại từ
+          // mảng conversation của Vapi ở conversation-update (nguồn chuẩn).
+          // Ở đây chỉ hiển thị "live" để ứng viên thấy ngay lời mình vừa nói.
+          setLiveTranscript({ role: "user", content: transcript })
         } else {
           setLiveTranscript({ role: "user", content: transcript })
         }
@@ -652,15 +588,30 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
 
         const lastAssistant = [...conversation].reverse().find(m => m.role === "assistant")
         if (lastAssistant?.content) {
-          setMessages(prev => {
-            const nextMessages = syncAssistantMessagesFromConversation(prev, conversation)
-            messagesRef.current = nextMessages
-            return nextMessages
+          // Dựng lại TOÀN BỘ đoạn hội thoại từ mảng conversation của Vapi
+          // (nguồn chuẩn). Gộp các bản ghi LIÊN TIẾP cùng vai trò thành một
+          // bong bóng → mỗi lượt nói = một câu hoàn chỉnh, không bị tách mảnh
+          // hay dính sang câu khác.
+          setMessages(() => {
+            const rebuilt: InterviewTranscriptMessage[] = []
+            for (const item of conversation) {
+              if (item.role !== "user" && item.role !== "assistant" && item.role !== "bot") {
+                continue
+              }
+              const role: "assistant" | "user" = item.role === "user" ? "user" : "assistant"
+              const content = item.content.trim()
+              if (content === "") continue
+
+              const last = rebuilt.at(-1)
+              if (last && last.role === role) {
+                last.content = `${last.content} ${content}`.trim()
+              } else {
+                rebuilt.push({ role, content })
+              }
+            }
+            messagesRef.current = rebuilt
+            return rebuilt
           })
-          // KHÔNG xóa assistantModelOutputRef ở đây. conversation-update
-          // thường fire TRƯỚC speech-end; nếu xóa thì speech-end (safety net)
-          // sẽ rỗng và không lưu được câu hỏi AI vừa nói → câu hỏi biến mất
-          // khi user trả lời. Ref sẽ được reset ở speech-start của lượt sau.
           setLiveTranscript(null)
 
           if (shouldTrackAssistantQuestion(lastAssistant.content)) {
