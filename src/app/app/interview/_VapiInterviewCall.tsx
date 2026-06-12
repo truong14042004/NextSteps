@@ -532,6 +532,35 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
         markRecognizedSpeech()
 
         if (message.transcriptType === "final") {
+          // LƯU CHỐT câu hỏi AI (đang nằm trong ref/live) vào messages TRƯỚC
+          // khi thêm câu trả lời. Nhờ vậy câu hỏi không bị mất khi user nói
+          // (kể cả khi speech-end/conversation-update chưa kịp lưu), và câu
+          // hỏi luôn nằm giữa hai lượt trả lời (không bị dồn chung bong bóng).
+          const pendingAiQuestion = assistantModelOutputRef.current.trim()
+          if (pendingAiQuestion !== "") {
+            setMessages(prev => {
+              const last = prev.at(-1)
+              if (last?.role === "assistant" && last.content === pendingAiQuestion) {
+                return prev
+              }
+              if (last?.role === "assistant") {
+                const updated = [...prev]
+                updated[updated.length - 1] = {
+                  role: "assistant",
+                  content: pendingAiQuestion,
+                }
+                messagesRef.current = updated
+                return updated
+              }
+              const next = [
+                ...prev,
+                { role: "assistant" as const, content: pendingAiQuestion },
+              ]
+              messagesRef.current = next
+              return next
+            })
+          }
+
           // Câu hỏi thứ 5 đã được hỏi → user vừa trả lời → kết thúc ngay
           if (isLastQuestionRef.current) {
             isLastQuestionRef.current = false
