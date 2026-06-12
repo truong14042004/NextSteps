@@ -127,8 +127,8 @@ export function ChatWidget({ config }: ChatWidgetProps) {
  
         /* ── Toggle button ── */
         .ns-toggle {
-          width: 56px;
-          height: 56px;
+          width: 58px;
+          height: 58px;
           border-radius: 50%;
           border: none;
           cursor: pointer;
@@ -136,12 +136,13 @@ export function ChatWidget({ config }: ChatWidgetProps) {
           align-items: center;
           justify-content: center;
           margin-left: auto;
-          font-size: 22px;
+          font-size: 24px;
           color: #fff;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-          transition: transform 0.2s, box-shadow 0.2s;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
+          transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
         }
-        .ns-toggle:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(0,0,0,0.3); }
+        .ns-toggle:hover { transform: scale(1.1) translateY(-2px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.32); }
+        .ns-toggle:active { transform: scale(0.95) translateY(0); }
  
         /* ── Panel ── */
         .ns-panel {
@@ -343,7 +344,7 @@ export function ChatWidget({ config }: ChatWidgetProps) {
         {/* Toggle */}
         <button
           className="ns-toggle"
-          style={{ background: primaryColor }}
+          style={{ background: `linear-gradient(135deg, ${primaryColor}, #8b5cf6)` }}
           onClick={() => setIsOpen((o) => !o)}
           title={isOpen ? "Đóng chat" : "Mở chat"}
         >

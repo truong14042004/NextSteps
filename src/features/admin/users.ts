@@ -1,7 +1,7 @@
 import "server-only"
 
 import { randomUUID } from "node:crypto"
-import { and, count, desc, eq, gt, ilike, inArray, isNull, lte, ne, or } from "drizzle-orm"
+import { and, count, desc, eq, gt, ilike, inArray, isNull, lte, ne, or, sql } from "drizzle-orm"
 import { revalidateTag } from "next/cache"
 import { z } from "zod"
 
@@ -9,6 +9,7 @@ import { db } from "@/drizzle/db"
 import {
   AuthCredentialTable,
   AuthSessionTable,
+  PaymentTransactionTable,
   UserSubscriptionTable,
   UserTable,
   userRoles,
@@ -38,6 +39,7 @@ export type AdminUserRow = {
   createdAt: Date
   updatedAt: Date
   lastActiveAt: Date
+  revenue: number
 }
 
 function normalizeEmail(email: string) {
@@ -141,7 +143,8 @@ export async function listAdminUsers({
           and(
             inArray(AuthSessionTable.userId, ids),
             isNull(AuthSessionTable.revokedAt),
-            gt(AuthSessionTable.expiresAt, new Date())
+            gt(AuthSessionTable.expiresAt, new Date()),
+            gt(AuthSessionTable.updatedAt, new Date(Date.now() - 5 * 60 * 1000))
           )
         )
     } catch (error) {
@@ -180,6 +183,34 @@ export async function listAdminUsers({
     }
   }
 
+  let revenues: { userId: string | null; totalAmount: number }[] = []
+  if (ids.length > 0) {
+    try {
+      revenues = await db
+        .select({
+          userId: PaymentTransactionTable.userId,
+          totalAmount: sql<number>`coalesce(sum(${PaymentTransactionTable.amount}), 0)::int`,
+        })
+        .from(PaymentTransactionTable)
+        .where(
+          and(
+            inArray(PaymentTransactionTable.userId, ids),
+            eq(PaymentTransactionTable.status, "paid")
+          )
+        )
+        .groupBy(PaymentTransactionTable.userId)
+    } catch (error) {
+      console.warn("Admin user list could not load revenues", error)
+    }
+  }
+
+  const revenueByUserId = new Map<string, number>()
+  for (const r of revenues) {
+    if (r.userId) {
+      revenueByUserId.set(r.userId, r.totalAmount)
+    }
+  }
+
   return {
     users: rows.map(user => {
       const { userStatus, ...row } = user
@@ -193,6 +224,7 @@ export async function listAdminUsers({
             : activeUserIds.has(user.id)
               ? "Active"
               : "Inactive",
+        revenue: revenueByUserId.get(user.id) ?? 0,
       }
     }) satisfies AdminUserRow[],
     pagination: {

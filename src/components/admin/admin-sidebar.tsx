@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+import { AppLogo } from "@/components/ui/AppLogo";
 
 const menu = [
   {
@@ -78,28 +78,20 @@ export function AdminSidebar() {
   const pathname = usePathname() ?? "";
 
   return (
-    <aside className="sticky top-0 h-screen w-64 shrink-0 border-r bg-background">
+    <aside className="sticky top-0 h-screen w-64 shrink-0 border-r border-border/40 bg-card/60 backdrop-blur-md shadow-sm">
       <div className="flex h-full flex-col">
-        <div className="px-5 py-5">
-          <div className="text-base font-semibold tracking-tight">
-            NextStep Admin
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            Executive Control
-          </div>
-
-          <div className="mt-4">
-            <Badge
-              variant="outline"
-              className="w-fit border-primary/20 bg-primary/5 text-primary"
-            >
-              Admin
-            </Badge>
-          </div>
+        {/* Sidebar Header */}
+        <div className="h-16 px-6 flex items-center border-b border-border/40">
+          <AppLogo
+            href="/admin"
+            textClassName="text-base font-bold tracking-tight text-foreground bg-gradient-to-r from-red-600 to-rose-500 bg-clip-text text-transparent"
+            imageSize={30}
+          />
         </div>
 
-        <nav className="flex-1 overflow-auto px-3 pb-4">
-          <div className="space-y-1.5">
+        {/* Sidebar Menu */}
+        <nav className="flex-1 overflow-y-auto px-4 py-6 scrollbar-thin">
+          <div className="space-y-1">
             {menu.map((item) => {
               const Icon = item.icon;
 
@@ -107,7 +99,7 @@ export function AdminSidebar() {
                 item.href === "/admin"
                   ? pathname === "/admin"
                   : pathname === item.href ||
-                    pathname.startsWith(item.href + "/");
+                  pathname.startsWith(item.href + "/");
 
               return (
                 <Link
@@ -116,42 +108,48 @@ export function AdminSidebar() {
                   className={cn(
                     "group relative flex w-full items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                     isActive
-                      ? "bg-primary/10 text-primary shadow-sm"
-                      : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
+                      ? "bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm shadow-primary/5"
+                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                   )}
                 >
+                  {/* Left Active Indicator */}
                   <span
                     className={cn(
-                      "absolute left-0 top-1/2 h-0 w-1 -translate-y-1/2 rounded-r-full bg-primary transition-all duration-200",
-                      isActive ? "h-7" : "h-0 group-hover:h-5",
+                      "absolute left-0 top-1/2 w-[3px] -translate-y-1/2 rounded-r-full bg-primary transition-all duration-300 ease-out",
+                      isActive ? "h-6" : "h-0 group-hover:h-4",
                     )}
                   />
 
+                  {/* Icon Wrapper */}
                   <span
                     className={cn(
                       "flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200",
                       isActive
-                        ? "bg-primary/10 text-primary"
+                        ? "bg-gradient-to-br from-primary/15 to-primary/5 text-primary shadow-sm"
                         : "text-muted-foreground group-hover:bg-accent group-hover:text-foreground",
                     )}
                   >
                     <Icon
                       className={cn(
-                        "h-4 w-4 shrink-0 transition-transform duration-200",
-                        isActive && "scale-110",
+                        "h-4.5 w-4.5 shrink-0 transition-transform duration-200",
+                        isActive && "scale-105",
                       )}
                     />
                   </span>
 
-                  <span className="truncate">{item.label}</span>
+                  <span className="truncate tracking-wide">{item.label}</span>
                 </Link>
               );
             })}
           </div>
         </nav>
 
-        <div className="border-t px-4 py-4 text-center text-xs text-muted-foreground">
-          <div>© 2026 NextStep</div>
+        {/* Sidebar Footer */}
+        <div className="border-t border-border/40 px-6 py-4 flex items-center justify-between text-xs text-muted-foreground/80">
+          <span>© 2026 NextStep</span>
+          <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] border border-border/30">
+            v1.2.0
+          </span>
         </div>
       </div>
     </aside>

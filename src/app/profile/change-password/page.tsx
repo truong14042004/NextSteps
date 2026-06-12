@@ -6,11 +6,13 @@ import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
 import ChangePasswordClient from "./ChangePasswordClient"
 
 export default async function ChangePasswordPage() {
-  const { userId, redirectToSignIn } = await getCurrentUser({
+  const { userId, user, redirectToSignIn } = await getCurrentUser({
     allData: true,
   })
 
   if (userId == null) redirectToSignIn()
+
+  const backHref = user?.role === "admin" ? "/admin/profile" : "/profile"
 
   return (
     <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950/20">
@@ -18,7 +20,7 @@ export default async function ChangePasswordPage() {
         {/* Back Link */}
         <div>
           <Link
-            href="/profile"
+            href={backHref}
             className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors bg-white dark:bg-white/5 border border-slate-200/50 dark:border-white/5 px-3 py-1.5 rounded-xl shadow-sm"
           >
             <ArrowLeft className="h-3.5 w-3.5" />

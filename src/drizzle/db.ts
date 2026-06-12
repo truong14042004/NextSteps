@@ -5,12 +5,15 @@ import * as schema from "@/drizzle/schema"
 
 const pool = new Pool({
   connectionString: env.DATABASE_URL,
-  // Recycle idle connections before Neon's serverless instance suspends them
-  idleTimeoutMillis: 10_000,
-  // Fail fast if the DB is unreachable instead of hanging
-  connectionTimeoutMillis: 10_000,
-  // Keep a small pool; Neon handles concurrency on its side
-  max: 5,
+  // Kill idle connections quickly so Neon's serverless sleep doesn't leave stale sockets
+  idleTimeoutMillis: 5_000,
+  // Give Neon enough time to wake from sleep before timing out
+  connectionTimeoutMillis: 15_000,
+  // Small pool — Neon handles concurrency on its side
+  max: 3,
+  // Let the process exit if all connections are idle (good for serverless)
+  allowExitOnIdle: true,
 })
+
 
 export const db = drizzle(pool, { schema })

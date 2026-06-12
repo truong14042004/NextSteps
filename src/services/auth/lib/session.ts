@@ -85,9 +85,31 @@ export async function getSessionUserId() {
       gt(AuthSessionTable.expiresAt, new Date())
     ),
     columns: {
+      id: true,
       userId: true,
+      updatedAt: true,
     },
   })
 
-  return session?.userId ?? null
+  if (session != null) {
+    const now = new Date()
+    // Throttling to only update if last update was more than 60 seconds ago
+    if (
+      session.updatedAt == null ||
+      now.getTime() - session.updatedAt.getTime() > 60 * 1000
+    ) {
+      // Run asynchronously or update inline to ensure active status is saved
+      try {
+        await db
+          .update(AuthSessionTable)
+          .set({ updatedAt: now })
+          .where(eq(AuthSessionTable.id, session.id))
+      } catch (err) {
+        console.warn("Failed to touch session updatedAt:", err)
+      }
+    }
+    return session.userId
+  }
+
+  return null
 }

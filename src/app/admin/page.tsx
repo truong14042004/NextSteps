@@ -1,4 +1,14 @@
-import { BarChart3, Users } from "lucide-react";
+import {
+  BarChart3,
+  Users,
+  Calendar,
+  BriefcaseBusiness,
+  CreditCard,
+  ReceiptText,
+  Package,
+  Download,
+} from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +23,7 @@ import { StatsCard } from "@/components/admin/dashboard/stats-card";
 import { AiPerformanceCard } from "@/components/admin/dashboard/ai-performance-card";
 import { GrowthChart } from "@/components/admin/dashboard/growth-chart";
 import { UserActivityTable } from "@/components/admin/dashboard/user-activity-table";
+import { RecentActivityFeed } from "@/components/admin/dashboard/recent-activity-feed";
 import { getAdminDashboard } from "@/features/admin/metrics";
 
 export default async function AdminPage() {
@@ -20,34 +31,22 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <section className="flex items-start justify-between gap-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Tổng quan quản trị
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Hệ thống NextStep theo dõi hiệu suất và các chỉ số tương tác người
-            dùng.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="min-w-[210px]">
-            <Select defaultValue="30">
-              <SelectTrigger className="rounded-xl">
-                <SelectValue placeholder="Past 30 Days" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">Past 7 Days</SelectItem>
-                <SelectItem value="30">Past 30 Days</SelectItem>
-                <SelectItem value="90">Past 90 Days</SelectItem>
-              </SelectContent>
-            </Select>
+      {/* Mini Hero Header Section */}
+      {/* Subtle accent light source */}
+      {/* <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
+        
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              Tổng quan quản trị
+            </h1>
+            <p className="mt-2 text-sm md:text-base text-muted-foreground max-w-xl">
+              Hệ thống NextStep theo dõi hiệu suất và các chỉ số tương tác người dùng trong thời gian thực.
+            </p>
           </div>
-          <Button className="rounded-xl">Generate Report</Button>
-        </div>
-      </section>
+        </div> */}
 
+      {/* KPI Cards Section */}
       <section>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatsCard
@@ -81,11 +80,68 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      {/* Quick Actions Section */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
+          Thao tác nhanh
+        </h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 lg:grid-cols-5">
+          <Link
+            href="/admin/user-management"
+            className="flex flex-col items-center justify-center p-4 rounded-xl border border-border/40 bg-card hover:bg-muted/30 hover:border-border/60 transition-all text-center group"
+          >
+            <Users className="size-5 text-primary group-hover:scale-110 transition-transform mb-2" />
+            <span className="text-xs font-semibold text-foreground">
+              Quản lý người dùng
+            </span>
+          </Link>
+          <Link
+            href="/admin/recruiter-management"
+            className="flex flex-col items-center justify-center p-4 rounded-xl border border-border/40 bg-card hover:bg-muted/30 hover:border-border/60 transition-all text-center group"
+          >
+            <BriefcaseBusiness className="size-5 text-primary group-hover:scale-110 transition-transform mb-2" />
+            <span className="text-xs font-semibold text-foreground">
+              Quản lý nhà tuyển dụng
+            </span>
+          </Link>
+          <Link
+            href="/admin/revenue-management"
+            className="flex flex-col items-center justify-center p-4 rounded-xl border border-border/40 bg-card hover:bg-muted/30 hover:border-border/60 transition-all text-center group"
+          >
+            <CreditCard className="size-5 text-primary group-hover:scale-110 transition-transform mb-2" />
+            <span className="text-xs font-semibold text-foreground">
+              Quản lý doanh thu
+            </span>
+          </Link>
+          <Link
+            href="/admin/transaction-management"
+            className="flex flex-col items-center justify-center p-4 rounded-xl border border-border/40 bg-card hover:bg-muted/30 hover:border-border/60 transition-all text-center group"
+          >
+            <ReceiptText className="size-5 text-primary group-hover:scale-110 transition-transform mb-2" />
+            <span className="text-xs font-semibold text-foreground">
+              Quản lý giao dịch
+            </span>
+          </Link>
+          <Link
+            href="/admin/plan-management"
+            className="flex flex-col items-center justify-center p-4 rounded-xl border border-border/40 bg-card hover:bg-muted/30 hover:border-border/60 transition-all text-center group"
+          >
+            <Package className="size-5 text-primary group-hover:scale-110 transition-transform mb-2" />
+            <span className="text-xs font-semibold text-foreground">
+              Quản lý gói mua
+            </span>
+          </Link>
+        </div>
+      </section>
+
+      {/* 3-Column Grid: Growth Chart, Recent Activity Feed, Subscription Analytics */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3 items-stretch">
         <GrowthChart data={dashboard.registrationGrowth} />
+        <RecentActivityFeed activities={dashboard.recentActivities} />
         <AiPerformanceCard distribution={dashboard.planDistribution.items} />
       </section>
 
+      {/* Recent Users Table Section */}
       <section>
         <UserActivityTable />
       </section>
