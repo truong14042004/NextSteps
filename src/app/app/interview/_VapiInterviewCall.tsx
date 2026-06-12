@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { env } from "@/data/env/client"
-import { createInterview, updateInterview } from "@/features/interviews/actions"
+import { createInterview, updateInterview, syncVapiTranscript } from "@/features/interviews/actions"
 import { errorToast } from "@/lib/errorToast"
 import Vapi from "@vapi-ai/web"
 import { Loader2Icon, MicIcon, MicOffIcon, PhoneOffIcon, ArrowLeftIcon } from "lucide-react"
@@ -118,6 +118,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   const isRecoveringMicrophoneRef = useRef(false)
   const hasReceivedUserAudioRef = useRef(false)
   const endedReasonRef = useRef<string | null>(null)
+  const vapiCallIdRef = useRef<string | null>(null)
   const lastAssistantQuestionRef = useRef<string | null>(null)
   const answeredAssistantQuestionsRef = useRef<string[]>([])
   const assistantModelOutputRef = useRef("")
@@ -320,6 +321,18 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
         return
       }
 
+      // Lấy transcript CHUẨN từ Vapi (đè lên bản client tự ghép) để phần xem
+      // lại hiển thị đúng từng câu hỏi/câu trả lời. Best-effort: nếu lỗi/chưa
+      // sẵn sàng thì vẫn giữ bản client đã lưu ở trên.
+      const currentCallId = vapiCallIdRef.current
+      if (currentCallId) {
+        try {
+          await syncVapiTranscript(currentId, currentCallId)
+        } catch (error) {
+          console.warn("Failed to sync Vapi transcript:", error)
+        }
+      }
+
       if (options?.notice) {
         if (options.notice.type === "error") {
           toast.error(options.notice.message)
@@ -454,6 +467,17 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
         return
       }
       const message = event as Record<string, unknown>
+
+      // Backup: bắt callId từ các sự kiện (phòng khi vapi.start() không trả id)
+      const callObj = message.call
+      if (
+        vapiCallIdRef.current == null &&
+        callObj != null &&
+        typeof callObj === "object" &&
+        typeof (callObj as { id?: unknown }).id === "string"
+      ) {
+        vapiCallIdRef.current = (callObj as { id: string }).id
+      }
 
       if (message.type === "status-update" && message.status === "ended") {
         const endedReason =
@@ -801,6 +825,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     answeredAssistantQuestionsRef.current = []
     questionsAskedCountRef.current = 0
     isLastQuestionRef.current = false
+    vapiCallIdRef.current = null
     setInterviewId(null)
     setMessages([])
     setLiveTranscript(null)
@@ -833,13 +858,22 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
       console.info("Using interview turn-taking configuration")
 
       // Start Vapi call - override system prompt with dynamic candidate info
-      await vapi.start(
+      const startedCall = await vapi.start(
         ...buildVapiStartCallArgs({
           assistantId: env.NEXT_PUBLIC_VAPI_ASSISTANT_ID,
           jobInfo,
           interviewerName: nextInterviewerName,
         }),
       )
+
+      // Lưu callId để sau khi kết thúc lấy transcript chuẩn từ API Vapi.
+      const startedCallId =
+        startedCall != null && typeof startedCall === "object" && "id" in startedCall
+          ? (startedCall as { id?: unknown }).id
+          : null
+      if (typeof startedCallId === "string" && startedCallId !== "") {
+        vapiCallIdRef.current = startedCallId
+      }
     } catch (error) {
       console.error("❌ Failed to start call:", error)
       toast.error("Không thể bắt đầu cuộc gọi")
