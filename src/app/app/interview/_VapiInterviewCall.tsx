@@ -476,14 +476,23 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
 
     vapiInstance.on("speech-start", () => {
       console.log("Vapi speech started")
-      assistantModelOutputRef.current = ""
+      // KHÔNG reset assistantModelOutputRef ở đây. Một câu hỏi có thể được nói
+      // qua nhiều đoạn (speech-start nhiều lần); reset giữa chừng sẽ làm câu
+      // hỏi bị tách mảnh. Bộ đệm chỉ reset khi ứng viên trả lời (lượt AI mới).
     })
 
     vapiInstance.on("speech-end", () => {
       console.log("Vapi speech ended")
-      // KHÔNG commit lời AI ở đây nữa. Lời AI (đầy đủ, đúng ranh giới mỗi
-      // lượt) được lấy từ mảng conversation ở conversation-update. Commit từ
-      // model-output rời rạc sẽ làm câu hỏi bị tách thành nhiều mảnh.
+      // AI nói xong → CHỐT câu hỏi vào messages và TẮT bong bóng "live" (dấu
+      // ...). Nhờ vậy câu hỏi thành tin nhắn cố định, không còn trôi nổi và
+      // không biến mất khi ứng viên trả lời. commitAssistantTurn là append-only
+      // + nối dài cùng lượt nên không tạo bản trùng/mảnh.
+      setMessages(prev => {
+        const next = commitAssistantTurn(prev, assistantModelOutputRef.current)
+        if (next !== prev) messagesRef.current = next
+        return next
+      })
+      setLiveTranscript(null)
     })
 
     vapiInstance.on("network-quality-change", (event: unknown) => {
@@ -533,7 +542,8 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
         message.role === "assistant" &&
         message.status === "started"
       ) {
-        assistantModelOutputRef.current = ""
+        // Không reset bộ đệm ở đây (xem speech-start) để câu hỏi nhiều đoạn
+        // được ghép đầy đủ thay vì tách mảnh.
       }
 
       if (
@@ -568,6 +578,19 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
 
         hasReceivedUserAudioRef.current = true
         markRecognizedSpeech()
+
+        // FLUSH: lưu câu hỏi AI đang hiển thị (nội dung live từ model-output)
+        // vào messages NGAY khi user bắt đầu nói — trước khi bong bóng live bị
+        // lời user ghi đè. Append-only nên nếu đã commit rồi thì không trùng.
+        // Đây là chốt chặn để câu hỏi KHÔNG biến mất khi user trả lời.
+        const pendingAiQuestion = assistantModelOutputRef.current.trim()
+        if (pendingAiQuestion !== "") {
+          setMessages(prev => {
+            const next = commitAssistantTurn(prev, pendingAiQuestion)
+            if (next !== prev) messagesRef.current = next
+            return next
+          })
+        }
 
         if (message.transcriptType === "final") {
           // Câu hỏi thứ 5 đã được hỏi → user vừa trả lời → kết thúc ngay
@@ -630,6 +653,10 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
             messagesRef.current = next
             return next
           })
+          // Ứng viên đã trả lời xong → câu hỏi của lượt vừa rồi đã chốt; reset
+          // bộ đệm model-output để câu hỏi TIẾP THEO của AI bắt đầu sạch, không
+          // bị nối nhầm với câu hỏi trước.
+          assistantModelOutputRef.current = ""
           setLiveTranscript(null)
         } else {
           setLiveTranscript({ role: "user", content: transcript })
