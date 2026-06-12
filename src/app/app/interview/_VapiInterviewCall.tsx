@@ -88,6 +88,42 @@ function isClosingAssistantMessage(content: string) {
   return closingPhrases.some(phrase => normalized.includes(phrase))
 }
 
+type AiMsg = { role: "assistant" | "user"; content: string }
+
+// Thêm/cập nhật lời AI theo kiểu APPEND-ONLY (không bao giờ xóa tin nhắn cũ):
+//  - cùng lượt đang nói (nội dung trùng/nối dài câu AI gần nhất) → cập nhật,
+//    giữ bản dài hơn (không để co lại)
+//  - khác hẳn → câu hỏi MỚI → thêm bong bóng mới
+// Nhờ append-only, câu hỏi đã hiện sẽ KHÔNG biến mất khi user trả lời.
+function commitAssistantTurn(prev: AiMsg[], rawContent: string): AiMsg[] {
+  const content = rawContent.trim()
+  if (content === "") return prev
+
+  let lastIndex = -1
+  for (let i = prev.length - 1; i >= 0; i -= 1) {
+    if (prev[i].role === "assistant") {
+      lastIndex = i
+      break
+    }
+  }
+
+  if (lastIndex !== -1) {
+    const a = normalizeInterviewText(prev[lastIndex].content)
+    const b = normalizeInterviewText(content)
+    const isSameTurn = a === b || b.startsWith(a) || a.startsWith(b)
+
+    if (isSameTurn) {
+      // cùng một lượt: giữ bản dài hơn, không để bong bóng co lại
+      if (content.length <= prev[lastIndex].content.length) return prev
+      const updated = [...prev]
+      updated[lastIndex] = { role: "assistant", content }
+      return updated
+    }
+  }
+
+  return [...prev, { role: "assistant", content }]
+}
+
 export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobInfo; onBack?: () => void }) {
   const [isConnecting, setIsConnecting] = useState(false)
   const [isCallActive, setIsCallActive] = useState(false)
@@ -571,10 +607,30 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
             }
           }
 
-          // KHÔNG tự thêm câu trả lời vào messages. messages được dựng lại từ
-          // mảng conversation của Vapi ở conversation-update (nguồn chuẩn).
-          // Ở đây chỉ hiển thị "live" để ứng viên thấy ngay lời mình vừa nói.
-          setLiveTranscript({ role: "user", content: transcript })
+          // Thêm câu trả lời của ứng viên vào messages (append-only). Các mẩu
+          // "final" liên tiếp của cùng một lượt nói được gộp thành một câu trả
+          // lời hoàn chỉnh. Vì câu hỏi AI đã được lưu append-only trước đó nên
+          // câu trả lời mới không bị dồn nhầm vào câu trả lời cũ.
+          setMessages(prev => {
+            const incoming = transcript.trim()
+            if (incoming === "") return prev
+
+            const last = prev.at(-1)
+            if (last?.role === "user") {
+              const merged = [...prev]
+              merged[merged.length - 1] = {
+                role: "user",
+                content: `${last.content} ${incoming}`.trim(),
+              }
+              messagesRef.current = merged
+              return merged
+            }
+
+            const next = [...prev, { role: "user" as const, content: incoming }]
+            messagesRef.current = next
+            return next
+          })
+          setLiveTranscript(null)
         } else {
           setLiveTranscript({ role: "user", content: transcript })
         }
@@ -610,76 +666,60 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
           )
           : []
 
-        const lastAssistant = [...conversation].reverse().find(m => m.role === "assistant")
-        if (lastAssistant?.content) {
-          // Dựng lại TOÀN BỘ đoạn hội thoại từ mảng conversation của Vapi
-          // (nguồn chuẩn). Gộp các bản ghi LIÊN TIẾP cùng vai trò thành một
-          // bong bóng → mỗi lượt nói = một câu hoàn chỉnh, không bị tách mảnh
-          // hay dính sang câu khác.
+        // Ghép các bản ghi assistant/bot LIÊN TIẾP ở cuối (sau lượt user gần
+        // nhất) thành câu hỏi hiện tại đầy đủ của AI. Bỏ qua tin system chen
+        // giữa (vd các system note mình gửi).
+        let aiTurn = ""
+        for (let i = conversation.length - 1; i >= 0; i -= 1) {
+          const item = conversation[i]
+          if (item.role === "assistant" || item.role === "bot") {
+            const c = item.content.trim()
+            aiTurn = aiTurn === "" ? c : `${c} ${aiTurn}`.trim()
+          } else if (item.role === "user") {
+            break
+          }
+        }
+
+        if (aiTurn !== "") {
+          // Lưu lời AI theo kiểu append-only → câu hỏi KHÔNG biến mất khi user
+          // trả lời (không dựng lại/ghi đè cả danh sách).
           setMessages(prev => {
-            const rebuilt: InterviewTranscriptMessage[] = []
-            for (const item of conversation) {
-              if (item.role !== "user" && item.role !== "assistant" && item.role !== "bot") {
-                continue
-              }
-              const role: "assistant" | "user" = item.role === "user" ? "user" : "assistant"
-              const content = item.content.trim()
-              if (content === "") continue
-
-              const last = rebuilt.at(-1)
-              if (last && last.role === role) {
-                last.content = `${last.content} ${content}`.trim()
-              } else {
-                rebuilt.push({ role, content })
-              }
-            }
-
-            // KHÔNG để danh sách co lại. conversation-update đôi khi đến với
-            // mảng conversation tạm thời THIẾU câu hỏi vừa hỏi; nếu ghi đè
-            // bằng danh sách ngắn hơn thì câu hỏi sẽ biến mất khi user trả lời.
-            // Chỉ cập nhật khi bản dựng có số tin nhắn >= hiện tại.
-            if (rebuilt.length < prev.length) {
-              return prev
-            }
-
-            messagesRef.current = rebuilt
-            return rebuilt
+            const next = commitAssistantTurn(prev, aiTurn)
+            if (next !== prev) messagesRef.current = next
+            return next
           })
           setLiveTranscript(null)
 
-          if (shouldTrackAssistantQuestion(lastAssistant.content)) {
+          if (shouldTrackAssistantQuestion(aiTurn)) {
             const previousQuestion = lastAssistantQuestionRef.current
-            lastAssistantQuestionRef.current = lastAssistant.content
 
             // conversation-update fire NHIỀU lần cho cùng một câu hỏi khi AI
-            // đang stream. Nếu đếm mỗi lần fire thì một câu hỏi bị đếm nhiều
-            // lần → count nhanh chóng >=5 → phỏng vấn TỰ KẾT THÚC sớm. Chỉ
-            // tăng count khi đây thực sự là câu hỏi MỚI (không phải phần nối
-            // tiếp của câu vừa đếm).
+            // đang stream. Chỉ tăng count khi đây thực sự là câu hỏi MỚI
+            // (không phải phần nối tiếp của câu vừa đếm) để không kết thúc sớm.
             const prevNormalized = previousQuestion
               ? normalizeInterviewText(previousQuestion)
               : ""
-            const curNormalized = normalizeInterviewText(lastAssistant.content)
+            const curNormalized = normalizeInterviewText(aiTurn)
             const isSameQuestion =
               prevNormalized !== "" &&
               (prevNormalized === curNormalized ||
                 curNormalized.startsWith(prevNormalized) ||
                 prevNormalized.startsWith(curNormalized))
 
+            lastAssistantQuestionRef.current = aiTurn
+
             if (!isSameQuestion) {
-              // Đếm câu hỏi AI vừa hỏi
               questionsAskedCountRef.current += 1
               const count = questionsAskedCountRef.current
               console.info(`AI hỏi câu ${count}`)
 
               if (count >= 5) {
-                // Câu hỏi thứ 5: user trả lời xong sẽ kết thúc
                 isLastQuestionRef.current = true
               }
             }
           }
 
-          if (isClosingAssistantMessage(lastAssistant.content)) {
+          if (isClosingAssistantMessage(aiTurn)) {
             setIsInterviewComplete(true)
           }
         }
