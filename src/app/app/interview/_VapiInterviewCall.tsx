@@ -89,6 +89,40 @@ function isClosingAssistantMessage(content: string) {
   return closingPhrases.some(phrase => normalized.includes(phrase))
 }
 
+type AiMsg = { role: "assistant" | "user"; content: string }
+
+// Lưu lời AI vào danh sách tin nhắn một cách an toàn, chống MẢNH THỪA:
+//  - nếu nội dung trùng/đã là MỘT PHẦN (substring) của câu AI gần nhất → bỏ qua
+//    (tránh lưu thêm 1 khúc đuôi của câu hỏi đã có)
+//  - nếu nội dung MỞ RỘNG câu AI gần nhất (cùng lượt đang stream) → cập nhật
+//  - nếu khác hẳn → thêm tin nhắn mới
+function commitAiTurnToMessages(prev: AiMsg[], rawContent: string): AiMsg[] {
+  const content = rawContent.trim()
+  if (content === "") return prev
+
+  let lastIndex = -1
+  for (let i = prev.length - 1; i >= 0; i -= 1) {
+    if (prev[i].role === "assistant") {
+      lastIndex = i
+      break
+    }
+  }
+
+  if (lastIndex !== -1) {
+    const a = normalizeInterviewText(prev[lastIndex].content)
+    const b = normalizeInterviewText(content)
+
+    if (a === b || a.includes(b)) return prev
+    if (b.includes(a)) {
+      const updated = [...prev]
+      updated[lastIndex] = { role: "assistant", content }
+      return updated
+    }
+  }
+
+  return [...prev, { role: "assistant", content }]
+}
+
 export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobInfo; onBack?: () => void }) {
   const [isConnecting, setIsConnecting] = useState(false)
   const [isCallActive, setIsCallActive] = useState(false)
@@ -434,27 +468,12 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     vapiInstance.on("speech-end", () => {
       console.log("Vapi speech ended")
 
-      // Safety net: persist AI message ngay khi nói xong
-      // Tránh mất message nếu conversation-update fire muộn hoặc bị miss
-      const spokenContent = assistantModelOutputRef.current.trim()
-      if (!spokenContent) return
-
+      // Safety net: lưu lời AI khi nói xong (phòng conversation-update miss).
+      // commitAiTurnToMessages tự bỏ qua nếu nội dung chỉ là một phần của câu
+      // đã lưu (tránh tạo bong bóng "mảnh đuôi" thừa).
       setMessages(prev => {
-        // Nếu message cuối cùng trong list đã là nội dung này rồi thì bỏ qua
-        const last = prev.at(-1)
-        if (last?.role === "assistant" && last.content === spokenContent) {
-          return prev
-        }
-        // Nếu message cuối là assistant nhưng khác nội dung (partial) → update
-        if (last?.role === "assistant") {
-          const updated = [...prev]
-          updated[updated.length - 1] = { role: "assistant", content: spokenContent }
-          messagesRef.current = updated
-          return updated
-        }
-        // Thêm message AI mới vào chat
-        const next = [...prev, { role: "assistant" as const, content: spokenContent }]
-        messagesRef.current = next
+        const next = commitAiTurnToMessages(prev, assistantModelOutputRef.current)
+        if (next !== prev) messagesRef.current = next
         return next
       })
     })
@@ -533,33 +552,14 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
 
         if (message.transcriptType === "final") {
           // LƯU CHỐT câu hỏi AI (đang nằm trong ref/live) vào messages TRƯỚC
-          // khi thêm câu trả lời. Nhờ vậy câu hỏi không bị mất khi user nói
-          // (kể cả khi speech-end/conversation-update chưa kịp lưu), và câu
-          // hỏi luôn nằm giữa hai lượt trả lời (không bị dồn chung bong bóng).
-          const pendingAiQuestion = assistantModelOutputRef.current.trim()
-          if (pendingAiQuestion !== "") {
-            setMessages(prev => {
-              const last = prev.at(-1)
-              if (last?.role === "assistant" && last.content === pendingAiQuestion) {
-                return prev
-              }
-              if (last?.role === "assistant") {
-                const updated = [...prev]
-                updated[updated.length - 1] = {
-                  role: "assistant",
-                  content: pendingAiQuestion,
-                }
-                messagesRef.current = updated
-                return updated
-              }
-              const next = [
-                ...prev,
-                { role: "assistant" as const, content: pendingAiQuestion },
-              ]
-              messagesRef.current = next
-              return next
-            })
-          }
+          // khi thêm câu trả lời, để câu hỏi không bị mất khi user nói. Dùng
+          // commitAiTurnToMessages để KHÔNG lưu thừa một mảnh đuôi của câu hỏi
+          // đã có.
+          setMessages(prev => {
+            const next = commitAiTurnToMessages(prev, assistantModelOutputRef.current)
+            if (next !== prev) messagesRef.current = next
+            return next
+          })
 
           // Câu hỏi thứ 5 đã được hỏi → user vừa trả lời → kết thúc ngay
           if (isLastQuestionRef.current) {
