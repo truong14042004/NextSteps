@@ -2,18 +2,20 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { 
-  BrainCircuit, 
-  FileSearch, 
-  MessageSquare, 
-  Plus, 
-  Calendar, 
-  Building2, 
-  Sparkles, 
-  ArrowRight, 
-  Loader2, 
+import {
+  BrainCircuit,
+  FileSearch,
+  MessageSquare,
+  Plus,
+  Calendar,
+  Building2,
+  Sparkles,
+  ArrowRight,
+  Loader2,
   FileText,
-  AlertCircle
+  AlertCircle,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -58,6 +60,7 @@ export function JobHub({ jobs }: Props) {
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
   const [jobDetail, setJobDetail] = useState<any | null>(null)
   const [isLoadingDetail, setIsLoadingDetail] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(true)
 
   useEffect(() => {
     if (!activeJobId) {
@@ -84,7 +87,7 @@ export function JobHub({ jobs }: Props) {
   if (jobs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 dark:border-white/15 dark:bg-white/3 py-12 text-center">
-        <FileSearch className="h-10 w-10 text-slate-400 dark:text-slate-600" />
+        <FileSearch className="h-10 w-10 text-slate-400 dark:text-slate-655" />
         <div>
           <p className="font-medium text-slate-800 dark:text-white">Chưa có vị trí nào</p>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Bắt đầu bằng cách phân tích CV theo một Job Description.</p>
@@ -109,10 +112,12 @@ export function JobHub({ jobs }: Props) {
     }
   }
 
+  const renderedJobs = isCollapsed ? jobs.slice(0, 2) : jobs
+
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {jobs.map((job, i) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {renderedJobs.map((job, i) => {
           const readiness = readinessFromJob(job)
           const { pill, bar } = readinessColor(readiness)
           const bestPct = job.bestQuizScore != null && job.bestQuizTotal != null
@@ -122,57 +127,68 @@ export function JobHub({ jobs }: Props) {
           return (
             <motion.div
               key={job.id}
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.06 * i, duration: 0.4 }}
-              whileHover={{ y: -2, transition: { duration: 0.2 } }}
+              transition={{ delay: 0.05 * i, duration: 0.35 }}
+              whileHover={{ y: -3, transition: { duration: 0.15 } }}
               onClick={() => setActiveJobId(job.id)}
-              className="cursor-pointer"
+              className="cursor-pointer flex h-full"
             >
-              <div className="group relative h-full rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 p-5 shadow-lg backdrop-blur-sm transition-all hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-white/8 hover:shadow-xl">
-                {/* Top */}
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-slate-800 dark:text-white truncate">{job.name}</h3>
-                    {job.title && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{job.title}</p>
+              <div className="group relative w-full flex flex-col justify-between rounded-2xl border border-slate-100 bg-white dark:border-white/5 dark:bg-slate-900/40 p-4.5 shadow-sm backdrop-blur-sm transition-all hover:border-rose-500/25 hover:shadow-md">
+                {/* Card Top Header */}
+                <div>
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-sm text-slate-800 dark:text-white truncate group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                        {job.name}
+                      </h3>
+                      {job.title && (
+                        <p className="text-[11px] text-slate-550 dark:text-slate-400 mt-0.5 truncate font-medium">
+                          {job.title}
+                        </p>
+                      )}
+                    </div>
+                    <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${pill}`}>
+                      {readiness}%
+                    </span>
+                  </div>
+
+                  {/* Quizzes & Interviews stats line */}
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <div className="flex items-center gap-1.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-white/5 px-2 py-1 text-[10px] text-slate-650 dark:text-slate-350">
+                      <BrainCircuit className="h-3 w-3 text-purple-500" />
+                      <span>{job.quizCount} quiz</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-white/5 px-2 py-1 text-[10px] text-slate-650 dark:text-slate-350">
+                      <MessageSquare className="h-3 w-3 text-blue-500" />
+                      <span>{job.interviewCount} phỏng vấn</span>
+                    </div>
+                    {bestPct != null && (
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 ml-0.5">
+                        Lượt tốt nhất: {bestPct}%
+                      </span>
                     )}
                   </div>
-                  <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${pill.replace("-400", "-600 dark:text-$&").replace("dark:text-text-", "dark:text-")}`}>
-                    {readiness}%
-                  </span>
                 </div>
 
-                {/* Stats row */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex items-center gap-1.5 rounded-lg bg-slate-50/80 dark:bg-white/5 border border-slate-200 dark:border-white/8 px-2.5 py-1.5 text-xs">
-                    <BrainCircuit className="h-3 w-3 text-violet-500 dark:text-violet-400" />
-                    <span className="text-slate-600 dark:text-slate-300">{job.quizCount} quiz</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 rounded-lg bg-slate-50/80 dark:bg-white/5 border border-slate-200 dark:border-white/8 px-2.5 py-1.5 text-xs">
-                    <MessageSquare className="h-3 w-3 text-blue-500 dark:text-blue-400" />
-                    <span className="text-slate-600 dark:text-slate-300">{job.interviewCount} phỏng vấn</span>
-                  </div>
-                  {bestPct != null && (
-                    <div className="flex items-center gap-1.5 rounded-lg bg-slate-50/80 dark:bg-white/5 border border-slate-200 dark:border-white/8 px-2.5 py-1.5 text-xs">
-                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">Best {bestPct}%</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Readiness bar */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] text-slate-450 dark:text-slate-500">
+                {/* Progress bar + CTA */}
+                <div className="mt-3.5 space-y-2">
+                  <div className="flex items-center justify-between text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                     <span>Mức độ sẵn sàng</span>
-                    <span>{readiness}%</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-bold">{readiness}%</span>
                   </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-white/8">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-white/5">
                     <motion.div
                       initial={{ width: "0%" }}
                       animate={{ width: `${readiness}%` }}
-                      transition={{ duration: 0.9, ease: "easeOut", delay: 0.1 + i * 0.06 }}
+                      transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
                       className={`h-full rounded-full ${bar}`}
                     />
+                  </div>
+                  <div className="pt-2 flex justify-end">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-500 dark:text-rose-400 group-hover:underline">
+                      Luyện tập <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+                    </span>
                   </div>
                 </div>
               </div>
@@ -182,18 +198,40 @@ export function JobHub({ jobs }: Props) {
 
         {/* Add new position card */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.06 * jobs.length, duration: 0.4 }}
+          transition={{ delay: 0.05 * renderedJobs.length, duration: 0.35 }}
+          className="flex h-full min-h-[140px]"
         >
-          <Link href="/app/analyze" className="group flex h-full min-h-[140px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 dark:border-white/10 dark:bg-white/3 p-5 text-center transition-all hover:border-rose-500/30 hover:bg-rose-500/5 hover:border-solid hover:shadow-md">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 shadow-sm dark:shadow-none transition-all group-hover:bg-rose-500/15 group-hover:border-rose-500/30">
-              <Plus className="h-4.5 w-4.5 text-slate-400 group-hover:text-rose-400 transition-colors" />
+          <Link href="/app/analyze" className="group flex h-full w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/20 p-5 text-center transition-all hover:border-rose-500/30 hover:bg-rose-500/5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 shadow-sm transition-all group-hover:bg-rose-500/10 group-hover:border-rose-500/20">
+              <Plus className="h-4 w-4 text-slate-400 group-hover:text-rose-500 transition-colors" />
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors">Thêm vị trí mới</p>
+            <p className="text-xs font-semibold text-slate-550 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors">Thêm vị trí mới</p>
           </Link>
         </motion.div>
       </div>
+
+      {jobs.length > 2 && (
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="flex items-center gap-1 py-1.5 px-4 rounded-xl border border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-slate-900/30 text-xs font-semibold text-slate-650 dark:text-slate-400 transition-colors"
+          >
+            {isCollapsed ? (
+              <>
+                <ChevronDown className="h-3.5 w-3.5" />
+                Xem tất cả vị trí ({jobs.length})
+              </>
+            ) : (
+              <>
+                <ChevronUp className="h-3.5 w-3.5" />
+                Thu gọn danh sách
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Modern Workspace Modal Dialog */}
       <Dialog open={activeJobId !== null} onOpenChange={(open) => !open && setActiveJobId(null)}>
@@ -233,14 +271,14 @@ export function JobHub({ jobs }: Props) {
               <Tabs defaultValue="overview" className="flex flex-col flex-1 min-h-0 mt-4">
                 <div className="flex items-center justify-between border-b border-slate-150 dark:border-white/5 pb-2">
                   <TabsList className="bg-slate-100 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 p-1 rounded-xl">
-                    <TabsTrigger 
-                      value="overview" 
+                    <TabsTrigger
+                      value="overview"
                       className="px-4 py-1.5 text-xs font-semibold rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-rose-600 dark:data-[state=active]:text-rose-450 cursor-pointer"
                     >
                       Tổng quan
                     </TabsTrigger>
-                    <TabsTrigger 
-                      value="analysis" 
+                    <TabsTrigger
+                      value="analysis"
                       className="px-4 py-1.5 text-xs font-semibold rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-rose-600 dark:data-[state=active]:text-rose-450 cursor-pointer"
                     >
                       CV & Phân tích
@@ -329,7 +367,7 @@ export function JobHub({ jobs }: Props) {
                 <TabsContent value="analysis" className="flex-1 flex flex-col min-h-0 pt-4 overflow-y-auto pr-1">
                   {parsedAnalysis ? (
                     <div className="space-y-4">
-                      {jobDetail.resumeUrl && (
+                      {/* {jobDetail.resumeUrl && (
                         <div className="flex items-center justify-between p-3.5 bg-slate-50/50 dark:bg-white/2 rounded-2xl border border-slate-200 dark:border-white/8 text-xs">
                           <span className="flex items-center gap-2 font-medium text-slate-700 dark:text-slate-350">
                             <FileText className="h-4.5 w-4.5 text-rose-500" />
@@ -345,13 +383,13 @@ export function JobHub({ jobs }: Props) {
                             <ArrowRight className="h-3 w-3" />
                           </a>
                         </div>
-                      )}
-                      
+                      )} */}
+
                       <div className="border border-slate-200 dark:border-white/8 rounded-2xl p-4 md:p-6 bg-white dark:bg-transparent">
-                        <AnalysisResults 
-                          aiAnalysis={parsedAnalysis} 
-                          isLoading={false} 
-                          jobInfoId={jobDetail.id} 
+                        <AnalysisResults
+                          aiAnalysis={parsedAnalysis}
+                          isLoading={false}
+                          jobInfoId={jobDetail.id}
                         />
                       </div>
                     </div>

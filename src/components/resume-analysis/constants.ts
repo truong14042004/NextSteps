@@ -42,6 +42,15 @@ export const QUICK_EXAMPLES = [
     jobDescription:
       "Yêu cầu tuyển dụng:\n- Thành thạo truy vấn dữ liệu SQL (Subquery, Join, Window Functions).\n- Có kinh nghiệm thiết kế Dashboard trực quan hóa dữ liệu trên Power BI hoặc Tableau.\n- Khả năng lập trình Python cơ bản (Pandas, NumPy) là một lợi thế lớn.\n- Tư duy logic sắc bén, kỹ năng trình bày số liệu phức tạp một cách trực quan.",
   },
+  {
+    label: "Business Analyst",
+    candidateName: "Phạm Hoàng D",
+    jobTitle: "Business Analyst",
+    experienceLevel: "junior" as const,
+    industry: "business",
+    jobDescription:
+      "Yêu cầu tuyển dụng:\n- Tối thiểu 1-2 năm kinh nghiệm ở vị trí Business Analyst hoặc Product Owner.\n- Có khả năng lấy yêu cầu (Requirement Gathering), viết tài liệu PRD, SRS và vẽ Use Case Diagram.\n- Thành thạo công cụ Jira, Confluence và vẽ mockup/wireframe bằng Balsamiq hoặc Figma.\n- Kỹ năng giao tiếp và truyền đạt tốt giữa bộ phận nghiệp vụ và đội ngũ kỹ thuật.",
+  },
 ] as const;
 
 export const INDUSTRY_KEYWORDS: Record<string, string[]> = {

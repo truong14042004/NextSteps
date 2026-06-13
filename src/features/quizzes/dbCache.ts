@@ -41,4 +41,5 @@ export function revalidateQuizAttemptCache({
   revalidateTag(getQuizAttemptIdTag(attemptId), "default")
   revalidateTag(getQuizIdTag(quizId), "default")
   revalidateTag(getQuizJobInfoTag(jobInfoId), "default")
+  revalidateTag(getQuizGlobalTag(), "default")
 }

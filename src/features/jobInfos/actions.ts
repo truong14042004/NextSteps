@@ -160,6 +160,7 @@ export async function getUserJobInfosBasic(limit = 10) {
       experienceLevel: true,
       description: true,
       createdAt: true,
+      analysisResult: true,
     },
   })
 }

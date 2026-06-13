@@ -78,18 +78,27 @@ export async function getSessionUserId() {
   if (token == null) return null
 
   const tokenHash = hashToken(token)
-  const session = await db.query.AuthSessionTable.findFirst({
-    where: and(
-      eq(AuthSessionTable.tokenHash, tokenHash),
-      isNull(AuthSessionTable.revokedAt),
-      gt(AuthSessionTable.expiresAt, new Date())
-    ),
-    columns: {
-      id: true,
-      userId: true,
-      updatedAt: true,
-    },
-  })
+
+  let session: { id: string; userId: string; updatedAt: Date } | undefined
+  try {
+    session = await db.query.AuthSessionTable.findFirst({
+      where: and(
+        eq(AuthSessionTable.tokenHash, tokenHash),
+        isNull(AuthSessionTable.revokedAt),
+        gt(AuthSessionTable.expiresAt, new Date())
+      ),
+      columns: {
+        id: true,
+        userId: true,
+        updatedAt: true,
+      },
+    })
+  } catch (err) {
+    // DB temporarily unavailable (e.g. Neon serverless wake-up) — treat as no session
+    // so the layout degrades gracefully instead of crashing the entire app.
+    console.error("[getSessionUserId] DB query failed, returning null:", err)
+    return null
+  }
 
   if (session != null) {
     const now = new Date()
@@ -113,3 +122,4 @@ export async function getSessionUserId() {
 
   return null
 }
+

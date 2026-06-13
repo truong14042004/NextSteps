@@ -2,7 +2,7 @@
 
 import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
 import { db } from "@/drizzle/db"
-import { and, eq } from "drizzle-orm"
+import { and, eq, desc } from "drizzle-orm"
 import { InterviewTable, JobInfoTable } from "@/drizzle/schema"
 import { insertInterview, updateInterview as updateInterviewDb, getInterviewsByJobInfoId } from "./db"
 import { canCreateInterview } from "./permissions"
@@ -275,3 +275,102 @@ export async function getHumeMessagesAction(humeChatId: string) {
     return []
   }
 }
+
+export async function getUserInterviewStats() {
+  const { userId } = await getCurrentUser()
+  if (userId == null) {
+    return {
+      totalInterviews: 0,
+      averageScore: 0,
+      improvementRate: 0,
+      streakDays: 0,
+      completionRate: 0,
+    }
+  }
+
+  const interviews = await db
+    .select({
+      id: InterviewTable.id,
+      createdAt: InterviewTable.createdAt,
+      feedback: InterviewTable.feedback,
+    })
+    .from(InterviewTable)
+    .innerJoin(JobInfoTable, eq(JobInfoTable.id, InterviewTable.jobInfoId))
+    .where(eq(JobInfoTable.userId, userId))
+    .orderBy(desc(InterviewTable.createdAt))
+
+  const parseScore = (markdown: string | null) => {
+    if (!markdown) return null
+    const match = markdown.match(/(?:Overall Rating|Overall Score|Điểm tổng hợp|Điểm tổng|Đánh giá chung)[\s\*:]*(\d+(\.\d+)?)\/10/i)
+    return match ? parseFloat(match[1]) : null
+  }
+
+  const scoredInterviews = interviews
+    .map(i => ({
+      ...i,
+      score: parseScore(i.feedback),
+    }))
+    .filter(i => i.score !== null) as (typeof interviews[number] & { score: number })[]
+
+  const totalInterviews = interviews.length
+  
+  let averageScore = 0
+  if (scoredInterviews.length > 0) {
+    const sum = scoredInterviews.reduce((acc, curr) => acc + curr.score, 0)
+    averageScore = Math.round((sum / scoredInterviews.length) * 10) / 10
+  }
+
+  // Calculate improvement rate: compare average of the second half (newer) vs first half (older)
+  let improvementRate = 0
+  if (scoredInterviews.length >= 2) {
+    // Sort oldest to newest
+    const sorted = [...scoredInterviews].sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+    )
+    const mid = Math.floor(sorted.length / 2)
+    const older = sorted.slice(0, mid)
+    const newer = sorted.slice(mid)
+
+    const olderAvg = older.reduce((acc, curr) => acc + curr.score, 0) / older.length
+    const newerAvg = newer.reduce((acc, curr) => acc + curr.score, 0) / newer.length
+
+    if (olderAvg > 0) {
+      improvementRate = Math.round(((newerAvg - olderAvg) / olderAvg) * 100)
+    }
+  }
+
+  // Calculate streak
+  const uniqueDayKeys = new Set(
+    interviews.map(i => {
+      const day = new Date(i.createdAt)
+      day.setHours(0, 0, 0, 0)
+      return day.getTime()
+    })
+  )
+
+  let streakDays = 0
+  const cursor = new Date()
+  cursor.setHours(0, 0, 0, 0)
+
+  if (!uniqueDayKeys.has(cursor.getTime())) {
+    cursor.setDate(cursor.getDate() - 1)
+  }
+
+  while (uniqueDayKeys.has(cursor.getTime())) {
+    streakDays += 1
+    cursor.setDate(cursor.getDate() - 1)
+  }
+
+  const completionRate = totalInterviews > 0
+    ? Math.round((scoredInterviews.length / totalInterviews) * 100)
+    : 0;
+
+  return {
+    totalInterviews,
+    averageScore,
+    improvementRate,
+    streakDays,
+    completionRate,
+  }
+}
+

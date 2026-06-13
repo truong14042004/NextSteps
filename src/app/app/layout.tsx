@@ -27,7 +27,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   if (userId == null) return redirectToSignIn();
   if (user == null) return redirect("/sign-up");
 
-  // Nếu user có role admin => chuyển tới dashboard admin
   const userAccess = user as {
     publicMetadata?: { role?: unknown };
     role?: unknown;
@@ -68,20 +67,22 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    // root provides viewport height; child pages must NOT use min-h-screen
-    <div className="min-h-screen flex bg-background">
-      {/* Sidebar is fixed per-viewport (sticky + h-screen) */}
+    <div className="min-h-screen bg-background relative flex">
+      {/* Sidebar is fixed left-0 top-0 h-screen */}
       <Sidebar stats={statsProps} />
 
-      {/* Right column: header + main (ONLY main scrolls) */}
-      <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
+      {/* Right Column: topbar + scrollable content area */}
+      <div className="flex-1 flex flex-col min-h-screen md:pl-60">
+        {/* Topbar fixed top, spans to the right of sidebar */}
         <Navbar user={user} plan={plan} stats={statsProps} activities={activities} />
 
-        {/* Main is the only scrolling container. keep min-h-0 so children don't force extra height */}
-        <main className="flex-1 overflow-auto min-h-0">{children}</main>
+        {/* Main section scrollable independently */}
+        <main className="flex-1 overflow-y-auto pt-16 min-h-0">
+          {children}
+        </main>
       </div>
 
-      {/* Floating review button — visible on all /app pages */}
+      {/* Floating review button */}
       <ServiceReviewButton />
     </div>
   );

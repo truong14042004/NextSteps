@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getUserJobInfosBasic } from "@/features/jobInfos/actions";
-import { getInterviewsForJobInfo } from "@/features/interviews/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatExperienceLevel } from "@/features/jobInfos/lib/formatters";
@@ -11,61 +10,60 @@ import { vi } from "date-fns/locale";
 import {
   Loader2Icon,
   BriefcaseIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
   ClockIcon,
-  CheckCircleIcon,
   PlayCircleIcon,
-  FileTextIcon,
-  SparklesIcon,
-  ArrowRightIcon,
+  PlayIcon,
+  SearchIcon,
+  FilterIcon,
   HistoryIcon,
+  PercentIcon,
+  SparklesIcon,
 } from "lucide-react";
 import { InterviewJobInfo } from "./page";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 type JobInfoData = Awaited<ReturnType<typeof getUserJobInfosBasic>>[number];
-type InterviewData = Awaited<ReturnType<typeof getInterviewsForJobInfo>>;
 
 export function PreviousAnalysisOption({
   onSelect,
+  onOpenHistory,
 }: {
   onSelect: (jobInfo: InterviewJobInfo) => void;
+  onOpenHistory: (jobInfo: InterviewJobInfo) => void;
 }) {
   const [jobInfos, setJobInfos] = useState<JobInfoData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
-  const [interviews, setInterviews] = useState<Record<string, InterviewData>>(
-    {},
-  );
-  const [loadingInterviews, setLoadingInterviews] = useState<
-    Record<string, boolean>
-  >({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [experienceFilter, setExperienceFilter] = useState<string>("all");
 
   useEffect(() => {
-    getUserJobInfosBasic(10).then((data) => {
+    getUserJobInfosBasic(50).then((data) => {
       setJobInfos(data);
       setLoading(false);
     });
   }, []);
 
-  async function toggleHistory(jobInfoId: string) {
-    if (expandedJobId === jobInfoId) {
-      setExpandedJobId(null);
-      return;
-    }
+  const filteredJobInfos = useMemo(() => {
+    return jobInfos.filter((item) => {
+      const matchSearch =
+        (item.title?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+        (item.name?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+      
+      const matchExp =
+        experienceFilter === "all" || item.experienceLevel === experienceFilter;
 
-    setExpandedJobId(jobInfoId);
-
-    if (interviews[jobInfoId] != null) return;
-
-    setLoadingInterviews((prev) => ({ ...prev, [jobInfoId]: true }));
-    const data = await getInterviewsForJobInfo(jobInfoId);
-    setInterviews((prev) => ({ ...prev, [jobInfoId]: data }));
-    setLoadingInterviews((prev) => ({ ...prev, [jobInfoId]: false }));
-  }
+      return matchSearch && matchExp;
+    });
+  }, [jobInfos, searchTerm, experienceFilter]);
 
   if (loading) {
     return (
@@ -80,13 +78,13 @@ export function PreviousAnalysisOption({
 
   if (jobInfos.length === 0) {
     return (
-      <div className="rounded-[28px] border border-border bg-background/70 p-8 text-center shadow-sm">
-        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          <HistoryIcon className="size-6" />
+      <div className="rounded-[24px] border border-border bg-background/50 p-8 text-center shadow-xs">
+        <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <HistoryIcon className="size-5" />
         </div>
 
         <h3 className="text-lg font-semibold">Chưa có dữ liệu đã phân tích</h3>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+        <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
           Bạn chưa có phân tích CV/JD nào trước đó. Hãy tạo phân tích mới hoặc
           chuyển sang tab “Phỏng vấn mới” để bắt đầu nhanh.
         </p>
@@ -96,82 +94,121 @@ export function PreviousAnalysisOption({
 
   return (
     <div className="space-y-4">
-      <ScrollArea className="h-[520px] pr-4">
-        <div className="space-y-4">
-          {jobInfos.map((jobInfo) => {
-            const isExpanded = expandedJobId === jobInfo.id;
-            const interviewList = interviews[jobInfo.id];
+      {/* Search & Filter Controls */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1">
+          <SearchIcon className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Tìm theo vị trí, tên ứng viên..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="h-10 rounded-xl border-border bg-background/80 pl-10 pr-4 shadow-none"
+          />
+        </div>
+        <div className="w-full sm:w-[180px]">
+          <Select value={experienceFilter} onValueChange={setExperienceFilter}>
+            <SelectTrigger className="h-10 rounded-xl border-border bg-background/80 shadow-none">
+              <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                <FilterIcon className="size-3.5" />
+                <SelectValue placeholder="Cấp độ" />
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả cấp độ</SelectItem>
+              <SelectItem value="intern">Intern</SelectItem>
+              <SelectItem value="fresh">Fresher</SelectItem>
+              <SelectItem value="junior">Junior</SelectItem>
+              <SelectItem value="mid-level">Middle</SelectItem>
+              <SelectItem value="senior">Senior</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-            return (
-              <div
-                key={jobInfo.id}
-                className={cn(
-                  "overflow-hidden rounded-[28px] border bg-background/80 shadow-sm transition-all",
-                  isExpanded
-                    ? "border-primary/20 shadow-md"
-                    : "border-border hover:border-primary/15",
-                )}
-              >
-                <div className="p-5 md:p-5">
-                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+      <ScrollArea className="h-[480px] pr-2">
+        <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-card shadow-xs">
+          {filteredJobInfos.length === 0 ? (
+            <div className="py-12 text-center text-sm text-muted-foreground bg-white dark:bg-card">
+              Không tìm thấy kết quả phù hợp.
+            </div>
+          ) : (
+            filteredJobInfos.map((jobInfo) => {
+              // Parse match score from analysisResult
+              let matchScore: number | null = null;
+              if (jobInfo.analysisResult) {
+                try {
+                  const parsed = JSON.parse(jobInfo.analysisResult);
+                  if (parsed?.jobMatch?.score != null) {
+                    matchScore = Math.round(parsed.jobMatch.score * 10);
+                  }
+                } catch (e) {
+                  // ignore
+                }
+              }
+
+              return (
+                <div
+                  key={jobInfo.id}
+                  onClick={() =>
+                    onOpenHistory({
+                      id: jobInfo.id,
+                      title: jobInfo.title || "",
+                      name: jobInfo.name,
+                      experienceLevel: jobInfo.experienceLevel,
+                      description: jobInfo.description,
+                    })
+                  }
+                  className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 transition-all hover:bg-slate-50/50 dark:hover:bg-muted/10 cursor-pointer min-h-[70px] sm:min-h-[85px] hover:-translate-y-[1px] duration-150"
+                >
+                  <div className="min-w-0 flex-1 flex items-center gap-3.5">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-red-50 border border-red-100 text-red-600 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30">
+                      <BriefcaseIcon className="size-5" />
+                    </div>
+
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-start gap-3">
-                        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-primary/10 bg-primary/5 text-primary">
-                          <BriefcaseIcon className="size-5" />
-                        </div>
+                      <h4 className="truncate text-sm font-bold text-slate-900 dark:text-foreground">
+                        {jobInfo.title || "Không có vị trí"}
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {jobInfo.name}
+                      </p>
+                    </div>
+                  </div>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="truncate text-lg font-semibold text-foreground">
-                              {jobInfo.title || "Không có tiêu đề"}
-                            </h3>
-
-                            <Badge
-                              variant="outline"
-                              className="rounded-full border-primary/15 bg-primary/5 text-primary"
-                            >
-                              {formatExperienceLevel(jobInfo.experienceLevel)}
-                            </Badge>
-                          </div>
-
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            <span className="font-medium text-foreground">
-                              {jobInfo.name}
-                            </span>
-                            {" • "}
-                            {formatDistanceToNow(new Date(jobInfo.createdAt), {
-                              addSuffix: true,
-                              locale: vi,
-                            })}
-                          </p>
-                        </div>
-                      </div>
-
-                      {jobInfo.description && !isExpanded && (
-                        <div className="mt-4 rounded-2xl border border-border bg-muted/30 p-4">
-                          <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">
-                            {jobInfo.description}
-                          </p>
-                        </div>
+                  <div className="flex flex-wrap items-center gap-6 sm:justify-end shrink-0">
+                    {/* Match Score Display */}
+                    <div className="min-w-[80px] text-left sm:text-right">
+                      <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-wider">
+                        Match Score
+                      </span>
+                      {matchScore !== null ? (
+                        <span className={cn(
+                          "text-xs font-bold block mt-0.5",
+                          matchScore >= 75
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-amber-500 dark:text-amber-400"
+                        )}>
+                          {matchScore}%
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground block mt-0.5">--</span>
                       )}
                     </div>
 
-                    <div className="flex flex-wrap gap-2 lg:justify-end">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => toggleHistory(jobInfo.id)}
-                        className="rounded-xl border-primary/15 bg-white/80 hover:bg-primary/5 dark:bg-background/40"
-                      >
-                        <ClockIcon className="mr-2 size-4" />
-                        Lịch sử
-                        {isExpanded ? (
-                          <ChevronUpIcon className="ml-2 size-4" />
-                        ) : (
-                          <ChevronDownIcon className="ml-2 size-4" />
-                        )}
-                      </Button>
+                    {/* Updated Time Display */}
+                    <div className="min-w-[90px] text-left sm:text-right">
+                      <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-wider">
+                        Cập nhật
+                      </span>
+                      <span className="text-xs text-slate-700 dark:text-slate-300 block mt-0.5">
+                        {formatDistanceToNow(new Date(jobInfo.createdAt), {
+                          addSuffix: false,
+                          locale: vi,
+                        })} trước
+                      </span>
+                    </div>
 
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       <Button
                         type="button"
                         onClick={() =>
@@ -183,132 +220,19 @@ export function PreviousAnalysisOption({
                             description: jobInfo.description,
                           })
                         }
-                        className="rounded-xl btn-cta"
+                        className="h-8.5 rounded-lg text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/95 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5"
                       >
-                        <PlayCircleIcon className="mr-2 size-4" />
+                        <div className="flex size-4 items-center justify-center rounded-full bg-white text-primary shrink-0">
+                          <PlayIcon className="size-2 fill-current ml-[1px]" />
+                        </div>
                         Phỏng vấn ngay
                       </Button>
                     </div>
                   </div>
                 </div>
-
-                {isExpanded && (
-                  <div className="border-t border-border bg-white/60 px-5 py-5 dark:bg-background/40 md:px-6">
-                    <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                      <SparklesIcon className="size-3.5 text-primary" />
-                      Lịch sử phỏng vấn
-                    </div>
-
-                    {jobInfo.description && (
-                      <div className="mb-4 rounded-2xl border border-border bg-background/70 p-4">
-                        <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
-                          <FileTextIcon className="size-4 text-primary" />
-                          Mô tả công việc
-                        </div>
-                        <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
-                          {jobInfo.description}
-                        </p>
-                      </div>
-                    )}
-
-                    {loadingInterviews[jobInfo.id] ? (
-                      <div className="flex justify-center py-8">
-                        <div className="flex items-center gap-3 rounded-2xl border border-primary/10 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
-                          <Loader2Icon className="size-4 animate-spin text-primary" />
-                          Đang tải lịch sử phỏng vấn...
-                        </div>
-                      </div>
-                    ) : interviewList?.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-border bg-background/60 px-4 py-8 text-center">
-                        <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-                          <ClockIcon className="size-5" />
-                        </div>
-                        <p className="font-medium text-foreground">
-                          Chưa có lần phỏng vấn nào
-                        </p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          Bạn có thể bắt đầu buổi phỏng vấn đầu tiên từ dữ liệu
-                          này ngay bây giờ.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {interviewList?.map((interview) => {
-                          const status =
-                            interview.feedback != null
-                              ? {
-                                  label: "Có đánh giá",
-                                  className:
-                                    "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-300 dark:border-emerald-900/40",
-                                  icon: (
-                                    <CheckCircleIcon className="size-3.5" />
-                                  ),
-                                }
-                              : interview.vapiTranscript != null ||
-                                  interview.humeChatId != null
-                                ? {
-                                    label: "Chưa đánh giá",
-                                    className:
-                                      "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-300 dark:border-amber-900/40",
-                                    icon: <ClockIcon className="size-3.5" />,
-                                  }
-                                : {
-                                    label: "Chưa hoàn thành",
-                                    className:
-                                      "bg-muted text-muted-foreground border-border",
-                                    icon: <ClockIcon className="size-3.5" />,
-                                  };
-
-                          return (
-                            <Link
-                              key={interview.id}
-                              href={`/app/interview/${interview.id}`}
-                              className="group flex items-center justify-between gap-4 rounded-2xl border border-border bg-background/70 p-4 transition-all hover:border-primary/15 hover:bg-primary/5"
-                            >
-                              <div className="min-w-0 flex items-center gap-3">
-                                <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                                  <ClockIcon className="size-4" />
-                                </div>
-
-                                <div className="min-w-0">
-                                  <p className="text-sm font-semibold text-foreground">
-                                    {formatDistanceToNow(
-                                      new Date(interview.createdAt),
-                                      {
-                                        addSuffix: true,
-                                        locale: vi,
-                                      },
-                                    )}
-                                  </p>
-                                  <p className="mt-1 text-xs text-muted-foreground">
-                                    Thời lượng: {interview.duration}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex shrink-0 items-center gap-2">
-                                <Badge
-                                  className={cn(
-                                    "rounded-full border text-xs font-medium",
-                                    status.className,
-                                  )}
-                                >
-                                  <span className="mr-1">{status.icon}</span>
-                                  {status.label}
-                                </Badge>
-
-                                <ArrowRightIcon className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                              </div>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </ScrollArea>
     </div>

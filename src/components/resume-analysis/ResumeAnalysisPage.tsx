@@ -194,26 +194,24 @@ export default function ResumeAnalysisPage({
           {/* 2. KPI Cards Section */}
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* Card 1: CV đã phân tích */}
-            <div className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-border/60 dark:bg-card">
+            <div className="bg-white dark:bg-card border border-slate-200 dark:border-slate-800 rounded-[24px] p-4 shadow-xs hover:shadow-md transition-all duration-200">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-muted-foreground">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   CV đã phân tích
                 </span>
-                <div className="flex size-9 items-center justify-center rounded-xl bg-primary/5 text-primary">
-                  <FileTextIcon className="size-4.5" />
-                </div>
+                <FileTextIcon className="size-4.5 text-rose-500" />
               </div>
-              <div className="mt-4">
-                <span className="text-2xl font-bold text-foreground">
+              <div className="mt-2">
+                <span className="text-xl font-bold text-slate-900 dark:text-foreground">
                   {completedCount}
                 </span>
-                <span className="ml-1.5 text-xs text-muted-foreground">
+                <span className="text-[10px] text-muted-foreground ml-1">
                   đã phân tích ({remainingCount} còn lại)
                 </span>
               </div>
-              <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
+              <div className="mt-2.5 h-1 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
                 <div
-                  className="h-full rounded-full bg-primary transition-all duration-500"
+                  className="h-full rounded-full bg-rose-500 transition-all duration-500"
                   style={{
                     width: `${Math.min(
                       (completedCount / Math.max(completedCount + remainingCount, 1)) * 100,
@@ -225,24 +223,22 @@ export default function ResumeAnalysisPage({
             </div>
 
             {/* Card 2: ATS trung bình */}
-            <div className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-border/60 dark:bg-card">
+            <div className="bg-white dark:bg-card border border-slate-200 dark:border-slate-800 rounded-[24px] p-4 shadow-xs hover:shadow-md transition-all duration-200">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-muted-foreground">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   ATS trung bình
                 </span>
-                <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400">
-                  <TargetIcon className="size-4.5" />
-                </div>
+                <TargetIcon className="size-4.5 text-emerald-500" />
               </div>
-              <div className="mt-4">
-                <span className="text-2xl font-bold text-foreground">
+              <div className="mt-2">
+                <span className="text-xl font-bold text-slate-900 dark:text-foreground">
                   {avgAtsScore != null ? `${avgAtsScore}/100` : "--/100"}
                 </span>
-                <span className="ml-1.5 text-xs text-muted-foreground">
+                <span className="text-[10px] text-muted-foreground ml-1">
                   Mức tối ưu cấu trúc
                 </span>
               </div>
-              <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
+              <div className="mt-2.5 h-1 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
                 <div
                   className="h-full rounded-full bg-emerald-500 transition-all duration-500"
                   style={{ width: `${avgAtsScore != null ? avgAtsScore : 0}%` }}
@@ -251,24 +247,22 @@ export default function ResumeAnalysisPage({
             </div>
 
             {/* Card 3: Match Score trung bình */}
-            <div className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-border/60 dark:bg-card">
+            <div className="bg-white dark:bg-card border border-slate-200 dark:border-slate-800 rounded-[24px] p-4 shadow-xs hover:shadow-md transition-all duration-200">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-muted-foreground">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Match Score trung bình
                 </span>
-                <div className="flex size-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400">
-                  <ActivityIcon className="size-4.5" />
-                </div>
+                <ActivityIcon className="size-4.5 text-blue-500" />
               </div>
-              <div className="mt-4">
-                <span className="text-2xl font-bold text-foreground">
+              <div className="mt-2">
+                <span className="text-xl font-bold text-slate-900 dark:text-foreground">
                   {avgMatchScore != null ? `${avgMatchScore}%` : "--%"}
                 </span>
-                <span className="ml-1.5 text-xs text-muted-foreground">
+                <span className="text-[10px] text-muted-foreground ml-1">
                   Tỷ lệ khớp yêu cầu JD
                 </span>
               </div>
-              <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
+              <div className="mt-2.5 h-1 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
                 <div
                   className="h-full rounded-full bg-blue-500 transition-all duration-500"
                   style={{ width: `${avgMatchScore != null ? avgMatchScore : 0}%` }}
@@ -277,24 +271,22 @@ export default function ResumeAnalysisPage({
             </div>
 
             {/* Card 4: Vị trí đã lưu */}
-            <div className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-border/60 dark:bg-card">
+            <div className="bg-white dark:bg-card border border-slate-200 dark:border-slate-800 rounded-[24px] p-4 shadow-xs hover:shadow-md transition-all duration-200">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-muted-foreground">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Vị trí đã lưu
                 </span>
-                <div className="flex size-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400">
-                  <FlameIcon className="size-4.5 animate-pulse" />
-                </div>
+                <FlameIcon className="size-4.5 text-orange-500 fill-orange-400" />
               </div>
-              <div className="mt-4">
-                <span className="text-2xl font-bold text-foreground">
+              <div className="mt-2">
+                <span className="text-xl font-bold text-slate-900 dark:text-foreground">
                   {uniquePositions > 0 ? `${uniquePositions} vị trí` : "0 vị trí"}
                 </span>
-                <span className="ml-1.5 text-xs text-muted-foreground">
+                <span className="text-[10px] text-muted-foreground ml-1">
                   Lưu trữ trong Workspace
                 </span>
               </div>
-              <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
+              <div className="mt-2.5 h-1 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
                 <div
                   className="h-full rounded-full bg-amber-500 transition-all duration-500"
                   style={{

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card"
 import { ScoreChart } from "./dashboard/_ScoreChart"
 import { DashboardHero } from "./dashboard/_DashboardHero"
+import { QuickActions } from "./dashboard/_QuickActions"
 import { ReadinessScore } from "./dashboard/_ReadinessScore"
 import { AiCoachWidget } from "./dashboard/_AiCoachWidget"
 import { QuotaBars } from "./dashboard/_QuotaBars"
@@ -162,7 +163,7 @@ export default async function DashboardPage() {
   const { level, label: levelLabel } = computeLevel(xp)
 
   return (
-    <div className="container my-6 space-y-8 max-w-6xl">
+    <div className="container my-6 space-y-6 max-w-6xl">
 
       {/* 1 — Hero */}
       <DashboardHero
@@ -175,6 +176,9 @@ export default async function DashboardPage() {
         readinessPercent={readiness.score}
         suggestion={suggestion}
       />
+
+      {/* 1.5 — Quick Actions */}
+      <QuickActions />
 
       {/* 2 — Readiness + AI Coach */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -197,32 +201,22 @@ export default async function DashboardPage() {
       />
 
       {/* 4 — Quiz Score Chart */}
-      <Card className="border-slate-200/80 bg-white dark:border-white/10 dark:bg-white/5 backdrop-blur-sm shadow-xl">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2 text-slate-900 dark:text-white">
-            <Trophy className="h-4 w-4 text-amber-400" />
-            Lịch sử điểm quiz (30 ngày)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScoreChart points={scoreHistory} />
-        </CardContent>
-      </Card>
+      <ScoreChart points={scoreHistory} />
 
       {/* 5 — Job Hub + Activity Timeline */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Vị trí ứng tuyển</h2>
-            <Link href="/app/analyze" className="text-xs text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 transition-colors font-medium">
-              + Thêm vị trí
+            <h2 className="text-sm font-bold text-slate-800 dark:text-white">Vị trí ứng tuyển</h2>
+            <Link href="/app/analyze" className="text-xs text-rose-500 hover:text-rose-600 transition-colors font-bold">
+              + Thêm vị trí mới
             </Link>
           </div>
           <JobHub jobs={jobs} />
         </div>
 
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Hoạt động gần đây</h2>
+          <h2 className="text-sm font-bold text-slate-800 dark:text-white">Hoạt động gần đây</h2>
           <ActivityTimeline activities={activities} />
         </div>
       </section>

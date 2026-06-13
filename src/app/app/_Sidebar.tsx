@@ -56,77 +56,109 @@ export function Sidebar({ stats }: { stats?: StatsProps }) {
         key={item.id}
         href={item.href}
         className={cn(
-          "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+          "group relative flex w-full items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
           isActive
-            ? "bg-primary/10 text-primary"
-            : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200",
+            ? "bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm shadow-primary/5"
+            : "text-slate-600 dark:text-slate-400 hover:bg-slate-50/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200",
         )}
       >
-        <Icon className={cn("h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110", isActive ? "text-primary" : "text-slate-500")} />
-        <span className="truncate">{item.label}</span>
+        {/* Left Active Indicator */}
+        <span
+          className={cn(
+            "absolute left-0 top-1/2 w-[3px] -translate-y-1/2 rounded-r-full bg-primary transition-all duration-300 ease-out",
+            isActive ? "h-6" : "h-0 group-hover:h-4",
+          )}
+        />
+
+        {/* Icon Wrapper */}
+        <span
+          className={cn(
+            "flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200",
+            isActive
+              ? "bg-gradient-to-br from-primary/15 to-primary/5 text-primary shadow-sm"
+              : "text-slate-500 dark:text-slate-450 group-hover:bg-slate-50 dark:group-hover:bg-white/5 group-hover:text-slate-800 dark:group-hover:text-slate-200",
+          )}
+        >
+          <Icon
+            className={cn(
+              "h-4.5 w-4.5 shrink-0 transition-transform duration-200 group-hover:scale-105",
+              isActive && "scale-105",
+            )}
+          />
+        </span>
+
+        <span className="truncate tracking-wide">{item.label}</span>
       </Link>
     );
   };
 
   return (
-    <aside className="hidden md:flex md:flex-col w-64 flex-shrink-0 h-screen sticky top-0 left-0 z-20 border-r border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-950 shadow-[1px_0_10px_rgba(0,0,0,0.01)] box-border">
-      {/* header area */}
-      <div className="px-6 py-5 min-h-[64px] flex items-center border-b border-slate-50 dark:border-white/5">
-        <AppLogo />
-      </div>
-
-      {/* nav scrollable list */}
-      <nav className="flex-1 overflow-auto p-4 space-y-6">
-        <div>
-          <h3 className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            Chung
-          </h3>
-          <div className="space-y-1">
-            {generalItems.map(renderMenuItem)}
-          </div>
+    <aside className="hidden md:block fixed top-0 left-0 h-screen w-60 border-r border-border/40 bg-card/60 backdrop-blur-md shadow-sm z-50">
+      <div className="flex h-full flex-col">
+        {/* header area */}
+        <div className="px-6 h-16 flex items-center border-b border-border/40">
+          <AppLogo
+            textClassName="text-base font-bold tracking-tight bg-gradient-to-r from-red-600 to-rose-500 bg-clip-text text-transparent"
+            imageSize={30}
+          />
         </div>
 
-        <div>
-          <h3 className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            Công cụ phát triển
-          </h3>
-          <div className="space-y-1">
-            {careerToolsItems.map(renderMenuItem)}
-          </div>
-        </div>
-      </nav>
-
-      {/* User Level + XP Card replacing the simple text */}
-      {stats && (
-        <div className="p-4 mx-4 my-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 dark:bg-rose-500/20 text-rose-500">
-              <Award className="h-4.5 w-4.5" />
+        {/* nav scrollable list */}
+        <nav className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin">
+          <div>
+            <h3 className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Chung
+            </h3>
+            <div className="space-y-1">
+              {generalItems.map(renderMenuItem)}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Cấp {stats.level}</span>
-                <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">{stats.xp} XP</span>
+          </div>
+
+          <div>
+            <h3 className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Công cụ phát triển
+            </h3>
+            <div className="space-y-1">
+              {careerToolsItems.map(renderMenuItem)}
+            </div>
+          </div>
+        </nav>
+
+        {/* User Level + XP Card */}
+        {stats && (
+          <div className="p-4 mx-4 my-4 rounded-2xl bg-slate-50/50 dark:bg-white/3 border border-slate-100 dark:border-white/5 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 dark:bg-rose-500/20 text-rose-500 shrink-0">
+                <Award className="h-4.5 w-4.5 stroke-[1.8]" />
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate font-medium">
-                {stats.levelLabel}
-              </p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-850 dark:text-slate-200">Cấp {stats.level}</span>
+                  <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">{stats.xp} XP</span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate font-medium mt-0.5">
+                  {stats.levelLabel}
+                </p>
+              </div>
+            </div>
+            <div className="w-full h-1.5 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-rose-500 to-amber-500 rounded-full transition-all duration-300"
+                style={{ width: `${stats.progressPercent}%` }}
+              />
             </div>
           </div>
-          <div className="w-full h-1.5 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-rose-500 to-amber-500 rounded-full transition-all duration-300"
-              style={{ width: `${stats.progressPercent}%` }}
-            />
-          </div>
-        </div>
-      )}
+        )}
 
-      {!stats && (
-        <div className="border-t border-slate-100 dark:border-white/5 px-4 py-4 text-center text-[10px] text-slate-400">
-          © 2026 NextStep
-        </div>
-      )}
+        {!stats && (
+          <div className="border-t border-border/40 px-6 py-4 flex items-center justify-between text-xs text-muted-foreground/80">
+            <span>© 2026 NextStep</span>
+            <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] border border-border/30">
+              v1.2.0
+            </span>
+          </div>
+        )}
+      </div>
     </aside>
   );
 }

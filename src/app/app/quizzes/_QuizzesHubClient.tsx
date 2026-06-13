@@ -10,6 +10,7 @@ import {
   ActivityIcon,
   TargetIcon,
   CheckCircle2Icon,
+  CheckIcon,
   XCircleIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -268,10 +269,44 @@ export function QuizzesHubClient({ initialJobInfos }: Props) {
       if (data) {
         setResultAttempt(data.attempt)
         setResultQuestions(data.questions)
-        setView("result")
 
-        // Refresh jobInfos list to display updated stats
-        await refreshJobInfosList()
+        setJobInfos(prevJobs => {
+          return prevJobs.map(job => {
+            if (job.id === activeJobInfoId) {
+              return {
+                ...job,
+                quizzes: job.quizzes.map(quiz => {
+                  if (quiz.id === activeQuizId) {
+                    const attemptIndex = quiz.attempts.findIndex(a => a.id === activeAttemptId)
+                    const updatedAttempt = {
+                      id: data.attempt.id,
+                      status: data.attempt.status,
+                      score: data.attempt.score,
+                      startedAt: data.attempt.startedAt,
+                      submittedAt: data.attempt.submittedAt,
+                      expiresAt: data.attempt.expiresAt,
+                      answers: data.attempt.answers || []
+                    }
+                    let newAttempts = [...quiz.attempts]
+                    if (attemptIndex > -1) {
+                      newAttempts[attemptIndex] = updatedAttempt
+                    } else {
+                      newAttempts = [updatedAttempt, ...newAttempts]
+                    }
+                    return {
+                      ...quiz,
+                      attempts: newAttempts
+                    }
+                  }
+                  return quiz
+                })
+              }
+            }
+            return job
+          })
+        })
+
+        setView("result")
       }
     } catch (e) {
       errorToast("Gặp sự cố khi nộp bài")
@@ -452,30 +487,30 @@ export function QuizzesHubClient({ initialJobInfos }: Props) {
   return (
     <div className="container my-6 space-y-8 max-w-6xl mx-auto">
       {/* 1. Hero Section */}
-      <section className="relative overflow-hidden rounded-[32px] border border-primary/10 bg-gradient-to-br from-white via-red-50/20 to-violet-50/30 p-6 shadow-sm dark:from-card dark:via-primary/5 dark:to-secondary/5 md:p-8">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(179,0,0,0.05),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(124,58,237,0.05),transparent_40%)]" />
+      <section className="relative overflow-hidden rounded-[24px] border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-rose-50/30 via-purple-50/30 to-indigo-50/40 p-6 shadow-xs dark:from-card dark:via-primary/5 dark:to-secondary/5 md:p-8">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(244,63,94,0.05),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(99,102,241,0.05),transparent_40%)]" />
         
-        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-3xl space-y-4 flex-1">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50/50 px-2.5 py-0.5 text-xs font-semibold text-rose-600 dark:border-rose-900/30 dark:bg-rose-950/20">
               <SparklesIcon className="size-3.5 animate-pulse" />
               AI Quiz Practice Workspace
             </div>
 
-            <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-5xl">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
               Trắc nghiệm AI
             </h1>
 
-            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
+            <p className="max-w-2xl text-xs md:text-sm leading-relaxed text-slate-600 dark:text-slate-400">
               Luyện tập và củng cố kiến thức chuyên môn được cá nhân hóa hoàn toàn theo CV và mô tả công việc (JD) của bạn.
             </p>
 
-            <div className="flex flex-wrap items-center gap-4 pt-2">
+            <div className="flex flex-wrap items-center gap-6 pt-2">
               <div className="flex items-center gap-2">
                 <Button 
                   onClick={handleContinueLearning}
                   disabled={generatingJobId !== null}
-                  className="rounded-xl px-5 py-5 bg-primary font-bold text-white hover:bg-primary/90 shadow-md hover:shadow-lg transition-all flex items-center gap-2 group text-xs"
+                  className="rounded-xl px-4 py-2 bg-primary font-bold text-white hover:bg-primary/90 shadow-sm transition-all text-xs h-9 flex items-center gap-1.5 group"
                 >
                   {inProgressAttempt ? "Tiếp tục bài đang làm" : "Bắt đầu học ngay"}
                   <ArrowRightIcon className="size-3.5 group-hover:translate-x-1 transition-transform" />
@@ -483,13 +518,13 @@ export function QuizzesHubClient({ initialJobInfos }: Props) {
               </div>
 
               {/* Learning progress indicator */}
-              <div className="space-y-1 min-w-[240px] flex-1 max-w-xs">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-muted-foreground font-medium flex items-center gap-1">
+              <div className="space-y-1 min-w-[240px] flex-1 max-w-xs border-l border-slate-200 pl-5 dark:border-border/60">
+                <div className="flex items-center justify-between text-[10px] uppercase tracking-wider font-bold text-slate-400">
+                  <span className="flex items-center gap-1">
                     <ActivityIcon className="size-3 text-primary" />
-                    Tổng tiến độ luyện tập
+                    Tổng tiến độ
                   </span>
-                  <span className="font-bold text-foreground">{stats.completionRate}% câu đúng</span>
+                  <span>{stats.completionRate}% câu đúng</span>
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
                   <div 
@@ -502,10 +537,10 @@ export function QuizzesHubClient({ initialJobInfos }: Props) {
           </div>
 
           <div className="hidden lg:flex items-center justify-center pr-4 shrink-0">
-            <div className="relative flex size-32 items-center justify-center rounded-[28px] bg-gradient-to-br from-primary/10 to-violet-500/20 p-1 shadow-inner ring-8 ring-white/50 dark:ring-card/50">
-              <div className="absolute inset-0 animate-ping rounded-[28px] bg-primary/5 opacity-50" />
-              <div className="flex size-full items-center justify-center rounded-[24px] bg-white shadow dark:bg-card">
-                <BrainIcon className="size-12 text-primary animate-pulse" />
+            <div className="relative flex size-24 items-center justify-center rounded-[24px] bg-gradient-to-br from-rose-500/10 via-purple-500/10 to-indigo-500/10 p-1 shadow-inner ring-8 ring-white/50 dark:ring-card/50">
+              <div className="absolute inset-0 animate-ping rounded-[24px] bg-rose-500/5 opacity-50" />
+              <div className="flex size-full items-center justify-center rounded-[20px] bg-white shadow dark:bg-card">
+                <BrainIcon className="size-10 text-primary" />
               </div>
             </div>
           </div>
@@ -818,9 +853,155 @@ function QuizTakingView({
 }: QuizTakingProps) {
   const currentQuestion = questions[currentQuestionIndex]
   const answeredCount = Object.values(answers).filter(v => v !== null).length
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [gradingStep, setGradingStep] = useState(0)
+  const [localSubmitting, setLocalSubmitting] = useState(false)
+  const startTimeRef = useRef(Date.now())
+
+  useEffect(() => {
+    if (submitting || localSubmitting) {
+      setGradingStep(1)
+      const t1 = setTimeout(() => setGradingStep(2), 800)
+      const t2 = setTimeout(() => setGradingStep(3), 1600)
+      const t3 = setTimeout(() => setGradingStep(4), 2400)
+      const t4 = setTimeout(() => setGradingStep(5), 3200)
+      return () => {
+        clearTimeout(t1)
+        clearTimeout(t2)
+        clearTimeout(t3)
+        clearTimeout(t4)
+      }
+    } else {
+      setGradingStep(0)
+    }
+  }, [submitting, localSubmitting])
+
+  const handleConfirmSubmit = () => {
+    setShowConfirmModal(false)
+    setLocalSubmitting(true)
+    onSubmit()
+  }
+
+  const timeSpentSeconds = Math.max(0, Math.floor((Date.now() - startTimeRef.current) / 1000))
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
+      {/* 1. Modal xác nhận nộp bài */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-card rounded-3xl max-w-md w-full p-6 space-y-6 border border-slate-100 dark:border-border/60 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-bold text-foreground flex items-center justify-center gap-2">
+                📝 Xác nhận nộp bài?
+              </h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Bạn sẽ không thể chỉnh sửa đáp án sau khi nộp. AI sẽ tiến hành chấm điểm và tạo phản hồi chi tiết.
+              </p>
+            </div>
+
+            {/* Metrics */}
+            <div className="bg-slate-50 dark:bg-muted/30 rounded-2xl p-4 space-y-3 text-sm border border-slate-100 dark:border-border/40">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground font-medium">Số câu đã làm:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">{answeredCount} / {questions.length} câu</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground font-medium">Số câu chưa trả lời:</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400">{questions.length - answeredCount} câu</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground font-medium">Thời gian làm bài:</span>
+                <span className="font-bold text-foreground font-mono">{formatDurationSeconds(timeSpentSeconds)}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowConfirmModal(false)} 
+                className="flex-1 rounded-xl font-semibold h-11"
+              >
+                Quay lại
+              </Button>
+              <Button 
+                onClick={handleConfirmSubmit} 
+                className="flex-1 rounded-xl font-semibold bg-primary text-white hover:bg-primary/95 h-11"
+              >
+                Xác nhận nộp bài
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Trạng thái AI đang chấm bài */}
+      {(submitting || localSubmitting) && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
+          <div className="max-w-md w-full space-y-8">
+            {/* Pulsing neuro brain / ring animation */}
+            <div className="relative flex items-center justify-center size-28 mx-auto">
+              <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-pulse" />
+              <div className="absolute inset-0 rounded-full border-4 border-t-primary border-r-transparent border-b-transparent border-l-transparent animate-spin" />
+              <div className="flex size-20 items-center justify-center rounded-full bg-white dark:bg-card shadow-inner">
+                <BrainIcon className="size-10 text-primary animate-pulse" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="text-2xl font-extrabold text-white">
+                🤖 AI đang phân tích bài làm của bạn
+              </h2>
+              <p className="text-sm text-slate-300">
+                Chờ một lát, AI đang đánh giá và chuẩn bị phản hồi cho bạn...
+              </p>
+            </div>
+
+            {/* Checklist steps */}
+            <div className="bg-white/10 dark:bg-black/25 backdrop-blur-md rounded-3xl p-6 text-left space-y-4 max-w-xs mx-auto border border-white/10">
+              <div className="space-y-3.5 text-sm">
+                {[
+                  "Kiểm tra đáp án",
+                  "Đánh giá mức độ hiểu biết",
+                  "Phân tích kỹ năng còn thiếu",
+                  "Tạo feedback cá nhân hóa",
+                  "Đang tạo báo cáo AI..."
+                ].map((step, index) => {
+                  const currentIdx = index + 1
+                  const isDone = gradingStep > currentIdx
+                  const isCurrent = gradingStep === currentIdx
+
+                  return (
+                    <div 
+                      key={step} 
+                      className={cn(
+                        "flex items-center gap-3 transition-opacity duration-300",
+                        gradingStep >= currentIdx ? "opacity-100" : "opacity-30"
+                      )}
+                    >
+                      {isDone ? (
+                        <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white animate-scale-in">
+                          <CheckIcon className="size-3 stroke-[3]" />
+                        </div>
+                      ) : isCurrent ? (
+                        <Loader2Icon className="size-5 shrink-0 animate-spin text-primary" />
+                      ) : (
+                        <div className="size-5 shrink-0 rounded-full border-2 border-slate-400/50" />
+                      )}
+                      <span className={cn(
+                        "font-medium",
+                        isDone ? "text-slate-200 line-through decoration-emerald-500/50" : isCurrent ? "text-primary font-bold" : "text-slate-300"
+                      )}>
+                        {index === 4 && isCurrent ? "Đang tạo báo cáo AI..." : step}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top sticky progress/timer header */}
       <div className="sticky top-0 z-20 rounded-2xl border border-slate-100 bg-white/90 p-4 shadow-sm backdrop-blur dark:border-border/60 dark:bg-card/90 flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-1">
@@ -841,7 +1022,7 @@ function QuizTakingView({
           <Button variant="outline" size="sm" onClick={onQuit} className="rounded-lg font-bold">
             Thoát
           </Button>
-          <Button onClick={onSubmit} disabled={submitting} className="rounded-lg font-bold">
+          <Button onClick={() => setShowConfirmModal(true)} disabled={submitting} className="rounded-lg font-bold">
             <RefreshCwIcon className={cn("mr-1.5 size-4", submitting && "animate-spin")} />
             Nộp bài
           </Button>
@@ -925,7 +1106,7 @@ function QuizTakingView({
                 <ChevronRightIcon className="ml-1.5 size-4" />
               </Button>
             ) : (
-              <Button onClick={onSubmit} disabled={submitting} className="rounded-xl font-bold">
+              <Button onClick={() => setShowConfirmModal(true)} disabled={submitting} className="rounded-xl font-bold">
                 Nộp bài thi
               </Button>
             )}

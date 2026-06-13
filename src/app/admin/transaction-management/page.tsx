@@ -132,7 +132,7 @@ function PlanBadge({ plan }: { plan: string }) {
     )
   }
 
-  if (p === "Start" || p === "Starter") {
+  if (p === "Start") {
     return (
       <Badge className="bg-blue-50 hover:bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-950/30 dark:border-blue-900/50 dark:text-blue-400 font-semibold px-2 py-0.5 text-xs rounded-md shadow-2xs">
         Start
@@ -557,8 +557,8 @@ export default function AdminTransactionManagementPage() {
                 disabled={loading}
                 onClick={() => setPage(pageNumber)}
                 className={`min-w-9 h-9 rounded-lg font-medium transition-all ${pageNumber === page
-                    ? "bg-red-600 hover:bg-red-700 text-white"
-                    : "border-zinc-200 dark:border-zinc-700"
+                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  : "border-zinc-200 dark:border-zinc-700"
                   }`}
               >
                 {pageNumber}

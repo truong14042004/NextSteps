@@ -89,11 +89,14 @@ export function Navbar({
   }
 
   return (
-    <nav className="h-16 border-b border-slate-100 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-10">
-      <div className="container flex h-full items-center justify-between">
-        <Link href="/app" className="flex items-center gap-2">
-          <span className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">{title}</span>
-        </Link>
+    <nav className="fixed top-0 right-0 left-0 md:left-60 h-16 border-b border-border/40 bg-background/60 backdrop-blur-md z-40 px-6">
+      <div className="flex h-full items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-1.5">
+            {title}
+            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+          </span>
+        </div>
 
         <div className="flex items-center gap-3">
           <ThemeToggle />
@@ -102,13 +105,13 @@ export function Navbar({
           {mounted && (
             <span
               className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-sm border transition-all duration-300",
+                "inline-flex h-9 items-center gap-1.5 px-3.5 rounded-full text-xs font-semibold border transition-all duration-200",
                 isPaidPlan
                   ? "border-amber-500/20 bg-gradient-to-r from-amber-500/10 to-orange-500/10 text-amber-600 dark:text-amber-400"
-                  : "border-slate-200 bg-slate-50 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400",
+                  : "border-border/40 bg-muted/30 text-muted-foreground",
               )}
             >
-              <Crown className="size-3.5 shrink-0" />
+              <Crown className="size-3.5 shrink-0 text-amber-500 fill-amber-500/10" />
               <span>Gói {plan.planName}</span>
             </span>
           )}
@@ -117,20 +120,20 @@ export function Navbar({
           {mounted && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="relative p-2 rounded-xl border border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 transition-colors">
-                  <Bell className="size-4.5" />
+                <button className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border/40 bg-background/50 text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-200 active:scale-95 cursor-pointer">
+                  <Bell className="size-4.5 stroke-[1.8]" />
                   {activities && activities.length > 0 && (
-                    <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                    <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
                   )}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80 rounded-2xl p-2 border border-slate-100 dark:border-white/10 shadow-2xl bg-white dark:bg-slate-950">
-                <div className="px-3 py-2 border-b border-slate-50 dark:border-white/5">
+              <DropdownMenuContent align="end" className="w-80 rounded-3xl p-3 border border-border/40 shadow-xl bg-white dark:bg-slate-950 mt-2">
+                <div className="px-3 py-2 border-b border-border/40 mb-2">
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                     Lịch sử hoạt động
                   </span>
                 </div>
-                <div className="max-h-80 overflow-y-auto py-1 space-y-0.5">
+                <div className="max-h-80 overflow-y-auto space-y-0.5 scrollbar-thin">
                   {(!activities || activities.length === 0) ? (
                     <div className="px-3 py-6 text-center text-xs text-slate-400">
                       Chưa có hoạt động nào
@@ -143,7 +146,7 @@ export function Navbar({
                         <DropdownMenuItem
                           key={a.refId}
                           onClick={() => router.push(activityHref(a))}
-                          className="flex items-start gap-3 p-2 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 focus:bg-slate-50 dark:focus:bg-white/5"
+                          className="flex items-start gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 focus:bg-slate-50 dark:focus:bg-white/5"
                         >
                           <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", meta.bg)}>
                             <Icon className={cn("h-4 w-4", meta.color)} />
@@ -153,11 +156,11 @@ export function Navbar({
                               {meta.label} · <span className="text-slate-500 font-medium">{a.jobName}</span>
                             </p>
                             {a.detail && (
-                              <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                              <p className="text-[10px] text-slate-550 dark:text-slate-400 truncate mt-0.5">
                                 {a.detail}
                               </p>
                             )}
-                            <span className="text-[9px] text-slate-400 dark:text-slate-505 block mt-0.5">
+                            <span className="text-[9px] text-slate-400 dark:text-slate-550 block mt-0.5">
                               {timeAgo(a.occurredAt)}
                             </span>
                           </div>
@@ -170,58 +173,46 @@ export function Navbar({
             </DropdownMenu>
           )}
 
+          {/* User Profile Avatar with Dropdown */}
           {mounted && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="flex items-center gap-2 rounded-full outline-none transition-all duration-200 hover:scale-105"
+                  className="group relative flex items-center justify-center rounded-full p-[2px] transition-transform duration-200 hover:scale-105 active:scale-95 focus:outline-none cursor-pointer"
                   aria-label="Mở menu tài khoản"
                 >
-                  <UserAvatar user={user} />
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-primary to-orange-500 opacity-60 group-hover:opacity-100 transition-opacity" />
+                  <UserAvatar
+                    user={user}
+                    className="relative h-8 w-8 rounded-full border-2 border-background object-cover shadow-sm"
+                  />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80 rounded-3xl p-4 border border-slate-100 dark:border-white/10 shadow-2xl bg-white dark:bg-slate-950">
+              <DropdownMenuContent align="end" className="w-80 rounded-3xl p-4 border border-border/40 shadow-xl bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 mt-2">
                 {/* Header Profile details */}
                 <div className="flex items-center gap-3 mb-3">
                   <UserAvatar user={user} className="size-10" />
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{user.name}</h4>
+                    <h4 className="text-sm font-bold text-slate-850 dark:text-slate-100 truncate">{user.name}</h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">Hồ sơ ứng viên</p>
                   </div>
                 </div>
-
-                {/* Quick stats grid inside dropdown */}
-                {/* {stats && (
-                  <div className="grid grid-cols-3 gap-2 mt-3 text-center">
-                    <div className="p-2 rounded-xl bg-slate-50/50 dark:bg-white/3 border border-slate-100/50 dark:border-white/5">
-                      <span className="block text-sm font-bold text-slate-800 dark:text-slate-200">{stats.totalAnalyses}</span>
-                      <span className="text-[9px] text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">CV</span>
-                    </div>
-                    <div className="p-2 rounded-xl bg-slate-50/50 dark:bg-white/3 border border-slate-100/50 dark:border-white/5">
-                      <span className="block text-sm font-bold text-slate-800 dark:text-slate-200">{stats.totalInterviews}</span>
-                      <span className="text-[9px] text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">Mocks</span>
-                    </div>
-                    <div className="p-2 rounded-xl bg-slate-50/50 dark:bg-white/3 border border-slate-100/50 dark:border-white/5">
-                      <span className="block text-sm font-bold text-slate-800 dark:text-slate-200">{stats.totalQuizAttempts}</span>
-                      <span className="text-[9px] text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">Quizzes</span>
-                    </div>
-                  </div>
-                )} */}
 
                 {/* Account Plan Details Card */}
                 <div
                   className={cn(
                     "mt-3 p-3 rounded-2xl border transition-all duration-300",
                     isPaidPlan
-                      ? "border-amber-300/50 bg-amber-50/50 dark:border-amber-500/20 dark:bg-amber-500/5 text-amber-900 dark:text-amber-100"
-                      : "border-slate-100 bg-slate-50/50 dark:border-white/5 dark:bg-white/3",
+                      ? "border-amber-300/40 bg-amber-50/50 dark:border-amber-500/20 dark:bg-amber-500/5 text-amber-900 dark:text-amber-100"
+                      : "border-border/45 bg-slate-50/50 dark:bg-white/3",
                   )}
                 >
                   <div className="flex items-center gap-1.5 text-xs font-bold">
                     <Crown className="size-4 text-amber-500 shrink-0" />
                     <span>Gói: {plan.planName}</span>
                   </div>
-                  <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                  <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-450 font-medium">
                     {plan.resetText}
                   </p>
                 </div>
@@ -233,20 +224,20 @@ export function Navbar({
                     disabled={isSigningOut}
                     className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-white/5 text-slate-700 dark:text-slate-300 focus:bg-slate-50 dark:focus:bg-white/5 focus:text-slate-900 dark:focus:text-slate-100"
                   >
-                    <User className="size-4 text-slate-500 shrink-0" />
+                    <User className="size-4 text-slate-500 shrink-0 stroke-[1.8]" />
                     <span className="text-sm font-medium">Hồ sơ của tôi</span>
                   </DropdownMenuItem>
                 </div>
 
-                <DropdownMenuSeparator className="my-2 border-slate-100 dark:border-white/5" />
+                <DropdownMenuSeparator className="my-2 border-border/40" />
 
-                {/* Separated logout button */}
+                {/* Logout */}
                 <DropdownMenuItem
                   onClick={handleSignOut}
                   disabled={isSigningOut}
-                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-colors text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 focus:bg-rose-50 dark:focus:bg-rose-950/20 focus:text-rose-700 dark:focus:text-rose-300"
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-colors text-rose-600 dark:text-rose-450 hover:bg-rose-50 dark:hover:bg-rose-950/20 focus:bg-rose-50 dark:focus:bg-rose-950/20 focus:text-rose-700 dark:focus:text-rose-350"
                 >
-                  <LogOut className="size-4 shrink-0" />
+                  <LogOut className="size-4 shrink-0 stroke-[1.8]" />
                   <span className="text-sm font-bold">Đăng xuất</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -261,17 +252,13 @@ export function Navbar({
 function resolveTitle(pathname: string | null): string {
   if (!pathname) return "NextStep";
 
-  // Top-level sections
   if (pathname === "/app") return "Tổng quan";
   if (pathname.startsWith("/app/analyze")) return "Phân tích CV / JD";
   if (pathname.startsWith("/app/interview")) return "Phỏng vấn với AI";
   if (pathname.startsWith("/app/upgrade")) return "Nâng cấp gói";
   if (pathname.startsWith("/app/explore")) return "Khám phá";
-
-  // Quiz hub (cross-job)
   if (pathname === "/app/quizzes") return "Trắc nghiệm";
 
-  // Job-info nested
   if (pathname.startsWith("/app/job-infos/")) {
     if (/\/quizzes\/[^/]+\/attempts\//.test(pathname)) return "Làm bài quiz";
     if (pathname.endsWith("/quizzes") || /\/quizzes\/[^/]+$/.test(pathname))
