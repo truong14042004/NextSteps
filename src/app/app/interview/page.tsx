@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { Suspense, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   SparklesIcon,
@@ -48,6 +48,8 @@ import {
   getHumeMessagesAction,
   getUserInterviewStats,
 } from "@/features/interviews/actions";
+import { getJobInfoForClient } from "@/features/jobInfos/actions";
+import { useSearchParams } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
@@ -117,11 +119,40 @@ function parseFeedbackDetails(markdown: string | null) {
   };
 }
 
-export default function InterviewPage() {
+export function InterviewPageContent() {
   const [selectedJobInfo, setSelectedJobInfo] =
     useState<InterviewJobInfo | null>(null);
   const [sourceMode, setSourceMode] = useState<SourceMode>("previous");
   const [usage, setUsage] = useState<UsageInfo>(defaultUsage);
+
+  const searchParams = useSearchParams();
+  const jobInfoId = searchParams.get("jobInfoId");
+
+  useEffect(() => {
+    if (jobInfoId) {
+      getJobInfoForClient(jobInfoId).then((info) => {
+        if (info) {
+          let cvSummary: string | undefined;
+          if (info.analysisResult) {
+            try {
+              const parsed = JSON.parse(info.analysisResult);
+              cvSummary = parsed.other?.summary || parsed.ats?.summary || undefined;
+            } catch (e) {
+              // ignore
+            }
+          }
+          setSelectedJobInfo({
+            id: info.id,
+            title: info.title || "",
+            name: info.name,
+            experienceLevel: info.experienceLevel,
+            description: info.description,
+            cvSummary,
+          });
+        }
+      });
+    }
+  }, [jobInfoId]);
 
   // History Modal state
   const [historyJobInfo, setHistoryJobInfo] = useState<InterviewJobInfo | null>(null);
@@ -944,5 +975,20 @@ export default function InterviewPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function InterviewPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex items-center gap-3 rounded-2xl border border-primary/10 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+          <Loader2Icon className="size-4 animate-spin text-primary" />
+          Đang tải trang phỏng vấn...
+        </div>
+      </div>
+    }>
+      <InterviewPageContent />
+    </Suspense>
   );
 }

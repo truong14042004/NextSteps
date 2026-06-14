@@ -596,7 +596,7 @@ export function AnalysisResults({
               <div className="mt-6">
                 {jobInfoId ? (
                   <Button asChild className="w-full rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground font-bold shadow-sm shadow-primary/10 cursor-pointer text-xs h-9">
-                    <Link href={`/app/job-infos/${jobInfoId}/interviews/new`}>
+                    <Link href={`/app/interview?jobInfoId=${jobInfoId}`}>
                       Bắt đầu phỏng vấn
                       <ArrowRightIcon className="ml-1.5 size-3.5" />
                     </Link>

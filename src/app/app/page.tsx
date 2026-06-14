@@ -121,7 +121,7 @@ function pickNextStep({
   }
   const jobNoInterview = jobs.find(j => j.interviewCount === 0)
   if (jobNoInterview) {
-    return { text: `Thử mock interview cho "${jobNoInterview.name}" để rèn phản xạ trả lời.`, href: `/app/job-infos/${jobNoInterview.id}/interviews/new`, cta: "Phỏng vấn thử" }
+    return { text: `Thử mock interview cho "${jobNoInterview.name}" để rèn phản xạ trả lời.`, href: `/app/interview?jobInfoId=${jobNoInterview.id}`, cta: "Phỏng vấn thử" }
   }
 
   if (stats.averageQuizPercent != null && stats.averageQuizPercent < 70) {

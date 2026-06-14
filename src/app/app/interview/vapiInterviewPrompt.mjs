@@ -1,14 +1,12 @@
 const maleInterviewerNames = [
-  "Minh Quân",
-  "Anh Minh",
-  "Hoàng Nam",
-  "Quang Huy",
-  "Đức Anh",
-  "Tuấn Khang",
-  "Gia Bảo",
-  "Hữu Phúc",
-  "Bảo Long",
-  "Thanh Tùng",
+  "Ngọc Minh",
+  "Kim Cương",
+  "Bảo Thy",
+  "Phương Uyên",
+  "Khánh Ly",
+  "Thảo Vy",
+  "Khả Hân",
+  "Thúy An",
 ]
 
 export const getRandomMaleInterviewerName = () =>
@@ -120,5 +118,5 @@ export const buildInterviewFirstMessage = (jobInfo, options = {}) => {
   const interviewerName =
     options.interviewerName?.trim() || getRandomMaleInterviewerName()
 
-  return `Xin chào ${getCandidateName(jobInfo)}! Tôi là ${interviewerName}, người phỏng vấn trí tuệ nhân tạo đồng hành cùng bạn hôm nay. Buổi phỏng vấn của chúng ta dự kiến kéo dài khoảng 15 đến 20 phút. Bạn có thể dừng vài giây để suy nghĩ; tôi sẽ chờ bạn nói hết ý. Khi bạn sẵn sàng, chúng ta bắt đầu nhé.`
+  return `Xin chào ${getCandidateName(jobInfo)}! Tôi là ${interviewerName}, người phỏng vấn trí tuệ nhân tạo đồng hành cùng bạn hôm nay. Buổi phỏng vấn của chúng ta dự kiến kéo dài khoảng 10 phút. Bạn có thể dừng vài giây để suy nghĩ; tôi sẽ chờ bạn nói hết ý. Khi bạn sẵn sàng, chúng ta bắt đầu nhé.`
 }

@@ -5,8 +5,9 @@ import { env } from "@/data/env/client"
 import { createInterview, updateInterview, syncVapiTranscript } from "@/features/interviews/actions"
 import { errorToast } from "@/lib/errorToast"
 import Vapi from "@vapi-ai/web"
-import { Loader2Icon, MicIcon, MicOffIcon, PhoneOffIcon, ArrowLeftIcon } from "lucide-react"
+import { Loader2Icon, MicIcon, MicOffIcon, PhoneOffIcon, ArrowLeftIcon, CheckCircle2Icon, SparklesIcon, LightbulbIcon, UserIcon, BriefcaseIcon, ClockIcon, AwardIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { cn } from "@/lib/utils"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { InterviewJobInfo } from "./page"
 import { toast } from "sonner"
@@ -148,6 +149,10 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   const [interviewerName, setInterviewerName] = useState(() =>
     getRandomMaleInterviewerName(),
   )
+  const [isFinishingInterview, setIsFinishingInterview] = useState(false)
+  const [finishProgress, setFinishProgress] = useState(0)
+  const [finishStep, setFinishStep] = useState(0)
+  const [dynamicMessage, setDynamicMessage] = useState("AI đang đọc transcript...")
 
   const vapiRef = useRef<Vapi | null>(null)
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -354,6 +359,7 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     callStartRef.current = 0
 
     if (currentId && hasStartedCall) {
+      setIsFinishingInterview(true)
       try {
         const result = await updateInterview(currentId, {
           duration: currentDuration,
@@ -365,7 +371,8 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
         }
       } catch (error) {
         console.error("Failed to persist Vapi interview:", error)
-        toast.error("Cuoc goi da ket thuc nhung khong luu duoc ket qua.")
+        toast.error("Cuộc gọi đã kết thúc nhưng không lưu được kết quả.")
+        setIsFinishingInterview(false)
         return
       }
 
@@ -389,6 +396,9 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
         }
       }
 
+      setFinishProgress(100)
+      setFinishStep(4)
+      await new Promise(resolve => setTimeout(resolve, 1500))
       router.push(`/app/interview/${currentId}`)
       return
     }
@@ -410,6 +420,47 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
   useEffect(() => { messagesRef.current = messages }, [messages])
   useEffect(() => { interviewIdRef.current = interviewId }, [interviewId])
   useEffect(() => { durationRef.current = duration }, [duration])
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    let msgInterval: NodeJS.Timeout
+    const DYNAMIC_AI_MESSAGES = [
+      "AI đang đọc transcript...",
+      "AI đang đánh giá kỹ năng giao tiếp...",
+      "AI đang phân tích chuyên môn...",
+      "AI đang xác định điểm mạnh...",
+      "AI đang tạo đề xuất cải thiện...",
+      "AI đang so sánh với JD tuyển dụng...",
+    ]
+
+    if (isFinishingInterview) {
+      setFinishProgress(0)
+      setFinishStep(0)
+      setDynamicMessage(DYNAMIC_AI_MESSAGES[0])
+
+      interval = setInterval(() => {
+        setFinishProgress(prev => {
+          if (prev >= 95) return 95
+          const next = prev + Math.floor(Math.random() * 8) + 4
+          if (next < 25) setFinishStep(0)
+          else if (next < 50) setFinishStep(1)
+          else if (next < 75) setFinishStep(2)
+          else setFinishStep(3)
+          return next
+        })
+      }, 400)
+
+      let msgIdx = 0
+      msgInterval = setInterval(() => {
+        msgIdx = (msgIdx + 1) % DYNAMIC_AI_MESSAGES.length
+        setDynamicMessage(DYNAMIC_AI_MESSAGES[msgIdx])
+      }, 2000)
+    }
+    return () => {
+      clearInterval(interval)
+      clearInterval(msgInterval)
+    }
+  }, [isFinishingInterview])
 
   // Khi liveTranscript chuyển assistant → null: AI vừa nói xong, lưu vào messages[]
   const prevLiveTranscriptRef = useRef<InterviewTranscriptMessage | null>(null)
@@ -1006,34 +1057,230 @@ export function VapiInterviewCall({ jobInfo, onBack }: { jobInfo: InterviewJobIn
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [allMessages.length, liveTranscript?.content])
 
+  // Finishing state
+  if (isFinishingInterview) {
+    const finishingSteps = [
+      "Lưu cuộc phỏng vấn",
+      "Đồng bộ transcript",
+      "Phân tích kỹ năng",
+      "Tạo feedback AI"
+    ]
+    return (
+      <div className="min-h-[calc(100vh-6rem)] flex items-center justify-center py-6 px-4 bg-gradient-to-br from-red-50/20 via-white to-purple-50/20 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.04),rgba(139,92,246,0.04),#ffffff)]">
+        <div className="w-full max-w-xl bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-[24px] shadow-sm p-6 md:p-8 space-y-6 text-center transition-all duration-350 scale-100 animate-in fade-in zoom-in-95">
+          
+          {/* AI Icon with pulse, glow, scale */}
+          <div className="relative flex items-center justify-center mx-auto py-2">
+            <div className="absolute size-16 rounded-full bg-red-500/10 animate-ping duration-1000" />
+            <div className="absolute size-12 rounded-full bg-purple-500/10 animate-pulse duration-1000" />
+            <div className="relative size-10 rounded-full bg-gradient-to-tr from-red-500 to-purple-600 flex items-center justify-center text-white shadow-md shadow-purple-500/20 hover:scale-105 transition-transform">
+              <SparklesIcon className="size-5 animate-pulse" />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <h3 className="text-lg font-bold text-slate-900">
+              {finishStep === 4 ? "✓ Phân tích hoàn tất" : "AI đang tổng hợp buổi phỏng vấn"}
+            </h3>
+            <p className="text-xs text-slate-500 font-medium h-4 transition-all duration-300">
+              {finishStep === 4 ? "Đang chuẩn bị điều hướng..." : dynamicMessage}
+            </p>
+          </div>
+
+          <div className="space-y-2.5 pt-1">
+            {/* Shimmer gradient progress bar */}
+            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden p-[1px]">
+              <div 
+                className="h-full bg-gradient-to-r from-red-500 via-orange-500 to-purple-500 rounded-full transition-all duration-300 ease-out"
+                style={{ width: `${finishProgress}%` }}
+              />
+            </div>
+            <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              <span>Đang tạo báo cáo AI</span>
+              <span className="text-purple-600 font-extrabold">{finishProgress}%</span>
+            </div>
+          </div>
+
+          {/* Vertical Timeline */}
+          <div className="border border-slate-150 rounded-2xl bg-white p-5 space-y-4 text-left shadow-2xs">
+            {finishingSteps.map((step, idx) => {
+              const isCompleted = finishStep > idx
+              const isCurrent = finishStep === idx
+              return (
+                <div key={idx} className="flex items-center gap-3">
+                  <div className="flex items-center justify-center">
+                    {isCompleted ? (
+                      <div className="size-4.5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-bold">
+                        ✓
+                      </div>
+                    ) : isCurrent ? (
+                      <div className="relative size-4.5">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 animate-ping" />
+                        <div className="size-4.5 rounded-full bg-red-500 text-white flex items-center justify-center text-[9px] font-bold">
+                          ⟳
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="size-4.5 rounded-full bg-slate-100 border border-slate-200" />
+                    )}
+                  </div>
+                  <span className={cn(
+                    "text-xs font-bold transition-colors duration-300",
+                    isCompleted 
+                      ? "text-emerald-600 line-through decoration-emerald-500/40" 
+                      : isCurrent 
+                      ? "text-red-650" 
+                      : "text-slate-400"
+                  )}>
+                    {step}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Animated skeleton lines beneath */}
+          <div className="space-y-2 pt-2 animate-pulse">
+            <div className="h-3 w-full bg-slate-100 rounded-md" />
+            <div className="h-3 w-5/6 bg-slate-100 rounded-md" />
+            <div className="h-3 w-2/3 bg-slate-100 rounded-md" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Idle state - show start button
   if (!isConnecting && !isCallActive) {
     return (
-      <div className="h-screen-header flex flex-col items-center justify-center gap-8">
-        <div className="text-center space-y-2 max-w-md">
-          <h2 className="text-2xl font-bold">Sẵn sàng bắt đầu phỏng vấn?</h2>
-          <div className="space-y-1 text-sm text-muted-foreground">
-            <p><strong>Ứng viên:</strong> {jobInfo.name}</p>
-            <p><strong>Vị trí:</strong> {jobInfo.title}</p>
-          </div>
-        </div>
+      <div className="min-h-[calc(100vh-6rem)] flex items-center justify-center py-6 px-4">
+        <div className="w-full max-w-3xl md:max-w-4xl bg-white border border-slate-200 rounded-[24px] shadow-xs overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2">
 
-        <div className="flex gap-4">
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => onBack ? onBack() : router.push("/app/interview")}
-          >
-            <ArrowLeftIcon className="size-4 mr-2" />
-            Quay lại
-          </Button>
-          <Button
-            size="lg"
-            onClick={handleStartCall}
-          >
-            <MicIcon className="size-4 mr-2" />
-            Bắt đầu phỏng vấn
-          </Button>
+            {/* Left Panel: Information & Checklist */}
+            <div className="p-6 md:p-8 space-y-6 border-b md:border-b-0 md:border-r border-slate-200/60">
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary uppercase tracking-wider">
+                  <SparklesIcon className="size-3" />
+                  <span>AI Interview Lobby</span>
+                </div>
+                <h2 className="text-xl font-bold text-slate-900 leading-tight">
+                  Sẵn sàng bắt đầu phỏng vấn?
+                </h2>
+              </div>
+
+              {/* Position / Info details */}
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4.5 space-y-3">
+                <div className="grid grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <span className="block text-slate-400 font-semibold mb-0.5">ỨNG VIÊN</span>
+                    <span className="font-bold text-slate-800 flex items-center gap-1">
+                      <UserIcon className="size-3.5 text-slate-400" />
+                      {jobInfo.name}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-slate-400 font-semibold mb-0.5">VỊ TRÍ ỨNG TUYỂN</span>
+                    <span className="font-bold text-slate-800 flex items-center gap-1">
+                      <BriefcaseIcon className="size-3.5 text-slate-400" />
+                      {jobInfo.title}
+                    </span>
+                  </div>
+                  {jobInfo.experienceLevel && (
+                    <div>
+                      <span className="block text-slate-400 font-semibold mb-0.5">CẤP ĐỘ</span>
+                      <span className="font-bold text-slate-850 flex items-center gap-1">
+                        <AwardIcon className="size-3.5 text-slate-400" />
+                        {jobInfo.experienceLevel}
+                      </span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="block text-slate-400 font-semibold mb-0.5">THỜI LƯỢNG</span>
+                    <span className="font-bold text-slate-800 flex items-center gap-1">
+                      <ClockIcon className="size-3.5 text-slate-400" />
+                      Khoảng 10 phút
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Checklist */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Chuẩn bị trước khi vào:
+                </h3>
+                <ul className="space-y-2.5">
+                  <li className="flex items-start gap-2.5 text-xs text-slate-600 font-medium">
+                    <CheckCircle2Icon className="size-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <span>Kiểm tra microphone hoạt động bình thường</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-xs text-slate-600 font-medium">
+                    <CheckCircle2Icon className="size-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <span>Chọn một không gian ngồi yên tĩnh</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-xs text-slate-600 font-medium">
+                    <CheckCircle2Icon className="size-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <span>Trả lời tự nhiên trực tiếp bằng giọng nói</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-xs text-slate-600 font-medium">
+                    <CheckCircle2Icon className="size-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <span>Nên áp dụng phương pháp STAR khi trả lời câu hỏi</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Right Panel: Lobby Visual & Action Buttons */}
+            <div className="p-6 md:p-8 flex flex-col justify-between gap-6 bg-slate-50/30">
+              {/* Mic animation area */}
+              <div className="flex flex-col items-center justify-center py-6 space-y-4">
+                <div className="relative flex items-center justify-center">
+                  <div className="absolute size-20 rounded-full bg-primary/5 animate-ping duration-1000" />
+                  <div className="absolute size-16 rounded-full bg-primary/10 animate-pulse duration-1000" />
+                  <div className="relative size-12 rounded-full bg-primary flex items-center justify-center shadow-md shadow-primary/10">
+                    <MicIcon className="size-5 text-white animate-bounce" />
+                  </div>
+                </div>
+                <div className="text-center">
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 uppercase tracking-wider">
+                    Microphone sẵn sàng
+                  </span>
+                </div>
+              </div>
+
+              {/* Tip Card */}
+              <div className="bg-amber-50/60 border border-amber-200/60 rounded-2xl p-4 flex gap-3 text-xs text-amber-800 leading-relaxed shadow-2xs">
+                <LightbulbIcon className="size-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block font-bold text-amber-900 mb-0.5">Mẹo nhanh</strong>
+                  Hãy trả lời như một buổi phỏng vấn thật, tập trung vào các ví dụ cụ thể của bạn.
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => onBack ? onBack() : router.push("/app/interview")}
+                  className="w-full sm:w-1/3 rounded-xl font-bold text-xs h-11 border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors"
+                >
+                  <ArrowLeftIcon className="size-3.5 mr-1.5" />
+                  Quay lại
+                </Button>
+                <Button
+                  size="lg"
+                  onClick={handleStartCall}
+                  className="w-full sm:flex-1 rounded-xl bg-primary hover:bg-primary/95 text-white font-bold text-xs h-11 shadow-sm shadow-primary/10 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <MicIcon className="size-3.5" />
+                  Bắt đầu phỏng vấn
+                </Button>
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
     )
