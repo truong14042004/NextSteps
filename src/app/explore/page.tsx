@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { ExploreHeader } from "@/components/explore/explore-header"
 import { ExplorePage } from "@/app/app/explore/_ExplorePage"
 import {
+  getMyActiveApplicationPostIds,
   getMyExplorePosts,
   getMyRecruiterRequest,
   getPublishedExplorePosts,
@@ -23,11 +24,12 @@ export default async function ExploreHomePage() {
     redirect("/sign-in")
   }
 
-  const [posts, myRequest, myPosts, plan] = await Promise.all([
+  const [posts, myRequest, myPosts, plan, appliedPostIds] = await Promise.all([
     getPublishedExplorePosts(),
     getMyRecruiterRequest(userId),
     getMyExplorePosts(userId),
     getPlanSummaryForUser(userId),
+    getMyActiveApplicationPostIds(userId),
   ])
 
   return (
@@ -42,6 +44,7 @@ export default async function ExploreHomePage() {
         posts={posts}
         myRequest={myRequest ?? null}
         myPosts={myPosts}
+        appliedPostIds={appliedPostIds}
       />
     </div>
   )

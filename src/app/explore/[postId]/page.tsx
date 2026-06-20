@@ -8,9 +8,10 @@ import {
   deleteExplorePostAsAdminAction,
   hideExplorePostAsAdminAction,
 } from "@/features/admin/explore"
-import { getExplorePostById } from "@/features/explore/db"
+import { getExplorePostById, getMyActiveApplicationPostIds } from "@/features/explore/db"
 import { getPlanSummaryForUser } from "@/features/plans/entitlements"
 import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
+import { canApplyToJob } from "@/features/explore/exploreRules.mjs"
 import { ExplorePostDetailClient } from "./ExplorePostDetailClient"
 
 export default async function ExplorePostDetailPage({
@@ -22,9 +23,10 @@ export default async function ExplorePostDetailPage({
   if (userId == null || user == null) redirect("/sign-in")
 
   const { postId } = await params
-  const [post, plan] = await Promise.all([
+  const [post, plan, appliedPostIds] = await Promise.all([
     getExplorePostById(postId),
     getPlanSummaryForUser(userId),
+    getMyActiveApplicationPostIds(userId),
   ])
 
   if (post == null) notFound()
@@ -36,6 +38,8 @@ export default async function ExplorePostDetailPage({
   const isJob = post.type === "job_post"
   const isRecruiter = user.role === "recruiter"
   const isAdmin = user.role === "admin"
+  const canApply = canApplyToJob(user.role) && post.authorId !== userId
+  const alreadyApplied = appliedPostIds.includes(post.id)
 
   const adminActions = isAdmin && isJob ? (
     <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100 dark:border-border/60">
@@ -77,6 +81,9 @@ export default async function ExplorePostDetailPage({
         isAdmin={isAdmin}
         isRecruiter={isRecruiter}
         adminActions={adminActions}
+        canApply={canApply && post.status === "published"}
+        alreadyApplied={alreadyApplied}
+        applicantName={user.name}
       />
     </div>
   )

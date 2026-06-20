@@ -39,6 +39,9 @@ export function useResumeAnalysis({
   const loadingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const jobInfoIdRef = useRef<string | null>(null);
   const wasAnalyzingRef = useRef(false);
+  // File override cho luồng "Phân tích lại": file tải từ server được truyền
+  // thẳng vào đây, tránh phụ thuộc vào việc state resumeFile kịp propagate.
+  const resumeFileOverrideRef = useRef<File | null>(null);
 
   const hasRemainingUsage = usage.remaining == null || usage.remaining > 0;
 
@@ -94,7 +97,7 @@ export function useResumeAnalysis({
       headers.delete("Content-Type");
 
       const formData = buildResumeAnalysisFormData({
-        resumeFile,
+        resumeFile: resumeFileOverrideRef.current ?? resumeFile,
         values: form.getValues(),
         industryLabel: selectedIndustryLabel,
         languageLabel: selectedLanguageLabel,
@@ -118,8 +121,10 @@ export function useResumeAnalysis({
   const aiAnalysis = isLoading ? streamingAnalysis : (streamingAnalysis ?? persistedAnalysis);
 
   const reAnalyzeWithJobInfo = useCallback(
-    (existingJobInfoId?: string | null) => {
+    (existingJobInfoId?: string | null, overrideFile?: File | null) => {
       if (existingJobInfoId) jobInfoIdRef.current = existingJobInfoId;
+      if (overrideFile) resumeFileOverrideRef.current = overrideFile;
+      setPersistedAnalysis(undefined);
       submitAnalysisRequest(null);
     },
     [submitAnalysisRequest],
@@ -165,6 +170,8 @@ export function useResumeAnalysis({
 
       // Clear previous result before starting a new analysis
       setPersistedAnalysis(undefined);
+      // Luồng phân tích mới dùng file vừa upload, bỏ override của re-analyze cũ.
+      resumeFileOverrideRef.current = null;
 
       const result = await createJobInfoForAnalysis({
         candidateName: values.candidateName,

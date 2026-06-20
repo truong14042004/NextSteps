@@ -1,19 +1,21 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { and, eq } from "drizzle-orm"
+import { and, desc, eq, ne } from "drizzle-orm"
 import z from "zod"
 
 import { db } from "@/drizzle/db"
 import {
   ExploreCommentTable,
   ExplorePostTable,
+  JobApplicationTable,
   RecruiterRequestTable,
 } from "@/drizzle/schema"
 import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
 import {
   commentSchema,
   cvShowcasePostSchema,
+  jobApplicationSchema,
   recruiterPostSchema,
   recruiterRequestSchema,
 } from "./schemas"
@@ -248,13 +250,41 @@ export async function submitRecruiterRequestAction(
   const existing = await db.query.RecruiterRequestTable.findFirst({
     where: and(
       eq(RecruiterRequestTable.userId, auth.userId),
-      eq(RecruiterRequestTable.status, "pending")
+      ne(RecruiterRequestTable.status, "cancelled")
     ),
-    columns: { id: true },
+    orderBy: [desc(RecruiterRequestTable.createdAt)],
+    columns: { id: true, status: true },
   })
 
-  if (existing != null) {
+  if (existing?.status === "pending") {
     return { error: true as const, message: "Bạn đã có yêu cầu đang chờ duyệt" }
+  }
+
+  if (existing?.status === "approved") {
+    return { error: true as const, message: "Tài khoản đã có quyền nhà tuyển dụng" }
+  }
+
+  // Nếu yêu cầu trước bị từ chối: cho sửa lại và gửi lại (rejected → pending),
+  // xóa ghi chú/thông tin review cũ thay vì tạo bản ghi mới.
+  if (existing?.status === "rejected") {
+    await db
+      .update(RecruiterRequestTable)
+      .set({
+        companyName: parsed.data.companyName,
+        companyWebsite: parsed.data.companyWebsite ?? null,
+        businessEmail: parsed.data.businessEmail ?? null,
+        position: parsed.data.position,
+        reason: parsed.data.reason,
+        status: "pending",
+        adminNote: null,
+        reviewedById: null,
+        reviewedAt: null,
+      })
+      .where(eq(RecruiterRequestTable.id, existing.id))
+
+    revalidatePath("/explore")
+    revalidatePath("/admin/recruiter-management")
+    return { error: false as const, message: "Đã gửi lại yêu cầu tới admin" }
   }
 
   await db.insert(RecruiterRequestTable).values({
@@ -322,4 +352,151 @@ export async function hideOwnExplorePostAction(postId: string) {
   revalidatePath("/explore")
   revalidatePath(`/explore/${postId}`)
   return { error: false as const, message: "Đã ẩn bài viết" }
+}
+
+// ── Ứng tuyển / nộp hồ sơ ──────────────────────────────────────────────
+
+export async function applyToJobAction(
+  postId: string,
+  unsafeData: z.infer<typeof jobApplicationSchema>
+) {
+  const auth = await getRequiredUser()
+  if (auth.error) return auth
+
+  if (auth.user.role === "recruiter" || auth.user.role === "admin") {
+    return {
+      error: true as const,
+      message: "Tài khoản nhà tuyển dụng không thể nộp hồ sơ",
+    }
+  }
+
+  const parsed = jobApplicationSchema.safeParse(unsafeData)
+  if (!parsed.success) {
+    return { error: true as const, message: "Thông tin hồ sơ không hợp lệ" }
+  }
+
+  const post = await db.query.ExplorePostTable.findFirst({
+    where: and(
+      eq(ExplorePostTable.id, postId),
+      eq(ExplorePostTable.type, "job_post"),
+      eq(ExplorePostTable.status, "published")
+    ),
+    columns: { id: true, authorId: true },
+  })
+
+  if (post == null) {
+    return { error: true as const, message: "Không tìm thấy bài tuyển dụng" }
+  }
+
+  if (post.authorId === auth.userId) {
+    return { error: true as const, message: "Bạn không thể nộp hồ sơ cho bài của chính mình" }
+  }
+
+  const existing = await db.query.JobApplicationTable.findFirst({
+    where: and(
+      eq(JobApplicationTable.postId, postId),
+      eq(JobApplicationTable.applicantId, auth.userId),
+      ne(JobApplicationTable.status, "withdrawn")
+    ),
+    columns: { id: true },
+  })
+
+  if (existing != null) {
+    return { error: true as const, message: "Bạn đã nộp hồ sơ cho vị trí này" }
+  }
+
+  await db.insert(JobApplicationTable).values({
+    postId,
+    applicantId: auth.userId,
+    fullName: parsed.data.fullName,
+    email: parsed.data.email ?? null,
+    phone: normalizeOptional(parsed.data.phone),
+    coverLetter: normalizeOptional(parsed.data.coverLetter),
+    cvUrl: parsed.data.cvUrl,
+    cvFileName: parsed.data.cvFileName,
+  })
+
+  revalidatePath("/explore")
+  revalidatePath(`/explore/${postId}`)
+  revalidatePath("/recruiter/applicants")
+  return { error: false as const, message: "Đã nộp hồ sơ thành công" }
+}
+
+export async function withdrawApplicationAction(applicationId: string) {
+  const auth = await getRequiredUser()
+  if (auth.error) return auth
+
+  const application = await db.query.JobApplicationTable.findFirst({
+    where: and(
+      eq(JobApplicationTable.id, applicationId),
+      eq(JobApplicationTable.applicantId, auth.userId)
+    ),
+    columns: { id: true, status: true, postId: true },
+  })
+
+  if (application == null) {
+    return { error: true as const, message: "Không tìm thấy hồ sơ" }
+  }
+
+  if (application.status === "accepted") {
+    return { error: true as const, message: "Hồ sơ đã được nhận, không thể rút" }
+  }
+
+  await db
+    .update(JobApplicationTable)
+    .set({ status: "withdrawn" })
+    .where(eq(JobApplicationTable.id, applicationId))
+
+  revalidatePath("/explore")
+  revalidatePath(`/explore/${application.postId}`)
+  revalidatePath("/recruiter/applicants")
+  return { error: false as const, message: "Đã rút hồ sơ" }
+}
+
+const applicationReviewStatuses = ["pending", "reviewing", "accepted", "rejected"] as const
+
+export async function updateApplicationStatusAction(
+  applicationId: string,
+  status: (typeof applicationReviewStatuses)[number],
+  recruiterNote?: string
+) {
+  const auth = await getRequiredUser()
+  if (auth.error) return auth
+
+  if (auth.user.role !== "recruiter" && auth.user.role !== "admin") {
+    return { error: true as const, message: "Chỉ nhà tuyển dụng mới thao tác được" }
+  }
+
+  if (!applicationReviewStatuses.includes(status)) {
+    return { error: true as const, message: "Trạng thái không hợp lệ" }
+  }
+
+  const application = await db.query.JobApplicationTable.findFirst({
+    where: eq(JobApplicationTable.id, applicationId),
+    columns: { id: true, postId: true },
+    with: {
+      post: { columns: { authorId: true } },
+    },
+  })
+
+  if (application == null) {
+    return { error: true as const, message: "Không tìm thấy hồ sơ" }
+  }
+
+  // Recruiter chỉ duyệt hồ sơ của bài đăng do chính họ tạo (admin được toàn quyền).
+  if (auth.user.role !== "admin" && application.post?.authorId !== auth.userId) {
+    return { error: true as const, message: "Bạn không có quyền với hồ sơ này" }
+  }
+
+  await db
+    .update(JobApplicationTable)
+    .set({
+      status,
+      recruiterNote: normalizeOptional(recruiterNote),
+    })
+    .where(eq(JobApplicationTable.id, applicationId))
+
+  revalidatePath("/recruiter/applicants")
+  revalidatePath(`/recruiter/applicants/${application.postId}`)
+  return { error: false as const, message: "Đã cập nhật trạng thái hồ sơ" }
 }

@@ -67,39 +67,29 @@ export default function ResumeAnalysisPage({
       analysis.form.setValue("jobDescription", prefill.jobDescription);
       const jobInfoId = searchParams.get("jobInfoId");
       if (jobInfoId) {
-        // Try to fetch the previously uploaded resume for this jobInfo and auto-run analysis
+        // Tải lại CV đã lưu cho jobInfo này và tự động chạy phân tích lại.
         (async () => {
           try {
             const res = await fetch(`/api/job-infos/${jobInfoId}/resume`);
-            if (res.ok) {
-              const blob = await res.blob();
-              const contentType =
-                res.headers.get("content-type") || "application/pdf";
-              const disposition = res.headers.get("content-disposition") || "";
-              let filename = `${jobInfoId}.pdf`;
-              const match = disposition.match(/filename="?([^";]+)"?/);
-              if (match) filename = match[1];
-
-              const file = new File([blob], filename, { type: contentType });
-              upload.handleSelectFile(file);
-
-              // Give React a tick to propagate the resume file into the analysis hook
-              await new Promise((r) => setTimeout(r, 50));
-
-              // Trigger analysis re-run using the existing jobInfo id
-              if (
-                typeof (analysis as any).reAnalyzeWithJobInfo === "function"
-              ) {
-                (analysis as any).reAnalyzeWithJobInfo(jobInfoId);
-              } else {
-                // fallback: set jobInfoRef then submit via form handler
-                analysis.jobInfoIdRef.current = jobInfoId;
-                analysis.form.handleSubmit(analysis.handleSubmitAnalysis)();
-              }
+            if (!res.ok) {
+              setActiveTab("new");
+              return;
             }
-          } catch (e) {
-            // ignore fetch errors, user can manually upload and submit
-            // console.error(e)
+            const blob = await res.blob();
+            const contentType =
+              res.headers.get("content-type") || "application/pdf";
+            const disposition = res.headers.get("content-disposition") || "";
+            let filename = `${jobInfoId}.pdf`;
+            const match = disposition.match(/filename="?([^";]+)"?/);
+            if (match) filename = match[1];
+
+            const file = new File([blob], filename, { type: contentType });
+            // Hiển thị file trên UI + chạy phân tích với file truyền thẳng vào,
+            // không phụ thuộc state propagation (tránh race "không làm gì cả").
+            upload.setResumeFileDirect(file);
+            analysis.reAnalyzeWithJobInfo(jobInfoId, file);
+          } catch {
+            // Lỗi tải file: để user tự upload và submit lại.
           }
         })();
       }

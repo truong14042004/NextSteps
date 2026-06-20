@@ -40,6 +40,19 @@ export const recruiterRequestStatusEnum = pgEnum(
   recruiterRequestStatuses
 )
 
+export const jobApplicationStatuses = [
+  "pending",
+  "reviewing",
+  "accepted",
+  "rejected",
+  "withdrawn",
+] as const
+export type JobApplicationStatus = (typeof jobApplicationStatuses)[number]
+export const jobApplicationStatusEnum = pgEnum(
+  "job_application_status",
+  jobApplicationStatuses
+)
+
 export const ExplorePostTable = pgTable("explore_posts", {
   id,
   authorId: varchar()
@@ -107,6 +120,7 @@ export const explorePostRelations = relations(ExplorePostTable, ({ one, many }) 
     relationName: "explorePostReviewer",
   }),
   comments: many(ExploreCommentTable),
+  applications: many(JobApplicationTable),
 }))
 
 export const exploreCommentRelations = relations(ExploreCommentTable, ({ one }) => ({
@@ -133,6 +147,41 @@ export const recruiterRequestRelations = relations(
       fields: [RecruiterRequestTable.reviewedById],
       references: [UserTable.id],
       relationName: "recruiterRequestReviewer",
+    }),
+  })
+)
+
+export const JobApplicationTable = pgTable("job_applications", {
+  id,
+  postId: uuid()
+    .references(() => ExplorePostTable.id, { onDelete: "cascade" })
+    .notNull(),
+  applicantId: varchar()
+    .references(() => UserTable.id, { onDelete: "cascade" })
+    .notNull(),
+  status: jobApplicationStatusEnum().notNull().default("pending"),
+  fullName: varchar({ length: 160 }).notNull(),
+  email: varchar({ length: 255 }),
+  phone: varchar({ length: 40 }),
+  coverLetter: text(),
+  cvUrl: varchar({ length: 1024 }).notNull(),
+  cvFileName: varchar({ length: 255 }).notNull(),
+  recruiterNote: text(),
+  createdAt,
+  updatedAt,
+})
+
+export const jobApplicationRelations = relations(
+  JobApplicationTable,
+  ({ one }) => ({
+    post: one(ExplorePostTable, {
+      fields: [JobApplicationTable.postId],
+      references: [ExplorePostTable.id],
+    }),
+    applicant: one(UserTable, {
+      fields: [JobApplicationTable.applicantId],
+      references: [UserTable.id],
+      relationName: "jobApplicationApplicant",
     }),
   })
 )

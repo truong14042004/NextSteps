@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { getExplorePostTypeLabel, getRoleLabel } from "@/features/explore/exploreRules.mjs"
+import { JobApplyDialog } from "@/components/explore/JobApplyDialog"
 import { ExplorePostDetailComments } from "./_ExplorePostDetailComments"
 import type { getExplorePostById } from "@/features/explore/db"
 
@@ -35,6 +36,9 @@ type ExplorePostDetailClientProps = {
   isAdmin: boolean
   isRecruiter: boolean
   adminActions: React.ReactNode
+  canApply?: boolean
+  alreadyApplied?: boolean
+  applicantName?: string
 }
 
 export function ExplorePostDetailClient({
@@ -43,6 +47,9 @@ export function ExplorePostDetailClient({
   isAdmin,
   isRecruiter,
   adminActions,
+  canApply = false,
+  alreadyApplied = false,
+  applicantName = "",
 }: ExplorePostDetailClientProps) {
   const isJob = post.type === "job_post"
   const [likes, setLikes] = useState(0)
@@ -222,14 +229,25 @@ export function ExplorePostDetailClient({
             <div className="flex items-center gap-1.5">
               {/* Primary Action Button */}
               {isJob ? (
-                !isRecruiter && post.status === "published" && (
-                  <Button asChild className="rounded-xl font-bold bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 hover:opacity-90 shadow-md shadow-red-500/10">
-                    <Link href={`/app/analyze?source=explore&postId=${post.id}`}>
-                      <Sparkles className="mr-1.5 size-4 animate-pulse" />
-                      Phân tích CV với JD
-                    </Link>
-                  </Button>
-                )
+                <>
+                  {canApply && (
+                    <JobApplyDialog
+                      postId={post.id}
+                      positionTitle={post.positionTitle ?? post.title}
+                      companyName={post.companyName}
+                      defaultFullName={applicantName}
+                      alreadyApplied={alreadyApplied}
+                    />
+                  )}
+                  {!isRecruiter && post.status === "published" && (
+                    <Button asChild className="rounded-xl font-bold bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 hover:opacity-90 shadow-md shadow-red-500/10">
+                      <Link href={`/app/analyze?source=explore&postId=${post.id}`}>
+                        <Sparkles className="mr-1.5 size-4 animate-pulse" />
+                        Phân tích CV với JD
+                      </Link>
+                    </Button>
+                  )}
+                </>
               ) : (
                 post.cvUrl && (
                   <Button asChild className="rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-700 shadow-md shadow-indigo-500/10">

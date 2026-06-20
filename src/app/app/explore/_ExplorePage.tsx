@@ -56,6 +56,7 @@ import type {
   getMyRecruiterRequest,
   getPublishedExplorePosts,
 } from "@/features/explore/db"
+import { JobApplyDialog } from "@/components/explore/JobApplyDialog"
 import {
   cancelRecruiterRequestAction,
   createCvShowcasePostAction,
@@ -71,6 +72,7 @@ import {
   hideExplorePostAsAdminAction,
 } from "@/features/admin/explore"
 import {
+  canApplyToJob,
   canCreateRecruiterPost,
   canSubmitRecruiterRequest,
   getExplorePostStatusLabel,
@@ -95,6 +97,7 @@ type ExplorePageProps = {
   posts: PublishedPost[]
   myRequest: MyRequest | null
   myPosts: MyPost[]
+  appliedPostIds?: string[]
 }
 
 const softPanelClass =
@@ -350,7 +353,11 @@ function RecruiterRequestForm({
 
   if (!enabled && !request) return null
 
-  if (request) {
+  const isRejected = request?.status === "rejected"
+
+  // Pending / approved: hiển thị thẻ trạng thái read-only.
+  // Rejected: rơi xuống form bên dưới để user sửa và gửi lại.
+  if (request && !isRejected) {
     return (
       <div className="space-y-3 text-sm">
         <div className="flex items-center justify-between gap-3 p-3 bg-primary/5 rounded-xl border border-primary/10">
@@ -372,27 +379,42 @@ function RecruiterRequestForm({
 
   return (
     <form action={handleSubmit} className="space-y-4">
+      {isRejected && (
+        <div className="space-y-2 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-950/20 p-3">
+          <div className="flex items-center gap-2 text-sm font-semibold text-rose-600">
+            <Badge variant="destructive" className="rounded-full">Đã bị từ chối</Badge>
+          </div>
+          {request?.adminNote && (
+            <p className="text-xs text-rose-600">
+              <span className="font-semibold">Lý do: </span>{request.adminNote}
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Hãy chỉnh sửa thông tin bên dưới và gửi lại để admin xét duyệt.
+          </p>
+        </div>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Tên công ty">
-          <Input name="companyName" maxLength={160} required placeholder="Ví dụ: NextStep LLC" className={fieldClass} />
+          <Input name="companyName" maxLength={160} required defaultValue={request?.companyName ?? ""} placeholder="Ví dụ: NextStep LLC" className={fieldClass} />
         </Field>
         <Field label="Website công ty">
-          <Input name="companyWebsite" type="url" maxLength={255} placeholder="https://example.com" className={fieldClass} />
+          <Input name="companyWebsite" type="url" maxLength={255} defaultValue={request?.companyWebsite ?? ""} placeholder="https://example.com" className={fieldClass} />
         </Field>
         <Field label="Email công việc">
-          <Input name="businessEmail" type="email" maxLength={255} placeholder="hr@example.com" className={fieldClass} />
+          <Input name="businessEmail" type="email" maxLength={255} defaultValue={request?.businessEmail ?? ""} placeholder="hr@example.com" className={fieldClass} />
         </Field>
         <Field label="Chức vụ của bạn">
-          <Input name="position" maxLength={120} required placeholder="Ví dụ: HR Manager / Tech Lead" className={fieldClass} />
+          <Input name="position" maxLength={120} required defaultValue={request?.position ?? ""} placeholder="Ví dụ: HR Manager / Tech Lead" className={fieldClass} />
         </Field>
       </div>
       <Field label="Lý do đăng ký">
-        <Textarea name="reason" minLength={20} maxLength={2500} required placeholder="Chia sẻ nhu cầu tuyển dụng và quy mô của doanh nghiệp..." className={`min-h-24 ${fieldClass}`} />
+        <Textarea name="reason" minLength={20} maxLength={2500} required defaultValue={request?.reason ?? ""} placeholder="Chia sẻ nhu cầu tuyển dụng và quy mô của doanh nghiệp..." className={`min-h-24 ${fieldClass}`} />
       </Field>
       <div className="flex justify-end gap-2 pt-2 border-t">
         <Button type="submit" disabled={isPending} className={ctaClass}>
           <Send className="mr-2 size-4" />
-          Gửi yêu cầu tuyển dụng
+          {isRejected ? "Gửi lại yêu cầu" : "Gửi yêu cầu tuyển dụng"}
         </Button>
       </div>
     </form>
@@ -528,10 +550,16 @@ function ExplorePostCard({
   post,
   canAnalyzeWithJob,
   isAdmin,
+  currentUser,
+  canApply,
+  alreadyApplied,
 }: {
   post: PublishedPost
   canAnalyzeWithJob: boolean
   isAdmin: boolean
+  currentUser: CurrentUser
+  canApply: boolean
+  alreadyApplied: boolean
 }) {
   const isJob = post.type === "job_post"
   const [likes, setLikes] = useState(0)
@@ -743,6 +771,16 @@ function ExplorePostCard({
           </div>
 
           <div className="flex gap-2">
+            {canApply && isJob && (
+              <JobApplyDialog
+                postId={post.id}
+                positionTitle={post.positionTitle ?? post.title}
+                companyName={post.companyName}
+                defaultFullName={currentUser.name}
+                alreadyApplied={alreadyApplied}
+                size="compact"
+              />
+            )}
             {canAnalyzeWithJob && isJob && (
               <Button asChild className="rounded-xl text-xs font-bold bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 hover:opacity-90 shadow-md shadow-red-500/10 py-1.5 px-3">
                 <Link href={`/app/analyze?source=explore&postId=${post.id}`}>
@@ -875,9 +913,13 @@ export function ExplorePage({
   posts,
   myRequest,
   myPosts,
+  appliedPostIds = [],
 }: ExplorePageProps) {
   const [filter, setFilter] = useState<"all" | "job_post" | "cv_showcase">("all")
   const [activeTab, setActiveTab] = useState<"all" | "job_post" | "cv_showcase">("all")
+
+  const appliedSet = useMemo(() => new Set(appliedPostIds), [appliedPostIds])
+  const canApply = canApplyToJob(currentUser.role)
 
   // Modal Dialog states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -1065,6 +1107,9 @@ export function ExplorePage({
                     post={post}
                     canAnalyzeWithJob={currentUser.role !== "recruiter"}
                     isAdmin={currentUser.role === "admin"}
+                    currentUser={currentUser}
+                    canApply={canApply}
+                    alreadyApplied={appliedSet.has(post.id)}
                   />
                 ))
               )}

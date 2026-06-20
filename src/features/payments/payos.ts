@@ -10,7 +10,7 @@ import {
   PaymentTransactionTable,
   type PaymentStatus,
 } from "@/drizzle/schema"
-import { activateSubscriptionFromPayment } from "@/features/plans/entitlements"
+import { activateSubscriptionFromPayment, getActivePlanRank } from "@/features/plans/entitlements"
 
 const PAID_STATUSES = new Set(["PAID", "paid"])
 const CANCELLED_STATUSES = new Set(["CANCELLED", "cancelled"])
@@ -129,6 +129,22 @@ export async function createPayOSPaymentLink({
       ok: false as const,
       status: 400,
       message: "Goi mien phi khong can thanh toan.",
+    }
+  }
+
+  // Chặn đăng ký lại gói hiện tại hoặc hạ cấp xuống gói thấp hơn.
+  // Start chỉ được nâng lên Premium; Premium không được mua lại gói thấp hơn.
+  const currentRank = await getActivePlanRank(userId)
+  const targetRank = plan.sortOrder
+
+  if (currentRank > 0 && targetRank <= currentRank) {
+    const isSamePlan = targetRank === currentRank
+    return {
+      ok: false as const,
+      status: 400,
+      message: isSamePlan
+        ? "Bạn đang sử dụng gói này. Hãy chọn gói cao hơn để nâng cấp."
+        : "Bạn chỉ có thể nâng cấp lên gói cao hơn, không thể hạ cấp.",
     }
   }
 

@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { Compass } from "lucide-react"
+import { Compass, LayoutDashboard } from "lucide-react"
 
 import { ExploreAccountMenu } from "@/components/explore/explore-account-menu"
 import { HomeAccountMenu } from "@/components/home/home-account-menu"
@@ -53,6 +53,12 @@ export function ExploreHeader({ user, plan }: ExploreHeaderProps) {
                 <Compass className="size-4" />
                 Khám phá
               </Link>
+              {isRecruiter && (
+                <Link href="/recruiter" className={navLinkClass}>
+                  <LayoutDashboard className="size-4" />
+                  Quản lý tuyển dụng
+                </Link>
+              )}
               {!isRecruiter && (
                 <>
                   <Link href="/" className={navLinkClass}>

@@ -159,6 +159,22 @@ export async function getActivePlanForUser(userId: string, now = new Date()) {
   return getFreePlan(now)
 }
 
+async function getPlanRankByKey(planKey: string) {
+  if (planKey === "admin") return Number.MAX_SAFE_INTEGER
+  const row = await db.query.AdminPlanTable.findFirst({
+    where: eq(AdminPlanTable.key, planKey),
+    columns: { sortOrder: true },
+  })
+  return row?.sortOrder ?? 0
+}
+
+// Thứ hạng gói hiện tại của user (free=10, start=20, premium=30, admin=max).
+// Dùng để chặn đăng ký lại gói cũ / hạ cấp xuống gói thấp hơn.
+export async function getActivePlanRank(userId: string) {
+  const plan = await getActivePlanForUser(userId)
+  return getPlanRankByKey(plan.planKey)
+}
+
 export async function getPlanSummaryForUser(userId: string) {
   const plan = await getActivePlanForUser(userId)
 
@@ -270,6 +286,27 @@ export async function activateSubscriptionFromPayment({
   })
 
   const samePlan = active?.planKey === planKey
+
+  // Defense-in-depth: nếu user đang ở gói cao hơn mà giao dịch này là gói thấp hơn
+  // (hạ cấp lọt qua được guard ở khâu tạo link), không hủy gói cao đang dùng.
+  // Chỉ ghi nhận giao dịch như một subscription song song, không động vào gói active.
+  if (active != null && !samePlan) {
+    const activeRank = await getPlanRankByKey(active.planKey)
+    const targetRank = await getPlanRankByKey(planKey)
+    if (targetRank < activeRank) {
+      await db.insert(UserSubscriptionTable).values({
+        userId,
+        planId,
+        planKey,
+        status: "active",
+        currentPeriodStart: now,
+        currentPeriodEnd: addMonths(now, 1),
+        paymentTransactionId,
+      })
+      return
+    }
+  }
+
   const currentPeriodStart = samePlan && active != null ? active.currentPeriodEnd : now
   const currentPeriodEnd = addMonths(currentPeriodStart, 1)
 

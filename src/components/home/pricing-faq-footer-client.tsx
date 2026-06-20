@@ -13,6 +13,8 @@ export type FormattedPlan = {
   badge: string;
   highlight: boolean;
   isPremium: boolean;
+  isCurrent?: boolean;
+  isLocked?: boolean;
   cta: string;
   href: string;
   features: string[];
@@ -26,7 +28,7 @@ export function PricingClient({ plans }: { plans: FormattedPlan[] }) {
     { name: "Premium", price: "799k", period: "/tháng", description: "Dành cho người nghiêm túc muốn luyện toàn diện từ CV đến phỏng vấn.", badge: "Nổi bật", highlight: false, cta: "Nâng cấp Premium", href: "/checkout?plan=premium&billing=monthly&price=799000", features: ["Tất cả tính năng của Start", "Mock Interview 10 lần/tháng", "Feedback nâng cao cho câu trả lời", "Lưu lịch sử và theo dõi tiến bộ", "Ưu tiên trải nghiệm tính năng mới"] },
   ];
 
-  const renderedPlans = plans && plans.length > 0 ? plans : fallbackPlans.map(p => ({ ...p, isPremium: p.name === "Premium" }));
+  const renderedPlans: FormattedPlan[] = plans && plans.length > 0 ? plans : fallbackPlans.map(p => ({ ...p, isPremium: p.name === "Premium" }));
 
   return (
     <section id="pricing" className="relative py-24 bg-slate-950 overflow-hidden border-t border-white/5">
@@ -108,18 +110,31 @@ export function PricingClient({ plans }: { plans: FormattedPlan[] }) {
                     ))}
                   </ul>
 
-                  <Link
-                    href={plan.href}
-                    className={`block w-full py-4 text-center rounded-xl font-semibold transition-colors ${
-                      isPremium
-                        ? "bg-gradient-to-r from-rose-500 to-indigo-500 text-white hover:opacity-90"
-                        : highlight
-                        ? "bg-white text-slate-900 hover:bg-slate-200"
-                        : "bg-white/10 text-white hover:bg-white/20"
-                    }`}
-                  >
-                    {plan.cta}
-                  </Link>
+                  {plan.isCurrent ? (
+                    <div className="block w-full py-4 text-center rounded-xl font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 cursor-default">
+                      Gói hiện tại
+                    </div>
+                  ) : plan.isLocked ? (
+                    <div
+                      className="block w-full py-4 text-center rounded-xl font-semibold bg-white/5 text-slate-500 border border-white/10 cursor-not-allowed"
+                      title="Bạn không thể hạ cấp hoặc đăng ký lại gói thấp hơn"
+                    >
+                      {plan.cta}
+                    </div>
+                  ) : (
+                    <Link
+                      href={plan.href}
+                      className={`block w-full py-4 text-center rounded-xl font-semibold transition-colors ${
+                        isPremium
+                          ? "bg-gradient-to-r from-rose-500 to-indigo-500 text-white hover:opacity-90"
+                          : highlight
+                          ? "bg-white text-slate-900 hover:bg-slate-200"
+                          : "bg-white/10 text-white hover:bg-white/20"
+                      }`}
+                    >
+                      {plan.cta}
+                    </Link>
+                  )}
                 </div>
               </motion.div>
             );

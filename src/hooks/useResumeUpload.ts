@@ -35,6 +35,12 @@ export function useResumeUpload() {
     setResumeFile(null);
   }, []);
 
+  // Set file trực tiếp, bỏ qua validation. Dùng cho luồng "Phân tích lại":
+  // file được tải về từ server đã được validate khi upload lần đầu.
+  const setResumeFileDirect = useCallback((file: File) => {
+    setResumeFile(file);
+  }, []);
+
   return {
     resumeFile,
     isDragOver,
@@ -42,5 +48,6 @@ export function useResumeUpload() {
     handleDrop,
     handleSelectFile,
     clearResumeFile,
+    setResumeFileDirect,
   };
 }

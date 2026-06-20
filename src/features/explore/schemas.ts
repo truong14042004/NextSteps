@@ -49,3 +49,12 @@ export const recruiterRequestSchema = z.object({
 export const adminReviewSchema = z.object({
   note: z.string().trim().max(2500).optional().or(z.literal("")),
 })
+
+export const jobApplicationSchema = z.object({
+  fullName: z.string().trim().min(2, "Họ tên là bắt buộc").max(160),
+  email: optionalEmailSchema,
+  phone: z.string().trim().max(40).optional().or(z.literal("")),
+  coverLetter: z.string().trim().max(3000).optional().or(z.literal("")),
+  cvUrl: z.string().trim().url("CV URL không hợp lệ"),
+  cvFileName: z.string().trim().min(1).max(255),
+})

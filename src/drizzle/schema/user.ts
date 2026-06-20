@@ -5,6 +5,7 @@ import { JobInfoTable } from "./jobInfo"
 import {
   ExploreCommentTable,
   ExplorePostTable,
+  JobApplicationTable,
   RecruiterRequestTable,
 } from "./explore"
 
@@ -39,5 +40,8 @@ export const userRelations = relations(UserTable, ({ many }) => ({
   }),
   reviewedRecruiterRequests: many(RecruiterRequestTable, {
     relationName: "recruiterRequestReviewer",
+  }),
+  jobApplications: many(JobApplicationTable, {
+    relationName: "jobApplicationApplicant",
   }),
 }))

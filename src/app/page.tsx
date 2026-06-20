@@ -44,8 +44,20 @@ export default async function LandingPage() {
     listPublishedReviews(),
   ]);
 
+  // Gói hiện tại của user (nếu đã đăng nhập) để khóa nút đăng ký lại / hạ cấp.
+  const currentPlanKey = userId ? (await getPlanSummaryForUser(userId)).planKey : null;
+  const currentPlanRank =
+    currentPlanKey == null
+      ? 0
+      : pricingPlans.find((p) => p.key === currentPlanKey)?.sortOrder ??
+        (currentPlanKey === "admin" ? Number.MAX_SAFE_INTEGER : 0);
+
   const formattedPlans = pricingPlans.map((plan: AdminPlanConfig) => {
     const isPremium = plan.key === "premium";
+    const isCurrent = plan.key === currentPlanKey;
+    // Khóa nếu đây là gói hiện tại hoặc gói thấp hơn gói đang dùng (paid plans).
+    const isLocked =
+      currentPlanRank > 0 && plan.monthlyPrice > 0 && plan.sortOrder <= currentPlanRank;
 
     return {
       name: plan.name,
@@ -60,16 +72,23 @@ export default async function LandingPage() {
             : "Miễn phí",
       highlight: plan.key === "start",
       isPremium,
-      cta:
-        plan.monthlyPrice === 0
-          ? "Dùng miễn phí"
-          : isPremium
-            ? "Nâng cấp Premium"
-            : `Chọn gói ${plan.name}`,
+      isCurrent,
+      isLocked,
+      cta: isCurrent
+        ? "Gói hiện tại"
+        : isLocked
+          ? "Không khả dụng"
+          : plan.monthlyPrice === 0
+            ? "Dùng miễn phí"
+            : isPremium
+              ? "Nâng cấp Premium"
+              : `Chọn gói ${plan.name}`,
       href:
-        plan.monthlyPrice === 0
-          ? "/app"
-          : `/checkout?plan=${plan.key}&billing=monthly&price=${plan.monthlyPrice}`,
+        isLocked || isCurrent
+          ? "#pricing"
+          : plan.monthlyPrice === 0
+            ? "/app"
+            : `/checkout?plan=${plan.key}&billing=monthly&price=${plan.monthlyPrice}`,
       features: [
         `Phân tích CV: ${formatUsageLimit(plan.resumeAnalysisLimit)}`,
         `Câu hỏi AI: ${formatUsageLimit(plan.aiQuestionLimit)}`,
