@@ -28,11 +28,12 @@ function normalizeOptional(value: string | undefined) {
 }
 
 // Chuyển chuỗi ngày từ input type="date" ("YYYY-MM-DD" hoặc rỗng) sang Date | null.
-// Đặt về cuối ngày (23:59:59) để hạn nộp tính trọn ngày đó theo giờ địa phương.
+// Đặt về cuối ngày (23:59:59) theo giờ Việt Nam (UTC+7) bằng offset cố định,
+// để hạn nộp tính trọn ngày đó bất kể server chạy ở múi giờ nào (Vercel chạy UTC).
 function parseDeadline(value: string | undefined): Date | null {
   const trimmed = value?.trim()
   if (!trimmed) return null
-  const date = new Date(`${trimmed}T23:59:59`)
+  const date = new Date(`${trimmed}T23:59:59+07:00`)
   return Number.isNaN(date.getTime()) ? null : date
 }
 
