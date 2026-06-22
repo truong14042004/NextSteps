@@ -12,6 +12,8 @@ import {
   RecruiterRequestTable,
 } from "@/drizzle/schema"
 import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
+import { sendEmail } from "@/services/email/mailer"
+import { buildApplicationDecisionEmail } from "@/services/email/applicationEmails"
 import {
   commentSchema,
   cvShowcasePostSchema,
@@ -473,9 +475,16 @@ export async function updateApplicationStatusAction(
 
   const application = await db.query.JobApplicationTable.findFirst({
     where: eq(JobApplicationTable.id, applicationId),
-    columns: { id: true, postId: true },
+    columns: {
+      id: true,
+      postId: true,
+      fullName: true,
+      email: true,
+    },
     with: {
-      post: { columns: { authorId: true } },
+      post: {
+        columns: { authorId: true, title: true, positionTitle: true, companyName: true },
+      },
     },
   })
 
@@ -488,15 +497,164 @@ export async function updateApplicationStatusAction(
     return { error: true as const, message: "Bạn không có quyền với hồ sơ này" }
   }
 
+  const note = normalizeOptional(recruiterNote)
+
   await db
     .update(JobApplicationTable)
     .set({
       status,
-      recruiterNote: normalizeOptional(recruiterNote),
+      recruiterNote: note,
     })
     .where(eq(JobApplicationTable.id, applicationId))
 
   revalidatePath("/recruiter/applicants")
   revalidatePath(`/recruiter/applicants/${application.postId}`)
-  return { error: false as const, message: "Đã cập nhật trạng thái hồ sơ" }
+
+  // Gửi email thông báo cho ứng viên khi được nhận hoặc bị từ chối.
+  let emailSent = false
+  if ((status === "accepted" || status === "rejected") && application.email) {
+    const { subject, text, html } = buildApplicationDecisionEmail({
+      candidateName: application.fullName,
+      jobTitle: application.post?.positionTitle || application.post?.title || "vị trí ứng tuyển",
+      companyName: application.post?.companyName ?? null,
+      status,
+      recruiterNote: note,
+    })
+
+    try {
+      const result = await sendEmail({ to: application.email, subject, text, html })
+      emailSent = result.sent
+    } catch (error) {
+      console.error("Gửi email thông báo ứng viên thất bại:", error)
+    }
+  }
+
+  const baseMessage = "Đã cập nhật trạng thái hồ sơ"
+  const message =
+    (status === "accepted" || status === "rejected") && application.email
+      ? emailSent
+        ? `${baseMessage} và đã gửi email thông báo cho ứng viên`
+        : `${baseMessage}. Lưu ý: chưa gửi được email (SMTP chưa cấu hình)`
+      : baseMessage
+
+  return { error: false as const, message }
+}
+
+// ── Recruiter tự quản lý bài đăng của mình ─────────────────────────────
+
+export async function unhideOwnExplorePostAction(postId: string) {
+  const auth = await getRequiredUser()
+  if (auth.error) return auth
+
+  const post = await db.query.ExplorePostTable.findFirst({
+    where: and(
+      eq(ExplorePostTable.id, postId),
+      eq(ExplorePostTable.authorId, auth.userId)
+    ),
+    columns: { id: true, status: true },
+  })
+
+  if (post == null) {
+    return { error: true as const, message: "Bạn không có quyền với bài này" }
+  }
+
+  if (post.status !== "hidden") {
+    return { error: true as const, message: "Chỉ có thể hiện lại bài đang ẩn" }
+  }
+
+  await db
+    .update(ExplorePostTable)
+    .set({ status: "published" })
+    .where(eq(ExplorePostTable.id, postId))
+
+  revalidatePath("/explore")
+  revalidatePath(`/explore/${postId}`)
+  revalidatePath("/recruiter")
+  return { error: false as const, message: "Đã hiện lại bài viết" }
+}
+
+export async function deleteOwnExplorePostAction(postId: string) {
+  const auth = await getRequiredUser()
+  if (auth.error) return auth
+
+  const post = await db.query.ExplorePostTable.findFirst({
+    where: and(
+      eq(ExplorePostTable.id, postId),
+      eq(ExplorePostTable.authorId, auth.userId)
+    ),
+    columns: { id: true },
+  })
+
+  if (post == null) {
+    return { error: true as const, message: "Bạn không có quyền xóa bài này" }
+  }
+
+  await db
+    .update(ExplorePostTable)
+    .set({ status: "deleted" })
+    .where(eq(ExplorePostTable.id, postId))
+
+  revalidatePath("/explore")
+  revalidatePath(`/explore/${postId}`)
+  revalidatePath("/recruiter")
+  return { error: false as const, message: "Đã xóa bài viết" }
+}
+
+export async function updateOwnExplorePostAction(
+  postId: string,
+  unsafeData: z.infer<typeof recruiterPostSchema>
+) {
+  const auth = await getRequiredUser()
+  if (auth.error) return auth
+
+  if (auth.user.role !== "recruiter" && auth.user.role !== "admin") {
+    return { error: true as const, message: "Bạn không có quyền sửa bài tuyển dụng" }
+  }
+
+  const parsed = recruiterPostSchema.safeParse(unsafeData)
+  if (!parsed.success) {
+    return { error: true as const, message: "Dữ liệu bài viết không hợp lệ" }
+  }
+
+  const post = await db.query.ExplorePostTable.findFirst({
+    where: and(
+      eq(ExplorePostTable.id, postId),
+      eq(ExplorePostTable.authorId, auth.userId),
+      eq(ExplorePostTable.type, "job_post")
+    ),
+    columns: { id: true, status: true },
+  })
+
+  if (post == null || post.status === "deleted") {
+    return { error: true as const, message: "Không tìm thấy bài tuyển dụng" }
+  }
+
+  // Giữ nguyên trạng thái hiển thị hiện tại (published/hidden); bài chờ duyệt
+  // hoặc bị từ chối thì quay lại pending để admin duyệt lại (admin thì publish luôn).
+  const nextStatus =
+    auth.user.role === "admin"
+      ? "published"
+      : post.status === "published" || post.status === "hidden"
+        ? post.status
+        : "pending"
+
+  await db
+    .update(ExplorePostTable)
+    .set({
+      status: nextStatus,
+      title: parsed.data.title,
+      content: parsed.data.content,
+      companyName: parsed.data.companyName,
+      positionTitle: parsed.data.positionTitle,
+      location: normalizeOptional(parsed.data.location),
+      salaryRange: normalizeOptional(parsed.data.salaryRange),
+      skills: normalizeOptional(parsed.data.skills),
+      rejectionReason: null,
+    })
+    .where(eq(ExplorePostTable.id, postId))
+
+  revalidatePath("/explore")
+  revalidatePath(`/explore/${postId}`)
+  revalidatePath("/recruiter")
+  return { error: false as const, message: "Đã cập nhật bài tuyển dụng" }
 }

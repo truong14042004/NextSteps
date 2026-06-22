@@ -92,7 +92,19 @@ export default async function RecruiterPostsPage() {
                       <Button asChild variant="outline" size="sm" className="rounded-lg h-8">
                         <Link href={`/recruiter/applicants/${post.id}`}>Xem hồ sơ</Link>
                       </Button>
-                      <RecruiterPostActions postId={post.id} status={post.status} />
+                      <RecruiterPostActions
+                        post={{
+                          id: post.id,
+                          status: post.status,
+                          title: post.title,
+                          content: post.content,
+                          companyName: post.companyName,
+                          positionTitle: post.positionTitle,
+                          location: post.location,
+                          salaryRange: post.salaryRange,
+                          skills: post.skills,
+                        }}
+                      />
                     </div>
                   </td>
                 </tr>
