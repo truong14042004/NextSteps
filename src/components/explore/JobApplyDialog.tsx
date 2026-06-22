@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { applyToJobAction } from "@/features/explore/actions"
+import { validateResumeFile } from "@/lib/resume-validation"
 
 const fieldClass =
   "rounded-xl border-primary/10 bg-background/80 shadow-none focus-visible:ring-primary/20"
@@ -51,8 +52,24 @@ export function JobApplyDialog({
   const applied = alreadyApplied || submitted
   const compact = size === "compact"
 
+  // Reset trạng thái form khi đóng dialog để lần mở sau không dính CV/file cũ.
+  function handleOpenChange(next: boolean) {
+    setOpen(next)
+    if (!next) {
+      setCvFile(null)
+      setUploading(false)
+    }
+  }
+
   async function handleFileChange(file: File | null) {
     if (!file) return
+
+    // Kiểm tra loại/kích thước phía client trước khi upload (cùng luật với server).
+    const validation = validateResumeFile(file)
+    if (!validation.valid) {
+      toast.error(validation.message)
+      return
+    }
 
     const formData = new FormData()
     formData.append("file", file)
@@ -72,6 +89,9 @@ export function JobApplyDialog({
 
       setCvFile({ url: data.url, fileName: data.fileName ?? file.name })
       toast.success("Đã tải CV thành công")
+    } catch {
+      // Lỗi mạng khi upload CV — báo cho user thay vì nuốt im lặng.
+      toast.error("Không thể tải CV. Vui lòng kiểm tra kết nối và thử lại.")
     } finally {
       setUploading(false)
     }
@@ -133,7 +153,7 @@ export function JobApplyDialog({
         Nộp hồ sơ
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nộp hồ sơ ứng tuyển</DialogTitle>
@@ -177,7 +197,7 @@ export function JobApplyDialog({
               />
             </div>
             <div className="flex justify-end gap-2 pt-2 border-t">
-              <Button type="button" variant="outline" className="rounded-xl" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" className="rounded-xl" onClick={() => handleOpenChange(false)}>
                 Hủy
               </Button>
               <Button type="submit" disabled={isPending || uploading} className={ctaClass}>

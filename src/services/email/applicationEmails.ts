@@ -25,14 +25,21 @@ export function buildApplicationDecisionEmail({
   status,
   recruiterNote,
 }: ApplicationDecisionEmailInput) {
-  const positionLabel = companyName
-    ? `${jobTitle} tại ${companyName}`
-    : jobTitle
+  // Subject header không được chứa ký tự xuống dòng (chống header injection):
+  // jobTitle/companyName đến từ input của nhà tuyển dụng nên phải làm sạch.
+  const sanitizeHeader = (value: string) =>
+    value.replace(/[\r\n]+/g, " ").trim()
+  const safeJobTitle = sanitizeHeader(jobTitle)
+  const safeCompanyName = companyName ? sanitizeHeader(companyName) : null
+
+  const positionLabel = safeCompanyName
+    ? `${safeJobTitle} tại ${safeCompanyName}`
+    : safeJobTitle
 
   const accepted = status === "accepted"
   const subject = accepted
-    ? `Chúc mừng! Hồ sơ của bạn cho vị trí ${jobTitle} đã được chấp nhận`
-    : `Cập nhật kết quả ứng tuyển vị trí ${jobTitle}`
+    ? `Chúc mừng! Hồ sơ của bạn cho vị trí ${safeJobTitle} đã được chấp nhận`
+    : `Cập nhật kết quả ứng tuyển vị trí ${safeJobTitle}`
 
   const greeting = `Xin chào ${candidateName},`
 

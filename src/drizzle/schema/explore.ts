@@ -1,5 +1,5 @@
-import { relations } from "drizzle-orm"
-import { pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core"
+import { relations, sql } from "drizzle-orm"
+import { pgEnum, pgTable, text, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core"
 
 import { createdAt, id, updatedAt } from "../schemaHelpers"
 import { UserTable } from "./user"
@@ -169,7 +169,13 @@ export const JobApplicationTable = pgTable("job_applications", {
   recruiterNote: text(),
   createdAt,
   updatedAt,
-})
+}, table => ({
+  // Chống nộp hồ sơ trùng: mỗi ứng viên chỉ có 1 hồ sơ đang hiệu lực / 1 bài.
+  // Partial index bỏ qua các hồ sơ đã rút (withdrawn) để cho phép nộp lại.
+  activeApplicationUnique: uniqueIndex("job_app_active_unique")
+    .on(table.postId, table.applicantId)
+    .where(sql`status <> 'withdrawn'`),
+}))
 
 export const jobApplicationRelations = relations(
   JobApplicationTable,

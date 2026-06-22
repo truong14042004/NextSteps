@@ -120,18 +120,18 @@ export async function getActivePlanForUser(userId: string, now = new Date()) {
     } satisfies ActivePlan
   }
 
-  const subscription = await db.query.UserSubscriptionTable.findFirst({
+  const subscriptions = await db.query.UserSubscriptionTable.findMany({
     where: and(
       eq(UserSubscriptionTable.userId, userId),
       eq(UserSubscriptionTable.status, "active"),
       lte(UserSubscriptionTable.currentPeriodStart, now),
       gt(UserSubscriptionTable.currentPeriodEnd, now)
     ),
-    orderBy: [desc(UserSubscriptionTable.currentPeriodEnd)],
     with: {
       plan: {
         columns: {
           key: true,
+          sortOrder: true,
           resumeAnalysisLimit: true,
           aiQuestionLimit: true,
           mockInterviewLimit: true,
@@ -141,17 +141,28 @@ export async function getActivePlanForUser(userId: string, now = new Date()) {
     },
   })
 
-  if (subscription?.plan != null) {
+  // Chọn gói theo RANK (sortOrder) cao nhất trước, tie-break bằng periodEnd xa nhất.
+  // Không chọn theo mỗi periodEnd: nếu user vừa nâng lên gói cao mà còn giao dịch
+  // gói thấp (hết hạn muộn hơn) lọt qua, chọn theo periodEnd sẽ làm mất gói cao.
+  const best = subscriptions
+    .filter(sub => sub.plan != null)
+    .sort((a, b) => {
+      const rankDiff = (b.plan!.sortOrder ?? 0) - (a.plan!.sortOrder ?? 0)
+      if (rankDiff !== 0) return rankDiff
+      return b.currentPeriodEnd.getTime() - a.currentPeriodEnd.getTime()
+    })[0]
+
+  if (best?.plan != null) {
     return {
-      subscriptionId: subscription.id,
-      planKey: subscription.plan.key,
-      periodStart: subscription.currentPeriodStart,
-      periodEnd: subscription.currentPeriodEnd,
+      subscriptionId: best.id,
+      planKey: best.plan.key,
+      periodStart: best.currentPeriodStart,
+      periodEnd: best.currentPeriodEnd,
       limits: {
-        resumeAnalysisLimit: subscription.plan.resumeAnalysisLimit,
-        aiQuestionLimit: subscription.plan.aiQuestionLimit,
-        mockInterviewLimit: subscription.plan.mockInterviewLimit,
-        aiQuizLimit: subscription.plan.aiQuizLimit,
+        resumeAnalysisLimit: best.plan.resumeAnalysisLimit,
+        aiQuestionLimit: best.plan.aiQuestionLimit,
+        mockInterviewLimit: best.plan.mockInterviewLimit,
+        aiQuizLimit: best.plan.aiQuizLimit,
       },
     } satisfies ActivePlan
   }
@@ -275,55 +286,87 @@ export async function activateSubscriptionFromPayment({
   paymentTransactionId: string
 }) {
   const now = new Date()
-  const active = await db.query.UserSubscriptionTable.findFirst({
-    where: and(
-      eq(UserSubscriptionTable.userId, userId),
-      eq(UserSubscriptionTable.status, "active"),
-      lte(UserSubscriptionTable.currentPeriodStart, now),
-      gt(UserSubscriptionTable.currentPeriodEnd, now)
-    ),
-    orderBy: [desc(UserSubscriptionTable.currentPeriodEnd)],
+
+  // Idempotency: nếu giao dịch này đã từng kích hoạt subscription rồi thì bỏ qua
+  // (webhook + sync polling có thể gọi đồng thời cho cùng một orderCode).
+  const alreadyActivated = await db.query.UserSubscriptionTable.findFirst({
+    where: eq(UserSubscriptionTable.paymentTransactionId, paymentTransactionId),
+    columns: { id: true },
   })
+  if (alreadyActivated != null) return
 
-  const samePlan = active?.planKey === planKey
+  // Bọc đọc + ghi trong một transaction kèm advisory lock theo userId để hai
+  // luồng activate song song (webhook và sync) không tạo 2 subscription active.
+  await db.transaction(async tx => {
+    const lockKey = hashUserIdToLockKey(userId)
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockKey})`)
 
-  // Defense-in-depth: nếu user đang ở gói cao hơn mà giao dịch này là gói thấp hơn
-  // (hạ cấp lọt qua được guard ở khâu tạo link), không hủy gói cao đang dùng.
-  // Chỉ ghi nhận giao dịch như một subscription song song, không động vào gói active.
-  if (active != null && !samePlan) {
-    const activeRank = await getPlanRankByKey(active.planKey)
-    const targetRank = await getPlanRankByKey(planKey)
-    if (targetRank < activeRank) {
-      await db.insert(UserSubscriptionTable).values({
-        userId,
-        planId,
-        planKey,
-        status: "active",
-        currentPeriodStart: now,
-        currentPeriodEnd: addMonths(now, 1),
-        paymentTransactionId,
-      })
-      return
+    // Kiểm tra lại trong transaction (sau khi đã giữ lock).
+    const dup = await tx.query.UserSubscriptionTable.findFirst({
+      where: eq(UserSubscriptionTable.paymentTransactionId, paymentTransactionId),
+      columns: { id: true },
+    })
+    if (dup != null) return
+
+    const active = await tx.query.UserSubscriptionTable.findFirst({
+      where: and(
+        eq(UserSubscriptionTable.userId, userId),
+        eq(UserSubscriptionTable.status, "active"),
+        lte(UserSubscriptionTable.currentPeriodStart, now),
+        gt(UserSubscriptionTable.currentPeriodEnd, now)
+      ),
+      orderBy: [desc(UserSubscriptionTable.currentPeriodEnd)],
+    })
+
+    const samePlan = active?.planKey === planKey
+
+    // Defense-in-depth: nếu user đang ở gói cao hơn mà giao dịch này là gói thấp hơn
+    // (hạ cấp lọt qua được guard ở khâu tạo link), không hủy gói cao đang dùng.
+    // Chỉ ghi nhận giao dịch như một subscription song song, không động vào gói active.
+    if (active != null && !samePlan) {
+      const activeRank = await getPlanRankByKey(active.planKey)
+      const targetRank = await getPlanRankByKey(planKey)
+      if (targetRank < activeRank) {
+        await tx.insert(UserSubscriptionTable).values({
+          userId,
+          planId,
+          planKey,
+          status: "active",
+          currentPeriodStart: now,
+          currentPeriodEnd: addMonths(now, 1),
+          paymentTransactionId,
+        })
+        return
+      }
     }
-  }
 
-  const currentPeriodStart = samePlan && active != null ? active.currentPeriodEnd : now
-  const currentPeriodEnd = addMonths(currentPeriodStart, 1)
+    const currentPeriodStart = samePlan && active != null ? active.currentPeriodEnd : now
+    const currentPeriodEnd = addMonths(currentPeriodStart, 1)
 
-  if (active != null && !samePlan) {
-    await db
-      .update(UserSubscriptionTable)
-      .set({ status: "cancelled", currentPeriodEnd: now })
-      .where(eq(UserSubscriptionTable.id, active.id))
-  }
+    if (active != null && !samePlan) {
+      await tx
+        .update(UserSubscriptionTable)
+        .set({ status: "cancelled", currentPeriodEnd: now })
+        .where(eq(UserSubscriptionTable.id, active.id))
+    }
 
-  await db.insert(UserSubscriptionTable).values({
-    userId,
-    planId,
-    planKey,
-    status: "active",
-    currentPeriodStart,
-    currentPeriodEnd,
-    paymentTransactionId,
+    await tx.insert(UserSubscriptionTable).values({
+      userId,
+      planId,
+      planKey,
+      status: "active",
+      currentPeriodStart,
+      currentPeriodEnd,
+      paymentTransactionId,
+    })
   })
+}
+
+// Băm userId (string) thành số nguyên 32-bit cho pg_advisory_xact_lock.
+function hashUserIdToLockKey(userId: string) {
+  let hash = 0
+  for (let i = 0; i < userId.length; i++) {
+    hash = (Math.imul(31, hash) + userId.charCodeAt(i)) | 0
+  }
+  return hash
 }

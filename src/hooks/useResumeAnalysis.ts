@@ -122,12 +122,25 @@ export function useResumeAnalysis({
 
   const reAnalyzeWithJobInfo = useCallback(
     (existingJobInfoId?: string | null, overrideFile?: File | null) => {
+      // Cần có CV (file truyền thẳng hoặc file đang chọn) mới chạy được.
+      const effectiveFile = overrideFile ?? resumeFile;
+      if (!effectiveFile) {
+        toast.error("Không tải được CV. Vui lòng tải lên CV của bạn.");
+        return;
+      }
+
+      // Hết lượt thì dừng sớm, không upload file lên server rồi mới bị chặn.
+      if (!hasRemainingUsage) {
+        toast.error("Bạn đã hết lượt phân tích. Vui lòng mua thêm lượt.");
+        return;
+      }
+
       if (existingJobInfoId) jobInfoIdRef.current = existingJobInfoId;
-      if (overrideFile) resumeFileOverrideRef.current = overrideFile;
+      resumeFileOverrideRef.current = overrideFile ?? null;
       setPersistedAnalysis(undefined);
       submitAnalysisRequest(null);
     },
-    [submitAnalysisRequest],
+    [hasRemainingUsage, resumeFile, submitAnalysisRequest],
   );
 
   useEffect(() => {

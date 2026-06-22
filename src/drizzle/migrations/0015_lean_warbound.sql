@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "job_app_active_unique" ON "job_applications" USING btree ("postId","applicantId") WHERE status <> 'withdrawn';

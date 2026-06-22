@@ -27,6 +27,30 @@ function normalizeOptional(value: string | undefined) {
   return trimmed ? trimmed : null
 }
 
+// Trích storage path từ cvUrl (full GCS URL hoặc path) — dùng để kiểm tra quyền sở hữu.
+// Trả về null nếu không có marker /uploads/ hoặc chứa ký tự traversal.
+function extractExploreCvStoragePath(cvUrl: string): string | null {
+  const marker = "/uploads/"
+  const markerIndex = cvUrl.indexOf(marker)
+  const path = markerIndex === -1 ? cvUrl : cvUrl.slice(markerIndex + 1)
+
+  // Chặn path traversal và path tuyệt đối.
+  if (path.includes("..") || path.includes("\0") || path.startsWith("/")) {
+    return null
+  }
+
+  return path
+}
+
+// CV ứng tuyển hợp lệ phải nằm trong thư mục upload của chính ứng viên:
+// uploads/explore-cvs/<applicantId>/... (xem src/app/api/uploads/cv/route.ts).
+// Ngăn việc gửi cvUrl trỏ tới CV của người khác trong cùng bucket (IDOR).
+function isOwnExploreCvUrl(cvUrl: string, applicantId: string) {
+  const path = extractExploreCvStoragePath(cvUrl)
+  if (path == null) return false
+  return path.startsWith(`uploads/explore-cvs/${applicantId}/`)
+}
+
 async function getRequiredUser() {
   const { userId, user } = await getCurrentUser({ allData: true })
 
@@ -377,6 +401,15 @@ export async function applyToJobAction(
     return { error: true as const, message: "Thông tin hồ sơ không hợp lệ" }
   }
 
+  // Chống IDOR: cvUrl phải là file CV do chính ứng viên này upload, không cho
+  // trỏ tới CV của người khác trong cùng bucket.
+  if (!isOwnExploreCvUrl(parsed.data.cvUrl, auth.userId)) {
+    return {
+      error: true as const,
+      message: "CV không hợp lệ. Vui lòng tải CV lên lại.",
+    }
+  }
+
   const post = await db.query.ExplorePostTable.findFirst({
     where: and(
       eq(ExplorePostTable.id, postId),
@@ -407,16 +440,30 @@ export async function applyToJobAction(
     return { error: true as const, message: "Bạn đã nộp hồ sơ cho vị trí này" }
   }
 
-  await db.insert(JobApplicationTable).values({
-    postId,
-    applicantId: auth.userId,
-    fullName: parsed.data.fullName,
-    email: parsed.data.email ?? null,
-    phone: normalizeOptional(parsed.data.phone),
-    coverLetter: normalizeOptional(parsed.data.coverLetter),
-    cvUrl: parsed.data.cvUrl,
-    cvFileName: parsed.data.cvFileName,
-  })
+  try {
+    await db.insert(JobApplicationTable).values({
+      postId,
+      applicantId: auth.userId,
+      fullName: parsed.data.fullName,
+      email: parsed.data.email ?? null,
+      phone: normalizeOptional(parsed.data.phone),
+      coverLetter: normalizeOptional(parsed.data.coverLetter),
+      cvUrl: parsed.data.cvUrl,
+      cvFileName: parsed.data.cvFileName,
+    })
+  } catch (error) {
+    // Bắt unique violation (23505) từ partial index (postId, applicantId) khi
+    // race double-click/2 tab vượt qua được kiểm tra "existing" ở trên.
+    if (
+      typeof error === "object" &&
+      error != null &&
+      "code" in error &&
+      (error as { code?: string }).code === "23505"
+    ) {
+      return { error: true as const, message: "Bạn đã nộp hồ sơ cho vị trí này" }
+    }
+    throw error
+  }
 
   revalidatePath("/explore")
   revalidatePath(`/explore/${postId}`)
@@ -485,6 +532,9 @@ export async function updateApplicationStatusAction(
       post: {
         columns: { authorId: true, title: true, positionTitle: true, companyName: true },
       },
+      applicant: {
+        columns: { email: true },
+      },
     },
   })
 
@@ -511,8 +561,14 @@ export async function updateApplicationStatusAction(
   revalidatePath(`/recruiter/applicants/${application.postId}`)
 
   // Gửi email thông báo cho ứng viên khi được nhận hoặc bị từ chối.
-  let emailSent = false
-  if ((status === "accepted" || status === "rejected") && application.email) {
+  // Ưu tiên email ứng viên nhập trong hồ sơ, fallback về email tài khoản.
+  const isDecision = status === "accepted" || status === "rejected"
+  const recipientEmail = application.email ?? application.applicant?.email ?? null
+
+  type EmailOutcome = "not_sent" | "sent" | "not_configured" | "failed"
+  let emailOutcome: EmailOutcome = "not_sent"
+
+  if (isDecision && recipientEmail) {
     const { subject, text, html } = buildApplicationDecisionEmail({
       candidateName: application.fullName,
       jobTitle: application.post?.positionTitle || application.post?.title || "vị trí ứng tuyển",
@@ -522,20 +578,27 @@ export async function updateApplicationStatusAction(
     })
 
     try {
-      const result = await sendEmail({ to: application.email, subject, text, html })
-      emailSent = result.sent
+      const result = await sendEmail({ to: recipientEmail, subject, text, html })
+      emailOutcome = result.sent ? "sent" : "not_configured"
     } catch (error) {
       console.error("Gửi email thông báo ứng viên thất bại:", error)
+      emailOutcome = "failed"
     }
   }
 
   const baseMessage = "Đã cập nhật trạng thái hồ sơ"
-  const message =
-    (status === "accepted" || status === "rejected") && application.email
-      ? emailSent
-        ? `${baseMessage} và đã gửi email thông báo cho ứng viên`
-        : `${baseMessage}. Lưu ý: chưa gửi được email (SMTP chưa cấu hình)`
-      : baseMessage
+  let message = baseMessage
+  if (isDecision) {
+    if (!recipientEmail) {
+      message = `${baseMessage}. Ứng viên không có email nên không gửi được thông báo`
+    } else if (emailOutcome === "sent") {
+      message = `${baseMessage} và đã gửi email thông báo cho ứng viên`
+    } else if (emailOutcome === "not_configured") {
+      message = `${baseMessage}. Lưu ý: máy chủ email chưa được cấu hình`
+    } else if (emailOutcome === "failed") {
+      message = `${baseMessage}. Lưu ý: gửi email thất bại, vui lòng thử lại sau`
+    }
+  }
 
   return { error: false as const, message }
 }

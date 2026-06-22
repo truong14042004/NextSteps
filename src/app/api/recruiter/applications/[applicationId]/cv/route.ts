@@ -8,12 +8,14 @@ import { getCurrentUser } from "@/services/clerk/lib/getCurrentUser"
 function extractStoragePath(cvUrl: string) {
   const marker = "/uploads/"
   const markerIndex = cvUrl.indexOf(marker)
+  const path = markerIndex === -1 ? cvUrl : cvUrl.slice(markerIndex + 1)
 
-  if (markerIndex === -1) {
-    return cvUrl
+  // Defense-in-depth: chặn path traversal / path tuyệt đối trước khi truy cập bucket.
+  if (path.includes("..") || path.includes("\0") || path.startsWith("/")) {
+    return null
   }
 
-  return cvUrl.slice(markerIndex + 1)
+  return path
 }
 
 function getFileNameFromPath(path: string) {
@@ -57,6 +59,9 @@ export async function GET(
   }
 
   const storagePath = extractStoragePath(application.cvUrl)
+  if (storagePath == null) {
+    return new Response("CV not found", { status: 404 })
+  }
   const file = googleCloudStorageBucket.file(storagePath)
 
   try {

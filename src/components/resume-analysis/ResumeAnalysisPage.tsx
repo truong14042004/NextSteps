@@ -22,6 +22,7 @@ import {
   ActivityIcon,
   FlameIcon,
 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function ResumeAnalysisPage({
   exploreDraft = null,
@@ -72,6 +73,9 @@ export default function ResumeAnalysisPage({
           try {
             const res = await fetch(`/api/job-infos/${jobInfoId}/resume`);
             if (!res.ok) {
+              toast.error(
+                "Không tải được CV đã lưu. Vui lòng tải lại CV và bấm Phân tích.",
+              );
               setActiveTab("new");
               return;
             }
@@ -89,7 +93,11 @@ export default function ResumeAnalysisPage({
             upload.setResumeFileDirect(file);
             analysis.reAnalyzeWithJobInfo(jobInfoId, file);
           } catch {
-            // Lỗi tải file: để user tự upload và submit lại.
+            // Lỗi mạng khi tải CV: báo để user tự tải lên và submit lại.
+            toast.error(
+              "Không tải được CV đã lưu. Vui lòng tải lại CV và bấm Phân tích.",
+            );
+            setActiveTab("new");
           }
         })();
       }
@@ -97,8 +105,12 @@ export default function ResumeAnalysisPage({
     } catch {
       sessionStorage.removeItem("analyze_prefill");
     }
+    // Phụ thuộc searchParams: nút "Phân tích lại" ở tab Lịch sử chỉ đổi query string
+    // trên cùng route /app/analyze (soft navigation, không remount component). Nếu deps
+    // rỗng, effect chỉ chạy lúc mount và luồng phân tích lại im lặng không làm gì.
+    // Guard `if (!raw) return` + removeItem khiến effect idempotent, an toàn khi chạy lại.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   const industryLabel =
     INDUSTRIES.find((item) => item.value === analysis.industry)?.label ?? null;

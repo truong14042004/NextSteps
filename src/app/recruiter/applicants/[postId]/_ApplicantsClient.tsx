@@ -243,13 +243,35 @@ export function ApplicantsClient({ applications }: { applications: Application[]
               {previewCv?.name}
             </DialogTitle>
           </DialogHeader>
-          {previewCv && (
-            <iframe
-              src={previewCv.url}
-              title="Xem CV ứng viên"
-              className="flex-1 w-full rounded-b-lg"
-            />
-          )}
+          {previewCv &&
+            (/\.(pdf|txt)$/i.test(previewCv.name) ? (
+              <iframe
+                src={previewCv.url}
+                title="Xem CV ứng viên"
+                className="flex-1 w-full rounded-b-lg"
+              />
+            ) : (
+              <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+                <FileText className="size-12 text-muted-foreground/50" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">
+                    Không xem trước được file Word trực tiếp
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Trình duyệt không hiển thị được file .doc/.docx. Vui lòng tải về để xem.
+                  </p>
+                </div>
+                <a
+                  href={`${previewCv.url}?download=1`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+                >
+                  <Download className="size-4" />
+                  Tải CV về máy
+                </a>
+              </div>
+            ))}
         </DialogContent>
       </Dialog>
 
