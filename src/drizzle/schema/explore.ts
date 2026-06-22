@@ -70,6 +70,9 @@ export const ExplorePostTable = pgTable("explore_posts", {
   cvUrl: varchar({ length: 1024 }),
   cvFileName: varchar({ length: 255 }),
   rejectionReason: text(),
+  // Hạn nộp CV cho bài tuyển dụng (null = không giới hạn). Quá hạn thì
+  // bài sẽ bị ẩn khỏi trang Khám phá (xem getPublishedExplorePosts).
+  deadline: timestamp({ withTimezone: true }),
   reviewedById: varchar().references(() => UserTable.id, { onDelete: "set null" }),
   reviewedAt: timestamp({ withTimezone: true }),
   createdAt,

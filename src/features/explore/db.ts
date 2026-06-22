@@ -5,13 +5,24 @@ import {
   JobApplicationTable,
   RecruiterRequestTable,
 } from "@/drizzle/schema"
-import { and, count, desc, eq, ne } from "drizzle-orm"
+import { and, count, desc, eq, gte, isNull, ne, or } from "drizzle-orm"
 
 export async function getPublishedExplorePosts(type?: "job_post" | "cv_showcase") {
+  // Ẩn bài đã quá hạn nộp CV: chỉ hiển thị bài không có hạn (deadline NULL —
+  // gồm mọi bài cv_showcase) hoặc hạn còn ở tương lai.
+  const notExpired = or(
+    isNull(ExplorePostTable.deadline),
+    gte(ExplorePostTable.deadline, new Date())
+  )
+
   return db.query.ExplorePostTable.findMany({
     where: type
-      ? and(eq(ExplorePostTable.status, "published"), eq(ExplorePostTable.type, type))
-      : eq(ExplorePostTable.status, "published"),
+      ? and(
+          eq(ExplorePostTable.status, "published"),
+          eq(ExplorePostTable.type, type),
+          notExpired
+        )
+      : and(eq(ExplorePostTable.status, "published"), notExpired),
     orderBy: [desc(ExplorePostTable.createdAt)],
     with: {
       author: {
@@ -78,7 +89,9 @@ export async function getPublishedJobPostForAnalysis(postId: string) {
     where: and(
       eq(ExplorePostTable.id, postId),
       eq(ExplorePostTable.type, "job_post"),
-      eq(ExplorePostTable.status, "published")
+      eq(ExplorePostTable.status, "published"),
+      // Không cho phân tích với bài đã hết hạn nộp.
+      or(isNull(ExplorePostTable.deadline), gte(ExplorePostTable.deadline, new Date()))
     ),
     columns: {
       id: true,

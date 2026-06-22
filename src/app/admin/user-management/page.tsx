@@ -226,7 +226,12 @@ export default function AdminUserManagementPage() {
   const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
 
   async function handleDelete(id: string) {
-    if (!confirm("Xác nhận xóa người dùng này? Giao dịch và doanh thu vẫn được giữ lại.")) return;
+    if (
+      !confirm(
+        "Xác nhận xóa người dùng này? Toàn bộ dữ liệu của họ sẽ bị xóa vĩnh viễn, BAO GỒM cả lịch sử giao dịch và doanh thu. Hành động này không thể hoàn tác.",
+      )
+    )
+      return;
 
     try {
       const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });

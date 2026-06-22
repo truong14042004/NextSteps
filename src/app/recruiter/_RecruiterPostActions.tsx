@@ -34,6 +34,14 @@ export type RecruiterPost = {
   location: string | null
   salaryRange: string | null
   skills: string | null
+  deadline: Date | string | null
+}
+
+// Định dạng deadline (Date | ISO string | null) sang "YYYY-MM-DD" cho input type="date".
+function toDateInputValue(value: Date | string | null): string {
+  if (value == null) return ""
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10)
 }
 
 const fieldClass =
@@ -68,6 +76,7 @@ export function RecruiterPostActions({ post }: { post: RecruiterPost }) {
         location: String(formData.get("location") ?? ""),
         salaryRange: String(formData.get("salaryRange") ?? ""),
         skills: String(formData.get("skills") ?? ""),
+        deadline: String(formData.get("deadline") ?? ""),
       }),
     )
   }
@@ -183,6 +192,19 @@ export function RecruiterPostActions({ post }: { post: RecruiterPost }) {
                   name="salaryRange"
                   defaultValue={post.salaryRange ?? ""}
                   maxLength={120}
+                  className={fieldClass}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Hạn nộp CV</Label>
+                <Input
+                  name="deadline"
+                  type="date"
+                  defaultValue={
+                    post.deadline
+                      ? new Date(post.deadline).toISOString().slice(0, 10)
+                      : ""
+                  }
                   className={fieldClass}
                 />
               </div>

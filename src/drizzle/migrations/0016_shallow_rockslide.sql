@@ -1,0 +1,1 @@
+ALTER TABLE "explore_posts" ADD COLUMN "deadline" timestamp with time zone;

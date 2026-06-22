@@ -210,6 +210,12 @@ export function ExplorePostDetailClient({
                   <span>{isJob ? "Vị trí tuyển" : "Vị trí ứng tuyển"}: {post.positionTitle}</span>
                 </div>
               )}
+              {isJob && post.deadline && (
+                <div className="flex items-center gap-1 bg-amber-50 text-amber-800 dark:bg-amber-950/20 dark:text-amber-400 px-2.5 py-1 rounded-lg font-semibold">
+                  <CalendarDays className="size-3.5 text-amber-500" />
+                  <span>Hạn nộp: {new Date(post.deadline).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+                </div>
+              )}
             </div>
 
             {/* Skills required tags */}

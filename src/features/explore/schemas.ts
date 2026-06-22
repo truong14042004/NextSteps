@@ -24,6 +24,16 @@ export const recruiterPostSchema = z.object({
   location: z.string().trim().max(160).optional().or(z.literal("")),
   salaryRange: z.string().trim().max(120).optional().or(z.literal("")),
   skills: z.string().trim().max(1000).optional().or(z.literal("")),
+  // Hạn nộp CV — form gửi chuỗi "YYYY-MM-DD" hoặc rỗng (không hạn).
+  deadline: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .refine(
+      value => !value || !Number.isNaN(new Date(value).getTime()),
+      "Ngày hết hạn không hợp lệ",
+    ),
 })
 
 export const cvShowcasePostSchema = z.object({

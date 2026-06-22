@@ -27,6 +27,15 @@ function normalizeOptional(value: string | undefined) {
   return trimmed ? trimmed : null
 }
 
+// Chuyển chuỗi ngày từ input type="date" ("YYYY-MM-DD" hoặc rỗng) sang Date | null.
+// Đặt về cuối ngày (23:59:59) để hạn nộp tính trọn ngày đó theo giờ địa phương.
+function parseDeadline(value: string | undefined): Date | null {
+  const trimmed = value?.trim()
+  if (!trimmed) return null
+  const date = new Date(`${trimmed}T23:59:59`)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
 // Trích storage path từ cvUrl (full GCS URL hoặc path) — dùng để kiểm tra quyền sở hữu.
 // Trả về null nếu không có marker /uploads/ hoặc chứa ký tự traversal.
 function extractExploreCvStoragePath(cvUrl: string): string | null {
@@ -92,6 +101,7 @@ export async function createRecruiterPostAction(
     location: normalizeOptional(parsed.data.location),
     salaryRange: normalizeOptional(parsed.data.salaryRange),
     skills: normalizeOptional(parsed.data.skills),
+    deadline: parseDeadline(parsed.data.deadline),
   })
 
   revalidatePath("/explore")
@@ -152,6 +162,7 @@ export async function updateOwnPendingRecruiterPostAction(
       location: normalizeOptional(parsed.data.location),
       salaryRange: normalizeOptional(parsed.data.salaryRange),
       skills: normalizeOptional(parsed.data.skills),
+      deadline: parseDeadline(parsed.data.deadline),
       rejectionReason: null,
     })
     .where(eq(ExplorePostTable.id, postId))
@@ -416,11 +427,16 @@ export async function applyToJobAction(
       eq(ExplorePostTable.type, "job_post"),
       eq(ExplorePostTable.status, "published")
     ),
-    columns: { id: true, authorId: true },
+    columns: { id: true, authorId: true, deadline: true },
   })
 
   if (post == null) {
     return { error: true as const, message: "Không tìm thấy bài tuyển dụng" }
+  }
+
+  // Chặn nộp hồ sơ vào bài đã quá hạn nộp CV.
+  if (post.deadline != null && post.deadline.getTime() < Date.now()) {
+    return { error: true as const, message: "Tin tuyển dụng này đã hết hạn nộp hồ sơ" }
   }
 
   if (post.authorId === auth.userId) {
@@ -712,6 +728,7 @@ export async function updateOwnExplorePostAction(
       location: normalizeOptional(parsed.data.location),
       salaryRange: normalizeOptional(parsed.data.salaryRange),
       skills: normalizeOptional(parsed.data.skills),
+      deadline: parseDeadline(parsed.data.deadline),
       rejectionReason: null,
     })
     .where(eq(ExplorePostTable.id, postId))

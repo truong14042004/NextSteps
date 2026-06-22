@@ -113,6 +113,13 @@
       "when": 1782107531550,
       "tag": "0015_lean_warbound",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1782142686492,
+      "tag": "0016_shallow_rockslide",
+      "breakpoints": true
     }
   ]
 }

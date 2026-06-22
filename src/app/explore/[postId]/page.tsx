@@ -38,7 +38,9 @@ export default async function ExplorePostDetailPage({
   const isJob = post.type === "job_post"
   const isRecruiter = user.role === "recruiter"
   const isAdmin = user.role === "admin"
-  const canApply = canApplyToJob(user.role) && post.authorId !== userId
+  // Bài đã quá hạn nộp CV thì không cho ứng tuyển nữa (khớp với lọc ở trang Khám phá).
+  const isExpired = post.deadline != null && new Date(post.deadline) < new Date()
+  const canApply = canApplyToJob(user.role) && post.authorId !== userId && !isExpired
   const alreadyApplied = appliedPostIds.includes(post.id)
 
   const adminActions = isAdmin && isJob ? (

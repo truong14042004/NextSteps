@@ -28,6 +28,7 @@ import {
   Activity,
   Plus,
   Building,
+  CalendarClock,
   GraduationCap,
   Wand2,
   ThumbsUp,
@@ -156,6 +157,7 @@ function RecruiterPostForm({
         location: String(formData.get("location") ?? ""),
         salaryRange: String(formData.get("salaryRange") ?? ""),
         skills: String(formData.get("skills") ?? ""),
+        deadline: String(formData.get("deadline") ?? ""),
       })
 
       if (result.error) toast.error(result.message)
@@ -188,6 +190,9 @@ function RecruiterPostForm({
         </Field>
         <Field label="Kỹ năng yêu cầu">
           <Input name="skills" maxLength={1000} placeholder="React, SQL, English..." className={fieldClass} />
+        </Field>
+        <Field label="Hạn nộp CV (tùy chọn)">
+          <Input name="deadline" type="date" className={fieldClass} />
         </Field>
       </div>
       <Field label="Mô tả công việc chi tiết">
@@ -690,6 +695,19 @@ function ExplorePostCard({
                 <div className="flex items-center gap-1.5">
                   <DollarSign className="size-3.5 text-rose-500" />
                   <span>{post.salaryRange}</span>
+                </div>
+              )}
+              {post.deadline && (
+                <div className="flex items-center gap-1.5">
+                  <CalendarClock className="size-3.5 text-rose-500" />
+                  <span>
+                    Hạn nộp:{" "}
+                    {new Date(post.deadline).toLocaleDateString("vi-VN", {
+                      day: "numeric",
+                      month: "numeric",
+                      year: "numeric",
+                    })}
+                  </span>
                 </div>
               )}
             </div>

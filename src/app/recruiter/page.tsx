@@ -103,6 +103,7 @@ export default async function RecruiterPostsPage() {
                           location: post.location,
                           salaryRange: post.salaryRange,
                           skills: post.skills,
+                          deadline: post.deadline,
                         }}
                       />
                     </div>

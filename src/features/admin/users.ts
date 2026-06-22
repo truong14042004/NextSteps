@@ -8,13 +8,15 @@ import { z } from "zod"
 import { db } from "@/drizzle/db"
 import {
   AuthCredentialTable,
+  AuthOtpTable,
   AuthSessionTable,
   PaymentTransactionTable,
   UserSubscriptionTable,
   UserTable,
+  UserUsageEventTable,
   userRoles,
 } from "@/drizzle/schema"
-import { getUserIdTag } from "@/features/users/dbCache"
+import { getUserIdTag, revalidateUserCache } from "@/features/users/dbCache"
 import { hashPassword } from "@/services/auth/lib/password"
 
 const userPayloadSchema = z.object({
@@ -363,21 +365,39 @@ export async function deleteAdminUser(id: string, currentAdminId: string) {
     }
   }
 
-  const deleted = await db
-    .update(UserTable)
-    .set({ status: "deleted", updatedAt: new Date() })
-    .where(and(eq(UserTable.id, id), ne(UserTable.status, "deleted")))
-    .returning({ id: UserTable.id })
+  const user = await db.query.UserTable.findFirst({
+    where: eq(UserTable.id, id),
+    columns: { id: true, email: true },
+  })
 
-  if (deleted.length === 0) {
+  if (user == null) {
     return { ok: false as const, status: 404, message: "User not found" }
   }
 
-  await db
-    .update(AuthSessionTable)
-    .set({ revokedAt: new Date(), updatedAt: new Date() })
-    .where(and(eq(AuthSessionTable.userId, id), isNull(AuthSessionTable.revokedAt)))
+  // Xóa CỨNG toàn bộ dữ liệu của user, bao gồm cả lịch sử giao dịch.
+  // Ba bảng payment/subscription/usage đặt onDelete: "restrict" nên phải xóa
+  // thủ công đúng thứ tự phụ thuộc trước khi xóa user; các bảng còn lại
+  // (auth_*, job_info → questions/interviews/quizzes, explore_posts → comments/
+  // job_applications, recruiter_requests, service_reviews) tự cascade.
+  // auth_otps không có FK nên xóa theo email.
+  await db.transaction(async tx => {
+    await tx
+      .delete(UserUsageEventTable)
+      .where(eq(UserUsageEventTable.userId, id))
+    await tx
+      .delete(UserSubscriptionTable)
+      .where(eq(UserSubscriptionTable.userId, id))
+    await tx
+      .delete(PaymentTransactionTable)
+      .where(eq(PaymentTransactionTable.userId, id))
 
-  revalidateTag(getUserIdTag(id), "default")
+    if (user.email) {
+      await tx.delete(AuthOtpTable).where(eq(AuthOtpTable.email, user.email))
+    }
+
+    await tx.delete(UserTable).where(eq(UserTable.id, id))
+  })
+
+  revalidateUserCache(id)
   return { ok: true as const }
 }
