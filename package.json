@@ -76,5 +76,13 @@
   },
   "overrides": {
     "next": "$next"
+  },
+  "allowScripts": {
+    "@clerk/shared@4.0.0": true,
+    "esbuild@0.18.20": true,
+    "esbuild@0.25.8": true,
+    "@tailwindcss/oxide@4.1.11": true,
+    "sharp@0.34.5": true,
+    "unrs-resolver@1.11.1": true
   }
 }

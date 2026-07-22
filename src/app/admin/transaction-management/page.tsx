@@ -18,7 +18,9 @@ import {
   CreditCard,
   User as UserIcon,
   Layers,
-  Clock
+  Clock,
+  Trash2,
+  Loader2
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -39,6 +41,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 type TransactionRow = {
   id: string
@@ -169,6 +181,10 @@ export default function AdminTransactionManagementPage() {
   const [selectedTx, setSelectedTx] = useState<TransactionRow | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
+  // Delete confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<TransactionRow | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
   const fetchTransactions = useCallback(async () => {
     setLoading(true)
 
@@ -228,6 +244,32 @@ export default function AdminTransactionManagementPage() {
   // Calculate stats from list
   const successCount = transactions.filter(t => t.status === "paid").length
   const failedCount = transactions.filter(t => ["failed", "cancelled", "expired"].includes(t.status)).length
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+
+    setDeleting(true)
+
+    try {
+      const response = await fetch(`/api/admin/transactions/${deleteTarget.id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.message ?? "Không xoá được giao dịch.")
+      }
+
+      setDeleteTarget(null)
+      setIsModalOpen(false)
+      fetchTransactions()
+    } catch (error) {
+      console.error("Failed to delete transaction", error)
+      alert(error instanceof Error ? error.message : "Không xoá được giao dịch.")
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   return (
     <div className="space-y-6 pb-12">
@@ -524,6 +566,16 @@ export default function AdminTransactionManagementPage() {
                                   <Copy className="h-4 w-4" />
                                   Copy Order Code
                                 </DropdownMenuItem>
+
+                                <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
+
+                                <DropdownMenuItem
+                                  onClick={() => setDeleteTarget(transaction)}
+                                  className="rounded-lg text-red-600 dark:text-red-400 gap-2 font-medium cursor-pointer focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Xoá giao dịch
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </td>
@@ -686,9 +738,74 @@ export default function AdminTransactionManagementPage() {
             >
               Đóng
             </Button>
+
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (selectedTx) setDeleteTarget(selectedTx)
+              }}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl h-10 font-semibold text-sm gap-1.5"
+            >
+              <Trash2 className="h-4 w-4" />
+              Xoá giao dịch
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={deleteTarget != null}
+        onOpenChange={open => {
+          if (!deleting) setDeleteTarget(null)
+        }}
+      >
+        <AlertDialogContent className="sm:max-w-md rounded-2xl border-none shadow-xl bg-white dark:bg-zinc-900 p-6">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              Xoá giao dịch
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-zinc-500 dark:text-zinc-400">
+              Bạn có chắc chắn muốn xoá giao dịch
+              {" "}
+              <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-300">
+                {deleteTarget?.orderCode}
+              </span>
+              {" "}của{" "}
+              <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                {deleteTarget?.userName}
+              </span>?
+              {" "}Hành động này không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel
+              disabled={deleting}
+              className="rounded-xl h-10 font-semibold text-sm border border-zinc-200 dark:border-zinc-700"
+            >
+              Huỷ
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="rounded-xl h-10 font-semibold text-sm bg-red-600 hover:bg-red-700 text-white gap-1.5"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Đang xoá...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  Xoá
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -150,3 +150,12 @@ export async function listAdminTransactions({
     },
   }
 }
+
+export async function deleteAdminTransaction(transactionId: string) {
+  const [deleted] = await db
+    .delete(PaymentTransactionTable)
+    .where(eq(PaymentTransactionTable.id, transactionId))
+    .returning({ id: PaymentTransactionTable.id })
+
+  return deleted != null
+}
