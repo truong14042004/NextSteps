@@ -7,6 +7,16 @@ import { cn } from "@/lib/utils";
 const filters = ["Daily", "Monthly", "Yearly"] as const;
 type Filter = (typeof filters)[number];
 
+const formatYLabel = (val: number) => {
+  if (val >= 1_000_000) {
+    return (val / 1_000_000).toLocaleString("vi-VN", { maximumFractionDigits: 1 }) + "M₫";
+  }
+  if (val >= 1_000) {
+    return (val / 1_000).toLocaleString("vi-VN", { maximumFractionDigits: 0 }) + "k₫";
+  }
+  return val.toString() + "₫";
+};
+
 export function RevenueGrowthChart({
   data,
   transactions = [],
@@ -35,27 +45,24 @@ export function RevenueGrowthChart({
         const d = new Date();
         d.setDate(d.getDate() - (6 - i));
         
-        // Format as dd/mm/yyyy to match transaction dates (e.g. 12/06/2026)
-        const dd = String(d.getDate()).padStart(2, "0");
-        const mm = String(d.getMonth() + 1).padStart(2, "0");
-        const yyyy = d.getFullYear();
-        return `${dd}/${mm}/${yyyy}`;
+        return {
+          matchDate: d.toLocaleDateString("vi-VN"), // match the formatted date e.g. "1/8/2026"
+          labelDay: String(d.getDate()).padStart(2, "0"),
+          labelMonth: String(d.getMonth() + 1).padStart(2, "0"),
+          dayOfWeek: days[d.getDay()],
+        };
       });
 
-      return last7Days.map(dateStr => {
+      return last7Days.map(item => {
         // Find transactions on this date and sum their numeric amounts
         const dailySum = transactions
-          .filter(t => t.date === dateStr && (t.status === "Success" || t.status === "paid" || t.status === "đã thanh toán"))
+          .filter(t => t.date === item.matchDate && (t.status === "Success" || t.status === "paid" || t.status === "đã thanh toán"))
           .reduce((sum, t) => {
             const num = parseInt(t.amount.replace(/\D/g, "")) || 0;
             return sum + num;
           }, 0);
 
-        // Parse day of week and format label
-        const parts = dateStr.split("/");
-        const dateObj = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
-        const label = days[dateObj.getDay()] + ` (${parts[0]}/${parts[1]})`;
-
+        const label = `${item.dayOfWeek} (${item.labelDay}/${item.labelMonth})`;
         return { label, value: dailySum };
       });
     }
@@ -140,27 +147,53 @@ export function RevenueGrowthChart({
       <CardContent>
         <div className="relative w-full h-[280px] rounded-xl border border-zinc-100/80 dark:border-zinc-800/40 bg-zinc-50/30 dark:bg-zinc-900/30 p-5 flex flex-col justify-between">
           {filteredData && filteredData.length > 0 ? (
-            <div className="relative flex-1">
-              <svg className="w-full h-full overflow-visible" viewBox="0 0 500 180" preserveAspectRatio="none">
+            <div className="relative flex-1 w-full min-h-0">
+              <svg className="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 500 180" preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="revenue-area-gradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#b30000" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#b30000" stopOpacity="0.00" />
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity="0.22" />
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity="0.00" />
+                  </linearGradient>
+                  <linearGradient id="revenue-stroke-gradient" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#3b82f6" />
+                    <stop offset="50%" stopColor="#6366f1" />
+                    <stop offset="100%" stopColor="#a855f7" />
                   </linearGradient>
                 </defs>
                 
-                {/* Grid Lines */}
-                <line x1="0" y1="36" x2="500" y2="36" stroke="currentColor" strokeOpacity="0.04" strokeDasharray="3" className="text-zinc-500" />
-                <line x1="0" y1="72" x2="500" y2="72" stroke="currentColor" strokeOpacity="0.04" strokeDasharray="3" className="text-zinc-500" />
-                <line x1="0" y1="108" x2="500" y2="108" stroke="currentColor" strokeOpacity="0.04" strokeDasharray="3" className="text-zinc-500" />
-                <line x1="0" y1="144" x2="500" y2="144" stroke="currentColor" strokeOpacity="0.04" strokeDasharray="3" className="text-zinc-500" />
-                <line x1="0" y1="180" x2="500" y2="180" stroke="currentColor" strokeOpacity="0.08" className="text-zinc-500" />
+                {/* Grid Lines and Y Labels */}
+                {[155, 123.25, 91.5, 59.75, 28].map((yVal) => {
+                  const val = ((155 - yVal) / 127) * maxValue;
+                  return (
+                    <g key={yVal}>
+                      <line
+                        x1="55"
+                        y1={yVal}
+                        x2="485"
+                        y2={yVal}
+                        stroke="currentColor"
+                        strokeOpacity="0.04"
+                        strokeDasharray={yVal === 155 ? "0" : "3"}
+                        className={yVal === 155 ? "text-zinc-550 stroke-2" : "text-zinc-500"}
+                      />
+                      <text
+                        x="45"
+                        y={yVal}
+                        textAnchor="end"
+                        dominantBaseline="middle"
+                        className="fill-zinc-400 dark:fill-zinc-500 font-semibold select-none"
+                        style={{ fontSize: "8.5px" }}
+                      >
+                        {formatYLabel(val)}
+                      </text>
+                    </g>
+                  );
+                })}
 
                 {(() => {
-                  const maxVal = Math.max(1, ...filteredData.map(p => p.value));
                   const points = filteredData.map((item, idx) => {
-                    const x = (idx / Math.max(1, filteredData.length - 1)) * 480 + 10;
-                    const y = 165 - (item.value / maxVal) * 140;
+                    const x = (idx / Math.max(1, filteredData.length - 1)) * 430 + 55;
+                    const y = 155 - (item.value / maxValue) * 127;
                     return { x, y, val: item.value, label: item.label, idx };
                   });
 
@@ -180,7 +213,7 @@ export function RevenueGrowthChart({
                   };
 
                   const pathD = getCurvePath(points);
-                  const areaD = pathD ? `${pathD} L ${points[points.length - 1].x} 180 L ${points[0].x} 180 Z` : "";
+                  const areaD = pathD ? `${pathD} L ${points[points.length - 1].x} 155 L ${points[0].x} 155 Z` : "";
 
                   return (
                     <>
@@ -188,7 +221,7 @@ export function RevenueGrowthChart({
                       {areaD && <path d={areaD} fill="url(#revenue-area-gradient)" />}
                       
                       {/* Spline line */}
-                      {pathD && <path d={pathD} fill="none" stroke="#b30000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
+                      {pathD && <path d={pathD} fill="none" stroke="url(#revenue-stroke-gradient)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
 
                       {/* Hover gridlines */}
                       {points.map((p) => (
@@ -196,20 +229,20 @@ export function RevenueGrowthChart({
                           {hoveredIndex === p.idx && (
                             <line
                               x1={p.x}
-                              y1={10}
+                              y1={28}
                               x2={p.x}
-                              y2={180}
-                              stroke="#cbd5e1"
-                              strokeOpacity="0.6"
+                              y2={155}
+                              stroke="#6366f1"
+                              strokeOpacity="0.4"
                               strokeWidth="1"
                               strokeDasharray="3"
                             />
                           )}
                           <rect
                             x={p.x - 20}
-                            y={0}
+                            y={28}
                             width={40}
-                            height={180}
+                            height={127}
                             fill="transparent"
                             className="cursor-pointer"
                             onMouseEnter={() => setHoveredIndex(p.idx)}
@@ -226,10 +259,10 @@ export function RevenueGrowthChart({
                             key={p.idx}
                             cx={p.x}
                             cy={p.y}
-                            r={isHovered ? 6 : 4}
+                            r={isHovered ? 6 : 4.5}
                             className={cn(
-                              "cursor-pointer pointer-events-none transition-all duration-200 fill-white stroke-[#b30000] stroke-[2.5px]",
-                              isHovered && "fill-[#b30000] stroke-[#b30000] r-6"
+                              "cursor-pointer pointer-events-none transition-all duration-200 fill-white stroke-[#6366f1] stroke-[2.5px]",
+                              isHovered && "fill-[#a855f7] stroke-white stroke-[2px]"
                             )}
                           />
                         );
@@ -246,7 +279,10 @@ export function RevenueGrowthChart({
           )}
 
           {/* X Axis labels */}
-          <div className="flex justify-between mt-3 px-1 text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 select-none">
+          <div 
+            className="flex justify-between mt-3 text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 select-none"
+            style={{ paddingLeft: "11%", paddingRight: "3%" }}
+          >
             {filteredData.map((item) => (
               <span key={item.label} className="text-center flex-1">
                 {item.label}

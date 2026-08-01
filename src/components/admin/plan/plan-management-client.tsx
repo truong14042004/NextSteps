@@ -546,7 +546,7 @@ export function PlanManagementClient({ initialData }: PlanManagementClientProps)
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between pb-6">
             <div>
               <CardTitle className="text-lg font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
-                <LineChart className="h-4.5 w-4.5 text-[#b30000]" />
+                <LineChart className="h-4.5 w-4.5 text-purple-600" />
                 Xu hướng đăng ký
               </CardTitle>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400 font-medium">
@@ -581,8 +581,8 @@ export function PlanManagementClient({ initialData }: PlanManagementClientProps)
             {filteredGrowthData && filteredGrowthData.length > 0 ? (
               <div className="relative w-full h-[280px] rounded-xl border border-zinc-100/80 dark:border-zinc-800/40 bg-zinc-50/30 dark:bg-zinc-900/30 p-5 flex flex-col justify-between">
                 {/* SVG Multi-Line / Area chart */}
-                <div className="relative flex-1">
-                  <svg className="w-full h-full overflow-visible" viewBox="0 0 500 180" preserveAspectRatio="none">
+                <div className="relative flex-1 w-full min-h-0">
+                  <svg className="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 500 180" preserveAspectRatio="none">
                     <defs>
                       <linearGradient id="free-area-gradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#64748b" stopOpacity="0.12" />
